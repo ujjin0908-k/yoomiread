@@ -1,6 +1,6 @@
 import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, PenLine, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Cover, ProgressBar, Sheet, Stars, TopBar } from '../components';
+import { Cover, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
 import { shrinkImage } from '../images';
@@ -566,9 +566,12 @@ function TranslateSheet({ book, chapters, done, onClose }: { book: Book; chapter
         <p className="muted small">The glossary is used for every chapter. New names are added for you to check, not used until approved.</p>
         {status && <p className="small">{status}</p>}
         {running ? (
-          <button type="button" className="btn" onClick={() => stop.current?.abort()}>
-            Stop after this
-          </button>
+          <>
+            <Working label={status || 'Starting'} />
+            <button type="button" className="btn" onClick={() => stop.current?.abort()}>
+              Stop after this
+            </button>
+          </>
         ) : (
           <button type="button" className="pill-btn" disabled={!ready || !batch.length} onClick={() => void run()}>
             <span>Translate {plural(batch.length, 'chapter')}</span>

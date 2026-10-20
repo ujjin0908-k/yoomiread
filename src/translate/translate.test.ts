@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GlossaryEntry, TranslateSettings } from '../types';
 import { chat, readStream, TranslateError } from './api';
 import { callCost } from './run';
+import { isRefusal } from './prompt';
 import { chapterMessages, cleanTitle, costOf, estimateTokens, formatCost, NEW_TERMS, parseTerms, pronounWarnings, splitReply, titleMessages } from './prompt';
 
 const entry = (over: Partial<GlossaryEntry>): GlossaryEntry => ({
@@ -181,5 +182,17 @@ describe('money on screen', () => {
     expect(formatCost(0.42)).toBe('42.0¢');
     expect(formatCost(3.5)).toBe('$3.50');
     expect(formatCost(undefined)).toBe('price not set');
+  });
+});
+
+describe('refusals are not translations', () => {
+  it('spots a refusal at the start of the reply', () => {
+    expect(isRefusal("I can't translate this one. The chapter is labeled as …")).toBe(true);
+    expect(isRefusal('  I cannot help with that request.')).toBe(true);
+    expect(isRefusal('Sorry, but I can’t continue with this text.')).toBe(true);
+  });
+  it('does not flag real translations', () => {
+    expect(isRefusal('I can see the river from my window, and she waited.')).toBe(false);
+    expect(isRefusal('Mei walked along the riverbank.')).toBe(false);
   });
 });

@@ -147,3 +147,25 @@ export function Empty({ title, children }: { title: string; children?: ReactNode
     </div>
   );
 }
+
+/** Shown while translating: the app's own wizard bobs and steams, with a line of progress. */
+export function Working({ label }: { label: string }) {
+  return (
+    <div className="working" role="status" aria-live="polite">
+      <div className="working-figure" aria-hidden="true">
+        <img src="/icon-180.png" alt="" width={72} height={72} />
+        <span className="steam s1" />
+        <span className="steam s2" />
+        <span className="steam s3" />
+      </div>
+      <p className="working-label">
+        {label}
+        <span className="dots" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
+      </p>
+    </div>
+  );
+}

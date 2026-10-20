@@ -105,6 +105,13 @@ export function parseTerms(raw: string): ProposedTerm[] {
 }
 
 /** Splits the model's reply into the translation and the proposed new terms. */
+const REFUSAL = /^\s*(i can(?:not|'t)|i won(?:'|’)t|i am (?:unable|not able)|i'm (?:unable|not able)|sorry,? (?:but )?i (?:can|cannot|won))/i;
+
+/** True when the model answered with a refusal instead of a translation (no text should be saved). */
+export function isRefusal(reply: string): boolean {
+  return REFUSAL.test(reply.trim().slice(0, 200));
+}
+
 export function splitReply(reply: string): { text: string; terms: ProposedTerm[] } {
   const at = reply.indexOf(NEW_TERMS);
   const body = at >= 0 ? reply.slice(0, at) : reply;

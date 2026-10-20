@@ -2,7 +2,7 @@ import { db } from '../db';
 import { newId } from '../logic';
 import type { Chapter, GlossaryEntry, ModelOption, TranslateSettings, Translation } from '../types';
 import { chat, type ChatResult } from './api';
-import { chapterMessages, cleanTitle, costOf, estimateTokens, glossaryScanMessages, parseTerms, pronounWarnings, splitReply, titleMessages, type ChatMessage, type ProposedTerm } from './prompt';
+import { chapterMessages, cleanTitle, costOf, estimateTokens, glossaryScanMessages, isRefusal, parseTerms, pronounWarnings, splitReply, titleMessages, type ChatMessage, type ProposedTerm } from './prompt';
 
 /** Prices seen on the owner's provider on 2026-10-20 (change them in Settings when they move). */
 export const DEFAULT_MODELS: ModelOption[] = [
@@ -84,6 +84,13 @@ export async function translateChapter(
   const { text: english, terms } = splitReply(result.text);
   const option = modelFor(options.settings, options.model);
   const spend = callCost(option, messages, result);
+  // A refusal is not a translation: show it as an error and keep the chapter untranslated.
+  if (isRefusal(result.text)) {
+    await addSpend(chapter.bookId, spend.cost, spend.estimated);
+    throw new Error(
+      `${option.label} would not translate "${chapter.title}". Try the other model in Compare, or check what your provider allows.`,
+    );
+  }
   // Money is spent even when a Compare result is not kept.
   await addSpend(chapter.bookId, spend.cost, spend.estimated);
   const translation: Translation = {

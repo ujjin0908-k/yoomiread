@@ -1,6 +1,6 @@
 import { AlertTriangle, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { ProgressBar, Sheet, TopBar } from '../components';
+import { ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
 import { bookProgress, formatDate, moveToShelf, newId, paragraphs, readingMinutes, segmentText } from '../logic';
@@ -861,9 +861,12 @@ function TranslateChapterSheet({
         {error && <p className="warn small">{error}</p>}
 
         {running ? (
-          <button type="button" className="btn" onClick={() => stop.current?.abort()}>
-            Stop
-          </button>
+          <>
+            <Working label={mode === 'compare' ? 'Comparing both models' : 'Translating this chapter'} />
+            <button type="button" className="btn" onClick={() => stop.current?.abort()}>
+              Stop
+            </button>
+          </>
         ) : mode === 'translate' ? (
           <button type="button" className="pill-btn" disabled={!ready || !text} onClick={() => void translateOne()}>
             <span>Translate</span>
