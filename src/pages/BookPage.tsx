@@ -471,6 +471,8 @@ function TranslateSheet({ book, chapters, done, onClose }: { book: Book; chapter
   const [model, setModel] = useState(book.model ?? '');
   const [lengths, setLengths] = useState<Map<string, string>>();
   const [status, setStatus] = useState('');
+  // The English as it streams in, so you can see progress.
+  const [peek, setPeek] = useState('');
   const [running, setRunning] = useState(false);
   const stop = useRef<AbortController>();
 
@@ -505,6 +507,7 @@ function TranslateSheet({ book, chapters, done, onClose }: { book: Book; chapter
     setRunning(true);
     stop.current = new AbortController();
     const signal = stop.current.signal;
+    setPeek('');
     if (model !== book.model) await db.books.update(book.id, { model });
     // Up to three chapters at once: each one spends most of its time waiting on the provider.
     const CONCURRENCY = 3;
@@ -518,7 +521,15 @@ function TranslateSheet({ book, chapters, done, onClose }: { book: Book; chapter
         started++;
         setStatus(`Translating ${started} of ${batch.length}: ${c.title}…`);
         try {
-          finished.push(await translateChapter(c, { settings: settings!, model: option.id, signal, save: false }));
+          finished.push(
+            await translateChapter(c, {
+              settings: settings!,
+              model: option.id,
+              signal,
+              save: false,
+              onText: (piece) => setPeek((p) => (p + piece).slice(-400)),
+            }),
+          );
         } catch (e) {
           if (signal.aborted) return;
           failed.push(`${c.title} (${e instanceof Error ? e.message : 'failed'})`);
@@ -586,7 +597,7 @@ function TranslateSheet({ book, chapters, done, onClose }: { book: Book; chapter
         {status && <p className="small">{status}</p>}
         {running ? (
           <>
-            <Working label={status || 'Starting'} />
+            <Working label={status || 'Starting'} peek={peek} />
             <button type="button" className="btn" onClick={() => stop.current?.abort()}>
               Stop after this
             </button>

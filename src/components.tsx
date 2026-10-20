@@ -148,15 +148,33 @@ export function Empty({ title, children }: { title: string; children?: ReactNode
   );
 }
 
-/** Shown while translating: the app's own wizard bobs and steams, with a line of progress. */
-export function Working({ label }: { label: string }) {
+/** Original artwork: a little green lizard holding a star wand. Drawn in code; nothing copied. */
+function LizardWand() {
+  return (
+    <svg className="lizard" viewBox="0 0 120 90" width="104" height="78" aria-hidden="true">
+      <g className="liz-tail">
+        <path d="M22 60 C 6 62, 4 46, 14 42" stroke="#6b7a3a" strokeWidth="7" fill="none" strokeLinecap="round" />
+      </g>
+      <path d="M40 66 l-6 11 M60 66 l4 11" stroke="#6b7a3a" strokeWidth="4" strokeLinecap="round" />
+      <ellipse cx="50" cy="56" rx="27" ry="16" fill="#8fa04e" />
+      <circle cx="78" cy="40" r="15" fill="#8fa04e" />
+      <circle cx="84" cy="36" r="3.4" fill="#fbf8f1" />
+      <circle cx="85" cy="36" r="1.5" fill="#2a2823" />
+      <path d="M86 46 q5 3 9 -1" stroke="#2a2823" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      <path d="M68 54 L98 28" stroke="#5c4a32" strokeWidth="2.6" strokeLinecap="round" />
+      <path className="spark" d="M100 14 l2.4 6.2 6.2 2.4 -6.2 2.4 -2.4 6.2 -2.4 -6.2 -6.2 -2.4 6.2 -2.4z" fill="#d9a441" />
+      <circle className="spark s2" cx="112" cy="36" r="2" fill="#d9a441" />
+      <circle className="spark s3" cx="92" cy="8" r="1.6" fill="#d9a441" />
+    </svg>
+  );
+}
+
+/** Shown while translating: the lizard works its wand and the English streams in beneath it. */
+export function Working({ label, peek }: { label: string; peek?: string }) {
   return (
     <div className="working" role="status" aria-live="polite">
       <div className="working-figure" aria-hidden="true">
-        <img src="/icon-180.png" alt="" width={72} height={72} />
-        <span className="steam s1" />
-        <span className="steam s2" />
-        <span className="steam s3" />
+        <LizardWand />
       </div>
       <p className="working-label">
         {label}
@@ -166,6 +184,12 @@ export function Working({ label }: { label: string }) {
           <i />
         </span>
       </p>
+      {peek ? (
+        <p className="peek" lang="en">
+          {peek.slice(-260)}
+          <span className="caret" aria-hidden="true" />
+        </p>
+      ) : null}
     </div>
   );
 }

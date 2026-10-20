@@ -2088,3 +2088,65 @@ blockquote {
   height: 30px;
   flex: none;
 }
+
+/* ---------- Lizard with a wand (while translating) ---------- */
+
+.lizard {
+  display: block;
+  overflow: visible;
+}
+
+.liz-tail {
+  transform-origin: 22px 60px;
+  animation: sway 1.8s ease-in-out infinite;
+}
+
+.spark {
+  transform-origin: 100px 22px;
+  animation: twinkle 1.4s ease-in-out infinite;
+}
+
+.spark.s2 { animation-delay: 0.4s; transform-origin: 112px 36px; }
+.spark.s3 { animation-delay: 0.9s; transform-origin: 92px 8px; }
+
+.peek {
+  width: 100%;
+  max-height: 9.5em;
+  overflow: hidden;
+  margin: 8px 0 0;
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--ink);
+  text-align: left;
+  -webkit-mask-image: linear-gradient(transparent, #000 25%);
+  mask-image: linear-gradient(transparent, #000 25%);
+}
+
+.caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: var(--olive);
+  animation: blink 0.9s steps(1) infinite;
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(8deg); }
+}
+
+@keyframes twinkle {
+  0%, 100% { transform: scale(0.7); opacity: 0.4; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liz-tail,
+  .spark,
+  .caret {
+    animation: none;
+  }
+}

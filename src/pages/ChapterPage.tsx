@@ -862,7 +862,7 @@ function TranslateChapterSheet({
 
         {running ? (
           <>
-            <Working label={mode === 'compare' ? 'Comparing both models' : 'Translating this chapter'} />
+            <Working label={mode === 'compare' ? 'Comparing both models' : 'Translating this chapter'} peek={tab === 'b' ? live.b : live.a} />
             <button type="button" className="btn" onClick={() => stop.current?.abort()}>
               Stop
             </button>
