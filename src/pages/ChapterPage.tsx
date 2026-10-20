@@ -10,8 +10,8 @@ import type { Book, Chapter, Note } from '../types';
 type Selection = { start: number; end: number; quote: string };
 
 export function ChapterPage({ id }: { id: string }) {
-  const chapter = useLive(() => db.chapters.get(id), [id]);
-  const book = useLive(async () => (chapter ? db.books.get(chapter.bookId) : undefined), [chapter?.bookId]);
+  const chapter = useLive(async () => (await db.chapters.get(id)) ?? null, [id]);
+  const book = useLive(async () => (chapter ? await db.books.get(chapter.bookId) : undefined), [chapter?.bookId]);
   const notes = useLive(() => db.notes.where('chapterId').equals(id).sortBy('createdAt'), [id]);
   const siblings = useLive(
     async () => (chapter ? db.chapters.where('bookId').equals(chapter.bookId).sortBy('number') : []),
@@ -251,7 +251,7 @@ export function ChapterPage({ id }: { id: string }) {
 }
 
 /** Saves reading time for this visit and marks the book as being read. */
-function useReadingSession(chapter: Chapter | undefined, book: Book | undefined) {
+function useReadingSession(chapter: Chapter | null | undefined, book: Book | undefined) {
   const chapterId = chapter?.id;
   const bookRef = useRef(book);
   bookRef.current = book;
@@ -261,12 +261,17 @@ function useReadingSession(chapter: Chapter | undefined, book: Book | undefined)
     const bookId = chapter.bookId;
     let startedAt = document.visibilityState === 'visible' ? Date.now() : 0;
 
-    void (async () => {
+    // Only touch the reading fields, so a cover or review saved at the same moment is not overwritten.
+    void db.transaction('rw', db.books, async () => {
       const b = await db.books.get(bookId);
       if (!b) return;
-      const moved = b.shelf === 'want' ? moveToShelf(b, 'reading') : b;
-      await db.books.put({ ...moved, lastChapterId: chapterId, lastReadAt: Date.now() });
-    })();
+      const changes: Partial<Book> = { lastChapterId: chapterId, lastReadAt: Date.now() };
+      if (b.shelf === 'want') {
+        const moved = moveToShelf(b, 'reading');
+        Object.assign(changes, { shelf: moved.shelf, startedAt: moved.startedAt, updatedAt: moved.updatedAt });
+      }
+      await db.books.update(bookId, changes);
+    });
 
     const flush = () => {
       if (!startedAt) return;
@@ -294,7 +299,7 @@ function useReadingSession(chapter: Chapter | undefined, book: Book | undefined)
 }
 
 /** Comes back to the same spot, and remembers how far down I got. */
-function useScrollMemory(chapter: Chapter | undefined, onScroll: (fraction: number) => void) {
+function useScrollMemory(chapter: Chapter | null | undefined, onScroll: (fraction: number) => void) {
   const restored = useRef<string>();
   useEffect(() => {
     if (!chapter || restored.current === chapter.id) return;

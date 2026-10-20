@@ -33,3 +33,13 @@ describe('database', () => {
     expect(await db.notes.count()).toBe(1);
   });
 });
+
+describe('deleting', () => {
+  it('a book also removes its reading sessions', async () => {
+    db = new YoomiDB('t3');
+    await db.books.add(book);
+    await db.sessions.add({ id: 's1', bookId: 'b1', chapterId: 'c1', startedAt: 1, ms: 60_000 });
+    await db.deleteBook('b1');
+    expect(await db.sessions.count()).toBe(0);
+  });
+});

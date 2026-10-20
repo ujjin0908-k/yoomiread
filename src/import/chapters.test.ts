@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildParagraphs, coverTitle, isHeading, isJunkTitle, splitChapters, type PdfLine } from './chapters';
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { buildParagraphs, coverTitle, dropPageFurniture, isHeading, isJunkTitle, splitChapters, toLines, type PdfLine } from './chapters';
 
 const line = (page: number, y: number, text: string, x = 50): PdfLine => ({ page, y, x, text, height: 12 });
 
@@ -32,6 +33,13 @@ describe('chapter split', () => {
       expect(isHeading(h), h).toBe(true);
     }
     expect(isHeading('The chapter was long and full of rain.')).toBe(false);
+  });
+
+  it('does not take sentences that start like headings', () => {
+    for (const t of ['第三节课下课后，他跑去河边。', '第一回合她就输了。', '第二部分的人都走了，只剩下她', 'Chapter by chapter, the story grew.', 'Chapter one was the hardest to write, she said.']) {
+      expect(isHeading(t), t).toBe(false);
+    }
+    for (const t of ['Chapter One', 'Chapter 4: The Road', 'Chapter 12.', '第十二章　回家']) expect(isHeading(t), t).toBe(true);
   });
 
   it('splits at headings and drops a contents page', () => {
@@ -70,5 +78,61 @@ describe('cover page', () => {
     expect(isJunkTitle('Microsoft Word - draft.docx')).toBe(true);
     expect(isJunkTitle('lantern.pdf')).toBe(true);
     expect(isJunkTitle('The Lantern Courier')).toBe(false);
+  });
+});
+
+describe('page furniture', () => {
+  const page = (n: number, body: string[]) => [
+    line(n, 800, 'The Lantern Courier'),
+    ...body.map((t, i) => line(n, 700 - i * 14, t)),
+    line(n, 40, String(n + 10)),
+  ];
+
+  it('drops page numbers and running headers, keeps the text', () => {
+    const lines = [1, 2, 3, 4].flatMap((n) => page(n, [`Body text on page ${n}.`]));
+    expect(dropPageFurniture(lines).map((l) => l.text)).toEqual([1, 2, 3, 4].map((n) => `Body text on page ${n}.`));
+  });
+
+  it('keeps a real chapter heading at the top of a page', () => {
+    const lines = [...page(1, ['x']), line(2, 800, '第二章 渡口'), line(2, 700, 'y'), line(2, 40, '12'), ...page(3, ['z']), ...page(4, ['w'])];
+    expect(dropPageFurniture(lines).map((l) => l.text)).toContain('第二章 渡口');
+  });
+
+  it('reads lines top to bottom even when the PDF lists the footer first', () => {
+    const lines = [line(1, 40, '7'), line(1, 700, 'First.'), line(1, 686, 'Second.')];
+    expect(dropPageFurniture(lines).map((l) => l.text)).toEqual(['First.', 'Second.']);
+  });
+});
+
+describe('text pieces to lines', () => {
+  it('joins pieces on one baseline and takes the height from real text', () => {
+    const piece = (str: string, x: number, y: number, height: number, hasEOL = false) => ({ str, transform: [1, 0, 0, height, x, y], height, hasEOL });
+    const lines = toLines(1, [piece('', 70, 500, 0, true), piece('第', 50, 480, 15), piece('一章', 65, 480, 15, true), piece('正文', 50, 460, 11)]);
+    expect(lines).toEqual([
+      { page: 1, text: '第一章', x: 50, y: 480, height: 15 },
+      { page: 1, text: '正文', x: 50, y: 460, height: 11 },
+    ]);
+  });
+});
+
+describe('a realistic PDF, end to end', () => {
+  // Made for these tests: a cover, a running header, page numbers, long paragraphs across pages,
+  // and sentences that begin like headings. The text is our own.
+  it('finds exactly the two real chapters with clean text', async () => {
+    const doc = await getDocument({ url: new URL('./fixtures/river-letter.pdf', import.meta.url).pathname }).promise;
+    const lines: PdfLine[] = [];
+    for (let n = 2; n <= doc.numPages; n++) {
+      const content = await (await doc.getPage(n)).getTextContent();
+      lines.push(...toLines(n, content.items.filter((i) => 'str' in i) as never));
+    }
+    const chapters = splitChapters(buildParagraphs(dropPageFurniture(lines)));
+    expect(chapters.map((c) => c.title)).toEqual(['第一章 夜路', '第二章 渡口']);
+    for (const c of chapters) {
+      expect(c.text).not.toContain('河边的信');
+      expect(c.text).not.toMatch(/(^|\n)\s*\d+\s*(\n|$)/);
+      expect(c.text.split('\n\n').length).toBe(5);
+    }
+    expect(chapters[0].text).toContain('第三节课下课后，她跑去河边看船。');
+    await doc.destroy();
   });
 });

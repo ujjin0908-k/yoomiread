@@ -18,7 +18,7 @@ import {
 import type { Book, Shelf } from '../types';
 
 export function BookPage({ id, sub }: { id: string; sub?: string }) {
-  const book = useLive(() => db.books.get(id), [id]);
+  const book = useLive(async () => (await db.books.get(id)) ?? null, [id]);
   const chapters = useLive(() => db.chapters.where('bookId').equals(id).sortBy('number'), [id]);
   const notes = useLive(() => db.notes.where('bookId').equals(id).toArray(), [id]);
   const [addingChapter, setAddingChapter] = useState(false);
@@ -204,7 +204,8 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
           book={book}
           onClose={() => {
             setEditingReview(false);
-            if (finishing) go(`book/${id}`);
+            // Replace the finish step in history so Back does not open it again.
+            if (finishing) window.location.replace(`#/book/${id}`);
           }}
         />
       )}

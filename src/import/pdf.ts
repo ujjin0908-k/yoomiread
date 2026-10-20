@@ -3,7 +3,7 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import { guessLanguage } from '../logic';
 import type { BookLanguage } from '../types';
-import { buildParagraphs, coverTitle, isJunkTitle, splitChapters, type DraftChapter, type PdfLine } from './chapters';
+import { buildParagraphs, coverTitle, dropPageFurniture, isJunkTitle, splitChapters, toLines, type DraftChapter, type PdfLine } from './chapters';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -43,7 +43,7 @@ export async function importPdf(file: File, onProgress?: (page: number, pages: n
     }
 
     // A first page with almost no text is the cover; leave it out of chapter 1.
-    const body = firstPageChars < 120 ? lines.filter((l) => l.page !== 1) : lines;
+    const body = dropPageFurniture(firstPageChars < 120 ? lines.filter((l) => l.page !== 1) : lines);
     const allText = body.map((l) => l.text).join('');
     const scanned = allText.replace(/\s/g, '').length < doc.numPages * 20;
     const chapters = scanned ? [] : splitChapters(buildParagraphs(body));
@@ -62,28 +62,6 @@ export async function importPdf(file: File, onProgress?: (page: number, pages: n
   } finally {
     await doc.destroy();
   }
-}
-
-/** Groups text pieces that sit on the same baseline into lines. */
-function toLines(page: number, items: TextItem[]): PdfLine[] {
-  const lines: PdfLine[] = [];
-  let current: PdfLine | undefined;
-  for (const item of items) {
-    const [, , , d, x, y] = item.transform;
-    const height = item.height || Math.abs(d) || 10;
-    if (!current || Math.abs(current.y - y) > height * 0.5) {
-      if (current) lines.push(current);
-      current = { page, text: item.str, x, y, height };
-    } else {
-      current.text += item.str;
-    }
-    if (item.hasEOL && current) {
-      lines.push(current);
-      current = undefined;
-    }
-  }
-  if (current) lines.push(current);
-  return lines;
 }
 
 async function renderCover(doc: pdfjs.PDFDocumentProxy): Promise<Blob | undefined> {

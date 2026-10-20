@@ -103,6 +103,7 @@ export function QuoteCard({ id }: { id: string }) {
   const quotes = useQuotes();
   const item = quotes?.find((x) => x.note.id === id);
   if (!quotes) return <TopBar back="quotes" />;
+  // Loaded, but this quote is gone.
   if (!item) {
     return (
       <>
