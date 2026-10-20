@@ -37,9 +37,12 @@ export function useObjectUrl(blob?: Blob): string | undefined {
   const [url, setUrl] = useState<string>();
   useEffect(() => {
     if (!blob) return setUrl(undefined);
-    const u = URL.createObjectURL(blob);
-    setUrl(u);
-    return () => URL.revokeObjectURL(u);
+    setUrl(URL.createObjectURL(blob));
   }, [blob]);
+  // Revoke an old URL only after its replacement is on screen. Revoking it as soon as the blob changes
+  // leaves the image pointing at a dead URL for one render, which shows as a broken picture.
+  useEffect(() => {
+    if (url) return () => URL.revokeObjectURL(url);
+  }, [url]);
   return url;
 }

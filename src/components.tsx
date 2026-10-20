@@ -1,5 +1,5 @@
 import { BarChart3, ChevronLeft, Home, LibraryBig, Quote, X } from 'lucide-react';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useObjectUrl } from './images';
 import type { Book } from './types';
 
@@ -109,10 +109,12 @@ function tone(title: string): string {
 /** Book cover: the real image if there is one, else a made-up cover with the title. */
 export function Cover({ book, shape = 'rect', size = 'md' }: { book: Book; shape?: 'rect' | 'arch'; size?: 'xs' | 'sm' | 'md' | 'lg' }) {
   const url = useObjectUrl(book.cover);
+  // A picture the phone cannot show falls back to the made-up cover, not a broken-image icon.
+  const [failed, setFailed] = useState<string>();
   return (
     <div className={`cover cover-${shape} cover-${size}`} aria-hidden="true">
-      {url ? (
-        <img src={url} alt="" />
+      {url && url !== failed ? (
+        <img src={url} alt="" onError={() => setFailed(url)} />
       ) : (
         <div className={`cover-made tone-${tone(book.title)}`}>
           <span className="cover-rule" />
