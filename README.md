@@ -41,4 +41,3 @@ On iPhone: open the site in Safari, Share, "Add to Home Screen".
 
 1. Import ePub and chapter links; OCR for scanned PDFs.
 2. Chinese to English translation with a glossary.
-Test push
