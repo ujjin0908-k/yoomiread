@@ -36,17 +36,12 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
         shelf === 'finished' ? 'reading' : shelf,
         now,
       );
-      await db.transaction('rw', db.books, db.chapters, async () => {
+      await db.transaction('rw', db.books, db.chapters, db.texts, async () => {
         await db.books.add(book);
-        await db.chapters.bulkAdd(
+        await db.addChapters(
           result.chapters.map((c, i) => ({
-            id: newId(),
-            bookId: book.id,
-            number: i + 1,
-            title: c.title,
+            chapter: { id: newId(), bookId: book.id, number: i + 1, title: c.title, read: false, createdAt: now },
             text: c.text,
-            read: false,
-            createdAt: now,
           })),
         );
       });

@@ -28,13 +28,23 @@ export interface Chapter {
   bookId: string;
   number: number;
   title: string;
-  /** Chapter text, if pasted or imported. Highlights need it. */
-  text?: string;
+  /** Number of characters in the chapter text (the text itself is in its own table). */
+  length?: number;
   read: boolean;
   /** How far down the chapter I scrolled, 0 to 1. */
   position?: number;
   createdAt: number;
 }
+
+/** Chapter text lives apart from the chapter, so lists stay light even for huge novels. */
+export interface ChapterText {
+  chapterId: string;
+  bookId: string;
+  text: string;
+}
+
+/** A chapter as written in a backup file: text included. */
+export type BackupChapter = Chapter & { text?: string };
 
 export type NoteKind = 'chapter' | 'highlight';
 
@@ -67,7 +77,7 @@ export interface Backup {
   version: 1 | 2;
   exportedAt: number;
   books: (Omit<Book, 'cover'> & { cover?: string })[];
-  chapters: Chapter[];
+  chapters: BackupChapter[];
   notes: Note[];
   sessions?: Session[];
 }

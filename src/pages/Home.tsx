@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Cover, Empty, PageTitle, ProgressBar, TabBar } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
-import { bookProgress, continueChapter, readingMinutes } from '../logic';
+import { bookProgress, continueChapter, estimateMinutes } from '../logic';
 import type { Book, Chapter } from '../types';
 import { AddBook } from './AddBook';
 
@@ -79,7 +79,7 @@ export function Home() {
 function ContinueCard({ book, chapters }: { book: Book; chapters: Chapter[] }) {
   const next = continueChapter(book, chapters);
   const pct = bookProgress(book, chapters);
-  const left = next?.text ? readingMinutes(next.text, next.position ?? 0) : undefined;
+  const left = next?.length ? estimateMinutes(next.length, book.language, next.position ?? 0) : undefined;
   return (
     <section className="continue">
       <div className="continue-top">

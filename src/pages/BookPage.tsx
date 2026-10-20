@@ -265,15 +265,12 @@ function AddChapter({ bookId, next, onClose }: { bookId: string; next: number; o
   const [text, setText] = useState('');
 
   async function save() {
-    await db.chapters.add({
-      id: newId(),
-      bookId,
-      number,
-      title: title.trim() || `Chapter ${number}`,
-      text: text.trim() ? text.replace(/\r\n/g, '\n') : undefined,
-      read: false,
-      createdAt: Date.now(),
-    });
+    await db.addChapters([
+      {
+        chapter: { id: newId(), bookId, number, title: title.trim() || `Chapter ${number}`, read: false, createdAt: Date.now() },
+        text: text.trim() ? text.replace(/\r\n/g, '\n') : undefined,
+      },
+    ]);
     await db.books.update(bookId, { updatedAt: Date.now() });
     onClose();
   }

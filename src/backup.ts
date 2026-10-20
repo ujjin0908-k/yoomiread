@@ -1,4 +1,4 @@
-import type { Backup, Book, Chapter, Note, Session } from './types';
+import type { Backup, BackupChapter, Book, Note, Session } from './types';
 
 async function blobToDataUrl(blob: Blob): Promise<string> {
   const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -17,7 +17,7 @@ function dataUrlToBlob(url: string): Blob {
 }
 
 export async function makeBackup(
-  data: { books: Book[]; chapters: Chapter[]; notes: Note[]; sessions: Session[] },
+  data: { books: Book[]; chapters: BackupChapter[]; notes: Note[]; sessions: Session[] },
   now = Date.now(),
 ): Promise<Backup> {
   const books = await Promise.all(
@@ -27,7 +27,7 @@ export async function makeBackup(
 }
 
 /** Checks a backup file before it replaces anything. Throws with a readable message. */
-export function parseBackup(raw: string): { books: Book[]; chapters: Chapter[]; notes: Note[]; sessions: Session[] } {
+export function parseBackup(raw: string): { books: Book[]; chapters: BackupChapter[]; notes: Note[]; sessions: Session[] } {
   let data: unknown;
   try {
     data = JSON.parse(raw);

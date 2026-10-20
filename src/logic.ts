@@ -76,6 +76,13 @@ export function readingMinutes(text: string, readFraction = 0): number {
   return Math.ceil(cjk / 400 + words / 230);
 }
 
+/** The same estimate from a character count, for lists that do not load the text. */
+export function estimateMinutes(chars: number, language: BookLanguage, readFraction = 0): number {
+  const left = chars * (1 - Math.min(1, Math.max(0, readFraction)));
+  // About 400 Chinese characters a minute; English is about 230 words, roughly 1,300 characters.
+  return Math.ceil(left / (language === 'zh' ? 400 : 1300));
+}
+
 export function guessLanguage(text: string): BookLanguage {
   const sample = text.slice(0, 5000);
   const cjk = (sample.match(CJK) ?? []).length;

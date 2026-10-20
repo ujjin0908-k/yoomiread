@@ -12,6 +12,8 @@ type Selection = { start: number; end: number; quote: string };
 export function ChapterPage({ id }: { id: string }) {
   const chapter = useLive(async () => (await db.chapters.get(id)) ?? null, [id]);
   const book = useLive(async () => (chapter ? await db.books.get(chapter.bookId) : undefined), [chapter?.bookId]);
+  // '' means no text; undefined means still loading.
+  const text = useLive(async () => (await db.texts.get(id))?.text ?? '', [id]);
   const notes = useLive(() => db.notes.where('chapterId').equals(id).sortBy('createdAt'), [id]);
   const siblings = useLive(
     async () => (chapter ? db.chapters.where('bookId').equals(chapter.bookId).sortBy('number') : []),
@@ -26,7 +28,7 @@ export function ChapterPage({ id }: { id: string }) {
   const textRef = useRef<HTMLDivElement>(null);
 
   useReadingSession(chapter, book);
-  useScrollMemory(chapter, setScroll);
+  useScrollMemory(chapter, text !== undefined, setScroll);
 
   // Reader theme colors the whole page while it is open.
   useEffect(() => {
@@ -61,7 +63,7 @@ export function ChapterPage({ id }: { id: string }) {
   const next = list[index + 1];
   const live = list.map((c) => (c.id === id ? { ...c, position: Math.max(c.position ?? 0, scroll) } : c));
   const bookPct = book ? bookProgress(book, live) : 0;
-  const minutesLeft = chapter.text ? readingMinutes(chapter.text, scroll) : 0;
+  const minutesLeft = text ? readingMinutes(text, scroll) : 0;
   const zh = book?.language === 'zh';
 
   async function finishChapter() {
@@ -94,9 +96,9 @@ export function ChapterPage({ id }: { id: string }) {
         </h1>
         <span className="title-rule" aria-hidden="true" />
 
-        {chapter.text ? (
+        {text === undefined ? null : text ? (
           <div className={`reader ${prefs.dropCap ? 'drop' : ''}`} ref={textRef} lang={zh ? 'zh' : undefined}>
-            {paragraphs(chapter.text).map((p) => (
+            {paragraphs(text).map((p) => (
               <p key={p.start} data-start={p.start}>
                 {segmentText(p.text, shiftNotes(highlights, p.start, p.text.length)).map((s) =>
                   s.noteIds.length ? (
@@ -245,7 +247,7 @@ export function ChapterPage({ id }: { id: string }) {
           </ul>
         </Sheet>
       )}
-      {sheet === 'edit' && <EditText chapter={chapter} onClose={() => setSheet(undefined)} />}
+      {sheet === 'edit' && <EditText chapter={chapter} text={text ?? ''} onClose={() => setSheet(undefined)} />}
     </div>
   );
 }
@@ -299,10 +301,11 @@ function useReadingSession(chapter: Chapter | null | undefined, book: Book | und
 }
 
 /** Comes back to the same spot, and remembers how far down I got. */
-function useScrollMemory(chapter: Chapter | null | undefined, onScroll: (fraction: number) => void) {
+function useScrollMemory(chapter: Chapter | null | undefined, ready: boolean, onScroll: (fraction: number) => void) {
   const restored = useRef<string>();
   useEffect(() => {
-    if (!chapter || restored.current === chapter.id) return;
+    // Wait for the text: before it is on screen the page is too short to scroll to the saved spot.
+    if (!chapter || !ready || restored.current === chapter.id) return;
     restored.current = chapter.id;
     const room = () => document.documentElement.scrollHeight - window.innerHeight;
     requestAnimationFrame(() => {
@@ -334,7 +337,7 @@ function useScrollMemory(chapter: Chapter | null | undefined, onScroll: (fractio
       window.clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chapter?.id]);
+  }, [chapter?.id, ready]);
 }
 
 function CommentBox({ chapter }: { chapter: Chapter }) {
@@ -531,9 +534,9 @@ function NoteSheet({ chapter, note, pending, onClose }: { chapter: Chapter; note
   );
 }
 
-function EditText({ chapter, onClose }: { chapter: Chapter; onClose: () => void }) {
+function EditText({ chapter, text: original, onClose }: { chapter: Chapter; text: string; onClose: () => void }) {
   const [title, setTitle] = useState(chapter.title);
-  const [text, setText] = useState(chapter.text ?? '');
+  const [text, setText] = useState(original);
   const hasHighlights = useLive(
     () => db.notes.where('chapterId').equals(chapter.id).filter((n) => n.kind === 'highlight').count(),
     [chapter.id],
@@ -541,7 +544,8 @@ function EditText({ chapter, onClose }: { chapter: Chapter; onClose: () => void 
 
   async function save() {
     const clean = text.replace(/\r\n/g, '\n');
-    await db.chapters.update(chapter.id, { title: title.trim() || chapter.title, text: clean.trim() ? clean : undefined });
+    await db.setText(chapter, clean.trim() ? clean : undefined);
+    await db.chapters.update(chapter.id, { title: title.trim() || chapter.title });
     onClose();
   }
 
@@ -568,7 +572,7 @@ function EditText({ chapter, onClose }: { chapter: Chapter; onClose: () => void 
           Text
           <textarea rows={12} value={text} onChange={(e) => setText(e.target.value)} />
         </label>
-        {!!hasHighlights && text !== (chapter.text ?? '') && (
+        {!!hasHighlights && text !== original && (
           <p className="warn small">Changing the text can move your highlights.</p>
         )}
         <div className="row between">

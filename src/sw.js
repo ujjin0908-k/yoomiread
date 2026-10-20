@@ -1,8 +1,19 @@
-// Keeps YoomiRead working offline: the page and its files are saved on the phone after the first visit.
-const CACHE = 'yoomiread-v1';
+// Keeps YoomiRead working offline. On the first visit every file of the app is saved on the phone,
+// so reading and importing work with no internet from then on.
+// The build fills in BUILD_FILES and VERSION (see vite.config.ts).
+const FILES = self.BUILD_FILES;
+const CACHE = `yoomiread-${self.VERSION}`;
+const FONT_CSS =
+  'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Noto+Serif+SC:wght@400;600&display=swap';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/manifest.webmanifest', '/icon.svg', '/icon-180.png'])));
+  event.waitUntil(
+    caches.open(CACHE).then(async (c) => {
+      await c.addAll(['/', '/manifest.webmanifest', '/icon.svg', '/icon-180.png', '/icon-512.png', ...FILES]);
+      // Fonts are a bonus: without them the phone's own serif fonts are used.
+      await c.add(new Request(FONT_CSS, { mode: 'cors' })).catch(() => {});
+    }),
+  );
   self.skipWaiting();
 });
 
