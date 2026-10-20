@@ -9,7 +9,7 @@ const FONT_CSS =
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE).then(async (c) => {
-      await c.addAll(['/', '/manifest.webmanifest', '/icon.svg', '/icon-180.png', '/icon-512.png', ...FILES]);
+      await c.addAll(['/', '/manifest.webmanifest', '/favicon-64.png', '/icon-180.png', '/icon-192.png', '/icon-512.png', ...FILES]);
       // Fonts are a bonus: without them the phone's own serif fonts are used.
       await c.add(new Request(FONT_CSS, { mode: 'cors' })).catch(() => {});
     }),
