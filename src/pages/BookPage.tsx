@@ -16,7 +16,7 @@ import {
   progress,
 } from '../logic';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
-import { loadSettings, modelFor, translateChapter, translateTitle } from '../translate/run';
+import { keepTranslation, loadSettings, modelFor, translateChapter, translateTitle, type ChapterRun } from '../translate/run';
 import type { Book, BookLanguage, Chapter, Shelf, TranslateSettings } from '../types';
 
 export function BookPage({ id, sub }: { id: string; sub?: string }) {
@@ -504,26 +504,45 @@ function TranslateSheet({ book, chapters, done, onClose }: { book: Book; chapter
   async function run() {
     setRunning(true);
     stop.current = new AbortController();
+    const signal = stop.current.signal;
     if (model !== book.model) await db.books.update(book.id, { model });
-    let finished = 0;
+    // Up to three chapters at once: each one spends most of its time waiting on the provider.
+    const CONCURRENCY = 3;
+    const queue = [...batch];
+    const finished: ChapterRun[] = [];
+    const failed: string[] = [];
+    let started = 0;
+    const worker = async () => {
+      while (queue.length && !signal.aborted) {
+        const c = queue.shift()!;
+        started++;
+        setStatus(`Translating ${started} of ${batch.length}: ${c.title}…`);
+        try {
+          finished.push(await translateChapter(c, { settings: settings!, model: option.id, signal, save: false }));
+        } catch (e) {
+          if (signal.aborted) return;
+          failed.push(`${c.title} (${e instanceof Error ? e.message : 'failed'})`);
+        }
+      }
+    };
     let newTerms = 0;
     let spent = 0;
-    const costLine = () => (spent ? ` Cost ${formatCost(spent)}.` : '');
     try {
-      for (const c of batch) {
-        setStatus(`Translating ${c.title} (${finished + 1} of ${batch.length})…${costLine()}`);
-        const r = await translateChapter(c, { settings: settings!, model: option.id, signal: stop.current.signal });
-        finished++;
-        newTerms += r.newTerms;
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, batch.length) }, worker));
+    } finally {
+      // Save in chapter order, one at a time, so the same new name is never written twice.
+      const order = (r: ChapterRun) => batch.findIndex((c) => c.id === r.translation.chapterId);
+      finished.sort((a, b) => order(a) - order(b));
+      for (const r of finished) {
+        newTerms += await keepTranslation(r);
         spent += r.translation.cost ?? 0;
       }
-      setStatus(
-        `Done: ${plural(finished, 'chapter')}.${costLine()}${newTerms ? ` ${plural(newTerms, 'new name')} to check in the glossary.` : ''}`,
-      );
-    } catch (e) {
-      const why = stop.current.signal.aborted ? 'Stopped.' : e instanceof Error ? e.message : 'Something went wrong.';
-      setStatus(`${finished} of ${batch.length} done.${costLine()} ${why}`);
-    } finally {
+      const parts = [`Done: ${plural(finished.length, 'chapter')}.`];
+      if (spent) parts.push(`Cost ${formatCost(spent)}.`);
+      if (newTerms) parts.push(`${plural(newTerms, 'new name')} to check in the glossary.`);
+      if (failed.length) parts.push(`Not translated: ${failed.join('; ')}.`);
+      if (signal.aborted) parts.push('Stopped.');
+      setStatus(parts.join(' '));
       setRunning(false);
     }
   }

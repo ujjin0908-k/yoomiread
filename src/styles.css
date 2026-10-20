@@ -2081,3 +2081,10 @@ blockquote {
   }
   .steam { opacity: 0.4; }
 }
+
+/* The on/off switch keeps its own small size inside forms (form inputs are full width by default). */
+.form input.switch {
+  width: 50px;
+  height: 30px;
+  flex: none;
+}
