@@ -125,6 +125,7 @@ export function ChapterPage({ id }: { id: string }) {
             </button>
           </div>
         )}
+        {english && translation && <TranslatedBy translation={translation} />}
         {english && translation?.warnings?.length ? (
           <div className="card warn-card small">
             <AlertTriangle size={14} /> {translation.warnings.join(' ')}{' '}
@@ -666,6 +667,20 @@ function EditText({ chapter, text: original, onClose }: { chapter: Chapter; text
         </div>
       </form>
     </Sheet>
+  );
+}
+
+/** "Claude Haiku 5.5 · 0.09¢": the model behind this English text and what it cost. */
+function TranslatedBy({ translation }: { translation: { model: string; cost?: number; costEstimated?: boolean } }) {
+  const [label, setLabel] = useState(translation.model);
+  useEffect(() => {
+    void loadSettings().then((s) => setLabel(s.models.find((m) => m.id === translation.model)?.label ?? translation.model));
+  }, [translation.model]);
+  return (
+    <p className="translated-by small muted">
+      {label}
+      {translation.cost !== undefined && ` · ${translation.costEstimated ? 'about ' : ''}${formatCost(translation.cost)} for this chapter`}
+    </p>
   );
 }
 

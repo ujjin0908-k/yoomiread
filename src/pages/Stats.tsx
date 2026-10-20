@@ -3,9 +3,14 @@ import { PageTitle, TabBar } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
 import { computeStats, formatDuration, type Stats as StatsData } from '../logic';
+import { formatCost } from '../translate/prompt';
 
 export function Stats() {
   const stats = useLive(async () => computeStats(await db.books.toArray(), await db.sessions.toArray()), []);
+  const spent = useLive(async () => {
+    const books = await db.books.toArray();
+    return { total: books.reduce((sum, b) => sum + (b.spent ?? 0), 0), estimated: books.some((b) => b.spentEstimated) };
+  }, []);
 
   return (
     <>
@@ -28,6 +33,11 @@ export function Stats() {
               <Tile label={`Read in ${new Date().getFullYear()}`} value={String(stats.finishedThisYear)} />
               <Tile label="Average rating" value={stats.averageRating ? `${stats.averageRating.toFixed(1)} ★` : '–'} />
             </section>
+            {spent && spent.total > 0 && (
+              <section className="tiles one">
+                <Tile label={`Spent on AI translation${spent.estimated ? ' (partly estimated)' : ''}`} value={formatCost(spent.total)} />
+              </section>
+            )}
             <DailyChart stats={stats} />
           </>
         )}

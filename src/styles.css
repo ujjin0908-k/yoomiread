@@ -1988,3 +1988,14 @@ blockquote {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 14px !important;
 }
+
+.translated-by {
+  text-align: center;
+  margin: -12px 0 18px;
+  font-family: var(--sans);
+}
+
+.tiles.one {
+  grid-template-columns: 1fr;
+  margin-top: 0;
+}

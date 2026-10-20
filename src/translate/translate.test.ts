@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { GlossaryEntry, TranslateSettings } from '../types';
 import { chat, readStream, TranslateError } from './api';
-import { chapterMessages, costOf, estimateTokens, NEW_TERMS, parseTerms, pronounWarnings, splitReply } from './prompt';
+import { callCost } from './run';
+import { chapterMessages, cleanTitle, costOf, estimateTokens, formatCost, NEW_TERMS, parseTerms, pronounWarnings, splitReply, titleMessages } from './prompt';
 
 const entry = (over: Partial<GlossaryEntry>): GlossaryEntry => ({
   id: over.original ?? 'x',
@@ -140,5 +141,45 @@ describe('chat retries', () => {
 
   it('asks for settings when the key is missing', async () => {
     await expect(chat({ ...settings, apiKey: ' ' }, 'm', [])).rejects.toBeInstanceOf(TranslateError);
+  });
+});
+
+describe('book title', () => {
+  it('asks for only the English title', () => {
+    const m = titleMessages('灯下的河', '测试作者');
+    expect(m[0].content).toMatch(/only the English title/);
+    expect(m[1].content).toBe('Title: 灯下的河\nAuthor: 测试作者');
+  });
+
+  it('cleans quotes, labels and extra lines from the reply', () => {
+    expect(cleanTitle('"The River Under the Lamp"\n(literally: river under lamp)')).toBe('The River Under the Lamp');
+    expect(cleanTitle('English title: 《The Lantern Courier》')).toBe('The Lantern Courier');
+    expect(cleanTitle('\n\n  Title: Night Road  ')).toBe('Night Road');
+    expect(cleanTitle('   ')).toBe('');
+  });
+});
+
+describe('what a call cost', () => {
+  const haiku = { id: 'h', label: 'h', inputPrice: 0.066, outputPrice: 0.332 };
+  it('uses the tokens the provider reported', () => {
+    expect(callCost(haiku, [], { text: 'x', inputTokens: 1_000_000, outputTokens: 1_000_000 })).toEqual({ cost: 0.398, estimated: false });
+  });
+  it('estimates when no tokens were reported, and says so', () => {
+    const r = callCost(haiku, [{ role: 'user', content: '字'.repeat(4000) }], { text: 'word '.repeat(2000) });
+    expect(r.estimated).toBe(true);
+    expect(r.cost).toBeGreaterThan(0);
+  });
+  it('has no cost when the model has no prices', () => {
+    expect(callCost({ id: 'x', label: 'x' }, [], { text: 'x', inputTokens: 5, outputTokens: 5 }).cost).toBeUndefined();
+  });
+});
+
+describe('money on screen', () => {
+  it('shows cents under a dollar, dollars above', () => {
+    expect(formatCost(0.0013)).toBe('0.13¢');
+    expect(formatCost(0.0128)).toBe('1.28¢');
+    expect(formatCost(0.42)).toBe('42.0¢');
+    expect(formatCost(3.5)).toBe('$3.50');
+    expect(formatCost(undefined)).toBe('price not set');
   });
 });

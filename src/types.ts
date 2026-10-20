@@ -21,6 +21,10 @@ export interface Book {
   lastReadAt?: number;
   /** Model id used to translate this book (falls back to the default in Settings). */
   model?: string;
+  /** US dollars spent on AI for this book: every call, kept or not (comparisons, glossary, title). */
+  spent?: number;
+  /** True when some of that was estimated because the provider did not report tokens. */
+  spentEstimated?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -55,6 +59,8 @@ export interface Translation {
   inputTokens?: number;
   outputTokens?: number;
   cost?: number;
+  /** True when the provider did not report tokens and the cost was estimated. */
+  costEstimated?: boolean;
   /** Things worth a look, e.g. pronouns that do not match the glossary. */
   warnings?: string[];
   createdAt: number;

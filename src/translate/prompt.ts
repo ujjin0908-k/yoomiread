@@ -139,7 +139,9 @@ export function costOf(model: ModelOption | undefined, input: number, output: nu
 
 export function formatCost(dollars?: number): string {
   if (dollars === undefined) return 'price not set';
-  if (dollars < 0.01) return `${(dollars * 100).toFixed(2)}¢`;
+  // Under a dollar, cents read better than "$0.01".
+  if (dollars < 0.1) return `${(dollars * 100).toFixed(2)}¢`;
+  if (dollars < 1) return `${(dollars * 100).toFixed(1)}¢`;
   return `$${dollars.toFixed(2)}`;
 }
 
@@ -171,4 +173,26 @@ export function pronounWarnings(text: string, glossary: GlossaryEntry[]): string
     }
   }
   return warnings;
+}
+
+/** Instructions for translating a book title (and author name) into English. */
+export function titleMessages(title: string, author?: string): ChatMessage[] {
+  return [
+    {
+      role: 'system',
+      content:
+        'You translate Chinese book titles into natural English, the way an English publisher would title the book. ' +
+        'Reply with only the English title on one line: no quotes, no notes, no original text.',
+    },
+    { role: 'user', content: author ? `Title: ${title}\nAuthor: ${author}` : `Title: ${title}` },
+  ];
+}
+
+/** Takes the first real line of the reply and strips quotes and labels. */
+export function cleanTitle(reply: string): string {
+  const line = reply.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+  return line
+    .replace(/^(english\s+)?title\s*[:：]\s*/i, '')
+    .replace(/^["'“”‘’《「『]+|["'“”‘’》」』]+$/g, '')
+    .trim();
 }

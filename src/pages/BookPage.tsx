@@ -16,7 +16,7 @@ import {
   progress,
 } from '../logic';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
-import { loadSettings, modelFor, translateChapter } from '../translate/run';
+import { loadSettings, modelFor, translateChapter, translateTitle } from '../translate/run';
 import type { Book, BookLanguage, Chapter, Shelf, TranslateSettings } from '../types';
 
 export function BookPage({ id, sub }: { id: string; sub?: string }) {
@@ -24,6 +24,10 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const chapters = useLive(() => db.chapters.where('bookId').equals(id).sortBy('number'), [id]);
   const notes = useLive(() => db.notes.where('bookId').equals(id).toArray(), [id]);
   const translated = useLive(async () => new Set(await db.translations.where('bookId').equals(id).primaryKeys()), [id]);
+  const chapterCosts = useLive(
+    async () => (await db.translations.where('bookId').equals(id).toArray()).map((t) => t.cost).filter((c): c is number => c !== undefined),
+    [id],
+  );
   const glossaryCount = useLive(async () => {
     const all = await db.glossary.where('bookId').equals(id).toArray();
     return { all: all.length, review: all.filter((g) => g.status === 'review').length };
@@ -63,7 +67,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   }
 
   async function remove() {
-    if (!confirm(`Delete "${book!.title}" with all its chapters and notes?`)) return;
+    if (!confirm(`Delete "${book!.title}" with all its chapters, translations, notes and glossary? This cannot be undone.`)) return;
     await db.deleteBook(id);
     go('library');
   }
@@ -77,6 +81,11 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
     ['Chapters', p.total ? `${p.read} of ${p.total} read` : ''],
     ['Highlights', highlights ? String(highlights) : ''],
     ['Translated', translated?.size ? `${translated.size} of ${p.total} chapters` : ''],
+    ['AI spent', book.spent ? `${book.spentEstimated ? 'about ' : ''}${formatCost(book.spent)}` : ''],
+    [
+      'Per chapter',
+      chapterCosts?.length ? `about ${formatCost(chapterCosts.reduce((a, b) => a + b, 0) / chapterCosts.length)}` : '',
+    ],
   ];
 
   return (
@@ -364,6 +373,28 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
   const [author, setAuthor] = useState(book.author);
   const [originalTitle, setOriginalTitle] = useState(book.originalTitle ?? '');
   const [language, setLanguage] = useState<BookLanguage>(book.language);
+  const [naming, setNaming] = useState('');
+  const hasChinese = /[\u3400-\u9fff]/.test(title);
+
+  async function englishTitle() {
+    setNaming('Translating the title…');
+    try {
+      const settings = await loadSettings();
+      const english = await translateTitle(settings, modelFor(settings, book.model).id, title.trim(), author.trim() || undefined, book.id);
+      // Keep the Chinese title as the original, so nothing is lost.
+      if (!originalTitle.trim()) setOriginalTitle(title.trim());
+      setTitle(english);
+      setNaming('Done. Check it, then Save.');
+    } catch (e) {
+      setNaming(e instanceof Error ? e.message : 'Could not translate the title.');
+    }
+  }
+
+  async function remove() {
+    if (!confirm(`Delete "${book.title}" with all its chapters, translations, notes and glossary? This cannot be undone.`)) return;
+    await db.deleteBook(book.id);
+    window.location.replace('#/library');
+  }
 
   async function save() {
     // An empty title is not allowed: keep the old one.
@@ -386,11 +417,17 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
           void save();
         }}
       >
-        {justImported && <p className="muted small">The title was guessed from the PDF. Fix it now if the file had a strange name.</p>}
+        {justImported && <p className="muted small">The title was taken from the file. Fix it now if it has a strange name.</p>}
         <label>
           Title
-          <input autoFocus={justImported} required value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input autoFocus={justImported && !hasChinese} required value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>
+        {hasChinese && (
+          <button type="button" className="btn ghost" disabled={naming.endsWith('…')} onClick={() => void englishTitle()}>
+            <Languages size={16} /> Translate title to English
+          </button>
+        )}
+        {naming && <p className="small">{naming}</p>}
         <label>
           Author
           <input value={author} onChange={(e) => setAuthor(e.target.value)} />
@@ -419,6 +456,9 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
             <span>Save</span>
           </button>
         </div>
+        <button type="button" className="btn danger" onClick={() => void remove()}>
+          <Trash2 size={16} /> Delete this book
+        </button>
       </form>
     </Sheet>
   );
@@ -467,17 +507,22 @@ function TranslateSheet({ book, chapters, done, onClose }: { book: Book; chapter
     if (model !== book.model) await db.books.update(book.id, { model });
     let finished = 0;
     let newTerms = 0;
+    let spent = 0;
+    const costLine = () => (spent ? ` Cost ${formatCost(spent)}.` : '');
     try {
       for (const c of batch) {
-        setStatus(`Translating ${c.title} (${finished + 1} of ${batch.length})…`);
+        setStatus(`Translating ${c.title} (${finished + 1} of ${batch.length})…${costLine()}`);
         const r = await translateChapter(c, { settings: settings!, model: option.id, signal: stop.current.signal });
         finished++;
         newTerms += r.newTerms;
+        spent += r.translation.cost ?? 0;
       }
-      setStatus(`Done: ${plural(finished, 'chapter')}.${newTerms ? ` ${plural(newTerms, 'new name')} to check in the glossary.` : ''}`);
+      setStatus(
+        `Done: ${plural(finished, 'chapter')}.${costLine()}${newTerms ? ` ${plural(newTerms, 'new name')} to check in the glossary.` : ''}`,
+      );
     } catch (e) {
       const why = stop.current.signal.aborted ? 'Stopped.' : e instanceof Error ? e.message : 'Something went wrong.';
-      setStatus(`${finished} of ${batch.length} done. ${why}`);
+      setStatus(`${finished} of ${batch.length} done.${costLine()} ${why}`);
     } finally {
       setRunning(false);
     }

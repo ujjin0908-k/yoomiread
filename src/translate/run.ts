@@ -1,8 +1,8 @@
 import { db } from '../db';
 import { newId } from '../logic';
 import type { Chapter, GlossaryEntry, ModelOption, TranslateSettings, Translation } from '../types';
-import { chat } from './api';
-import { chapterMessages, costOf, glossaryScanMessages, parseTerms, pronounWarnings, splitReply, type ProposedTerm } from './prompt';
+import { chat, type ChatResult } from './api';
+import { chapterMessages, cleanTitle, costOf, estimateTokens, glossaryScanMessages, parseTerms, pronounWarnings, splitReply, titleMessages, type ChatMessage, type ProposedTerm } from './prompt';
 
 /** Prices seen on the owner's provider on 2026-10-20 (change them in Settings when they move). */
 export const DEFAULT_MODELS: ModelOption[] = [
@@ -25,6 +25,29 @@ export async function saveSettings(settings: TranslateSettings): Promise<void> {
 
 export function modelFor(settings: TranslateSettings, id?: string): ModelOption {
   return settings.models.find((m) => m.id === id) ?? settings.models.find((m) => m.id === settings.defaultModel) ?? settings.models[0];
+}
+
+/**
+ * What one call cost: from the tokens the provider reported, or estimated from the text
+ * when it reported none. Undefined when the model has no prices set.
+ */
+export function callCost(model: ModelOption, messages: ChatMessage[], result: ChatResult): { cost?: number; estimated: boolean } {
+  if (result.inputTokens !== undefined && result.outputTokens !== undefined) {
+    return { cost: costOf(model, result.inputTokens, result.outputTokens), estimated: false };
+  }
+  const input = estimateTokens(messages.map((m) => m.content).join('\n')).input;
+  const output = estimateTokens(result.text).input;
+  return { cost: costOf(model, input, output), estimated: true };
+}
+
+/** Adds a call's cost to the book's running total. */
+export async function addSpend(bookId: string, cost: number | undefined, estimated: boolean): Promise<void> {
+  if (cost === undefined) return;
+  await db.transaction('rw', db.books, async () => {
+    const b = await db.books.get(bookId);
+    if (!b) return;
+    await db.books.update(bookId, { spent: (b.spent ?? 0) + cost, spentEstimated: b.spentEstimated || estimated });
+  });
 }
 
 /** Adds proposed terms the glossary does not have yet, as "needs review". */
@@ -56,15 +79,13 @@ export async function translateChapter(
     db.glossary.where('bookId').equals(chapter.bookId).toArray(),
   ]);
   if (!text?.text) throw new Error('This chapter has no text to translate.');
-  const result = await chat(
-    options.settings,
-    options.model,
-    chapterMessages({ bookTitle: book?.title ?? '', chapterTitle: chapter.title, text: text.text, glossary }),
-    options.onText,
-    options.signal,
-  );
+  const messages = chapterMessages({ bookTitle: book?.title ?? '', chapterTitle: chapter.title, text: text.text, glossary });
+  const result = await chat(options.settings, options.model, messages, options.onText, options.signal);
   const { text: english, terms } = splitReply(result.text);
   const option = modelFor(options.settings, options.model);
+  const spend = callCost(option, messages, result);
+  // Money is spent even when a Compare result is not kept.
+  await addSpend(chapter.bookId, spend.cost, spend.estimated);
   const translation: Translation = {
     chapterId: chapter.id,
     bookId: chapter.bookId,
@@ -72,10 +93,8 @@ export async function translateChapter(
     model: options.model,
     inputTokens: result.inputTokens,
     outputTokens: result.outputTokens,
-    cost:
-      result.inputTokens !== undefined && result.outputTokens !== undefined
-        ? costOf(option, result.inputTokens, result.outputTokens)
-        : undefined,
+    cost: spend.cost,
+    costEstimated: spend.estimated,
     warnings: pronounWarnings(english, glossary.filter((g) => g.status === 'ok')),
     createdAt: Date.now(),
   };
@@ -109,12 +128,28 @@ export async function scanGlossary(bookId: string, settings: TranslateSettings, 
     if (sample.length > 12_000) break;
   }
   if (!sample.trim()) throw new Error('This book has no chapter text to read yet.');
-  const result = await chat(
-    settings,
-    model,
-    glossaryScanMessages({ bookTitle: book?.title ?? '', sample: sample.slice(0, 12_000), known }),
-    undefined,
-    signal,
-  );
+  const messages = glossaryScanMessages({ bookTitle: book?.title ?? '', sample: sample.slice(0, 12_000), known });
+  const result = await chat(settings, model, messages, undefined, signal);
+  const spend = callCost(modelFor(settings, model), messages, result);
+  await addSpend(bookId, spend.cost, spend.estimated);
   return addProposals(bookId, parseTerms(result.text));
+}
+
+/** Asks the model for an English title. */
+export async function translateTitle(
+  settings: TranslateSettings,
+  model: string,
+  title: string,
+  author?: string,
+  bookId?: string,
+): Promise<string> {
+  const messages = titleMessages(title, author);
+  const result = await chat(settings, model, messages);
+  if (bookId) {
+    const spend = callCost(modelFor(settings, model), messages, result);
+    await addSpend(bookId, spend.cost, spend.estimated);
+  }
+  const english = cleanTitle(result.text);
+  if (!english) throw new Error('The model gave no title back.');
+  return english;
 }
