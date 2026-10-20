@@ -19,6 +19,8 @@ export interface Book {
   finishedAt?: number;
   lastChapterId?: string;
   lastReadAt?: number;
+  /** Model id used to translate this book (falls back to the default in Settings). */
+  model?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -43,8 +45,47 @@ export interface ChapterText {
   text: string;
 }
 
-/** A chapter as written in a backup file: text included. */
-export type BackupChapter = Chapter & { text?: string };
+/** The English version of a chapter, kept next to the original. */
+export interface Translation {
+  chapterId: string;
+  bookId: string;
+  text: string;
+  model: string;
+  /** Tokens the provider reported, and what that cost in US dollars (when prices are set). */
+  inputTokens?: number;
+  outputTokens?: number;
+  cost?: number;
+  /** Things worth a look, e.g. pronouns that do not match the glossary. */
+  warnings?: string[];
+  createdAt: number;
+}
+
+export type GlossaryKind = 'person' | 'place' | 'term';
+export type Gender = 'he' | 'she' | 'they' | 'it';
+
+/** One name or term in a book's glossary, so translations stay consistent. */
+export interface GlossaryEntry {
+  id: string;
+  bookId: string;
+  /** As written in the original (e.g. 林梅). */
+  original: string;
+  /** How it is written in English (e.g. Lin Mei). */
+  english: string;
+  kind: GlossaryKind;
+  gender?: Gender;
+  note?: string;
+  /** Locked entries are never changed by the app. */
+  locked: boolean;
+  /** 'review': proposed by the model, not used in translations until approved. */
+  status: 'ok' | 'review';
+  /** Optional face for the reader (small JPEG). */
+  picture?: Blob;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** A chapter as written in a backup file: text and translation included. */
+export type BackupChapter = Chapter & { text?: string; translation?: Omit<Translation, 'chapterId' | 'bookId'> };
 
 export type NoteKind = 'chapter' | 'highlight';
 
@@ -53,7 +94,9 @@ export interface Note {
   bookId: string;
   chapterId: string;
   kind: NoteKind;
-  /** Character offsets into the chapter text (highlights only). */
+  /** Which text a highlight belongs to; older notes are on the original. */
+  on?: 'original' | 'translation';
+  /** Character offsets into that text (highlights only). */
   start?: number;
   end?: number;
   quote?: string;
@@ -74,10 +117,27 @@ export interface Session {
 /** Backup file. Covers are stored as data URLs so the file is plain JSON. */
 export interface Backup {
   app: 'yoomiread';
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   exportedAt: number;
   books: (Omit<Book, 'cover'> & { cover?: string })[];
   chapters: BackupChapter[];
   notes: Note[];
   sessions?: Session[];
+  glossary?: (Omit<GlossaryEntry, 'picture'> & { picture?: string })[];
+}
+
+/** One model offered by the translation provider, with its prices per million tokens. */
+export interface ModelOption {
+  id: string;
+  label: string;
+  inputPrice?: number;
+  outputPrice?: number;
+}
+
+/** Translation settings. Stored on this device only and never put in a backup. */
+export interface TranslateSettings {
+  baseUrl: string;
+  apiKey: string;
+  models: ModelOption[];
+  defaultModel: string;
 }

@@ -46,7 +46,7 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
         );
       });
       onClose();
-      go(`book/${book.id}${result.scanned ? '/scanned' : ''}`);
+      go(`book/${book.id}/${result.scanned ? 'scanned' : 'imported'}`);
     } catch (e) {
       console.error(e);
       setStatus('');

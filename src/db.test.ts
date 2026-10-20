@@ -29,7 +29,7 @@ describe('database', () => {
   it('restore replaces everything', async () => {
     db = new YoomiDB('t2');
     await db.books.add({ ...book, id: 'old' });
-    await db.restore(parseBackup(JSON.stringify(await makeBackup({ books: [book], chapters: [chapter], notes: [note], sessions: [] }))));
+    await db.restore(parseBackup(JSON.stringify(await makeBackup({ books: [book], chapters: [chapter], notes: [note], sessions: [], glossary: [] }))));
     expect((await db.books.toArray()).map((b) => b.id)).toEqual(['b1']);
     expect(await db.notes.count()).toBe(1);
   });

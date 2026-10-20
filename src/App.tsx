@@ -1,6 +1,7 @@
 import { useRoute } from './hooks';
 import { BookPage } from './pages/BookPage';
 import { ChapterPage } from './pages/ChapterPage';
+import { GlossaryPage } from './pages/Glossary';
 import { Home } from './pages/Home';
 import { Library } from './pages/Library';
 import { QuoteCard, Quotes } from './pages/Quotes';
@@ -12,6 +13,7 @@ export function App() {
   if (page === 'book' && id) return <BookPage key={id} id={id} sub={sub} />;
   if (page === 'chapter' && id) return <ChapterPage key={id} id={id} />;
   if (page === 'quote' && id) return <QuoteCard id={id} />;
+  if (page === 'glossary' && id) return <GlossaryPage key={id} bookId={id} />;
   if (page === 'library') return <Library />;
   if (page === 'quotes') return <Quotes />;
   if (page === 'stats') return <Stats />;

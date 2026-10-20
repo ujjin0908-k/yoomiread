@@ -99,7 +99,7 @@ describe('highlights', () => {
   });
 });
 
-const empty = { chapters: [] as Chapter[], notes: [] as Note[], sessions: [] as Session[] };
+const empty = { chapters: [] as Chapter[], notes: [] as Note[], sessions: [] as Session[], glossary: [] };
 
 describe('backups', () => {
   it('round trips, covers included', async () => {

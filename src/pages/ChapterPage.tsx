@@ -1,11 +1,16 @@
-import { ChevronLeft, ChevronRight, Highlighter, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ProgressBar, Sheet, TopBar } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
 import { bookProgress, formatDate, moveToShelf, newId, paragraphs, readingMinutes, segmentText } from '../logic';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
-import type { Book, Chapter, Note } from '../types';
+import { costOf, estimateTokens, formatCost } from '../translate/prompt';
+import { keepTranslation, loadSettings, modelFor, translateChapter, type ChapterRun } from '../translate/run';
+import type { Book, Chapter, GlossaryEntry, Note, TranslateSettings } from '../types';
+import { Avatar } from './Glossary';
+
+type View = 'original' | 'translation';
 
 type Selection = { start: number; end: number; quote: string };
 
@@ -14,6 +19,8 @@ export function ChapterPage({ id }: { id: string }) {
   const book = useLive(async () => (chapter ? await db.books.get(chapter.bookId) : undefined), [chapter?.bookId]);
   // '' means no text; undefined means still loading.
   const text = useLive(async () => (await db.texts.get(id))?.text ?? '', [id]);
+  const translation = useLive(async () => (await db.translations.get(id)) ?? null, [id]);
+  const glossary = useLive(async () => (chapter ? db.glossary.where('bookId').equals(chapter.bookId).toArray() : []), [chapter?.bookId]);
   const notes = useLive(() => db.notes.where('chapterId').equals(id).sortBy('createdAt'), [id]);
   const siblings = useLive(
     async () => (chapter ? db.chapters.where('bookId').equals(chapter.bookId).sortBy('number') : []),
@@ -23,12 +30,15 @@ export function ChapterPage({ id }: { id: string }) {
   const [pending, setPending] = useState<Selection>();
   // The selection is copied here when the note opens; focusing the note box clears the live one.
   const [open, setOpen] = useState<Note | Selection>();
-  const [sheet, setSheet] = useState<'look' | 'chapters' | 'notes' | 'edit'>();
+  const [sheet, setSheet] = useState<'look' | 'chapters' | 'notes' | 'edit' | 'translate'>();
+  // English first when there is a translation; I can switch any time.
+  const [chosenView, setView] = useState<View>();
+  const [card, setCard] = useState<GlossaryEntry>();
   const [scroll, setScroll] = useState(0);
   const textRef = useRef<HTMLDivElement>(null);
 
   useReadingSession(chapter, book);
-  useScrollMemory(chapter, text !== undefined, setScroll);
+  useScrollMemory(chapter, text !== undefined && translation !== undefined, setScroll);
 
   // Reader theme colors the whole page while it is open.
   useEffect(() => {
@@ -55,7 +65,13 @@ export function ChapterPage({ id }: { id: string }) {
     );
   }
 
-  const highlights = (notes ?? []).filter((n) => n.kind === 'highlight');
+  const view: View = chosenView ?? (translation ? 'translation' : 'original');
+  const shown = view === 'translation' && translation ? translation.text : text;
+  const english = view === 'translation' && !!translation;
+  const highlights = (notes ?? []).filter((n) => n.kind === 'highlight' && (n.on ?? 'original') === view);
+  // Faces only for people who have a picture; nobody else gets a circle.
+  const faces = (glossary ?? []).filter((g) => g.kind === 'person' && g.picture && g.status === 'ok');
+  const faceFor = (paragraph: string) => faces.find((g) => paragraph.includes(english ? g.english : g.original));
   const comments = (notes ?? []).filter((n) => n.kind === 'chapter');
   const list = siblings ?? [];
   const index = list.findIndex((c) => c.id === id);
@@ -63,8 +79,8 @@ export function ChapterPage({ id }: { id: string }) {
   const next = list[index + 1];
   const live = list.map((c) => (c.id === id ? { ...c, position: Math.max(c.position ?? 0, scroll) } : c));
   const bookPct = book ? bookProgress(book, live) : 0;
-  const minutesLeft = text ? readingMinutes(text, scroll) : 0;
-  const zh = book?.language === 'zh';
+  const minutesLeft = shown ? readingMinutes(shown, scroll) : 0;
+  const zh = book?.language === 'zh' && !english;
 
   async function finishChapter() {
     await db.chapters.update(id, { read: true, position: 1 });
@@ -77,6 +93,9 @@ export function ChapterPage({ id }: { id: string }) {
         back={`book/${chapter.bookId}`}
         right={
           <>
+            <button type="button" className="round-btn plain" aria-label="Translate" disabled={!text} onClick={() => setSheet('translate')}>
+              <Languages size={19} />
+            </button>
             <button type="button" className="round-btn plain" aria-label="Reading settings" onClick={() => setSheet('look')}>
               <Type size={19} />
             </button>
@@ -96,10 +115,28 @@ export function ChapterPage({ id }: { id: string }) {
         </h1>
         <span className="title-rule" aria-hidden="true" />
 
-        {text === undefined ? null : text ? (
-          <div className={`reader ${prefs.dropCap ? 'drop' : ''}`} ref={textRef} lang={zh ? 'zh' : undefined}>
-            {paragraphs(text).map((p) => (
-              <p key={p.start} data-start={p.start}>
+        {translation && (
+          <div className="view-toggle seg" role="group" aria-label="Show">
+            <button type="button" className={view === 'original' ? 'on' : ''} aria-pressed={view === 'original'} onClick={() => setView('original')}>
+              中文
+            </button>
+            <button type="button" className={view === 'translation' ? 'on' : ''} aria-pressed={view === 'translation'} onClick={() => setView('translation')}>
+              English
+            </button>
+          </div>
+        )}
+        {english && translation?.warnings?.length ? (
+          <div className="card warn-card small">
+            <AlertTriangle size={14} /> {translation.warnings.join(' ')}{' '}
+            <a href={`#/glossary/${chapter.bookId}`}>Check the glossary</a>
+          </div>
+        ) : null}
+
+        {text === undefined || translation === undefined ? null : shown ? (
+          <div className={`reader ${prefs.dropCap ? 'drop' : ''}`} ref={textRef} lang={zh ? 'zh' : 'en'}>
+            {withFaces(paragraphs(shown), faceFor).map(({ p, face }) => (
+              <p key={`${view}-${p.start}`} data-start={p.start} className={face ? 'has-face' : undefined}>
+                {face && <Avatar entry={face} size={26} onClick={() => setCard(face)} />}
                 {segmentText(p.text, shiftNotes(highlights, p.start, p.text.length)).map((s) =>
                   s.noteIds.length ? (
                     <mark
@@ -200,6 +237,7 @@ export function ChapterPage({ id }: { id: string }) {
           chapter={chapter}
           note={'id' in open ? open : undefined}
           pending={'id' in open ? undefined : open}
+          on={view}
           onClose={() => {
             setOpen(undefined);
             window.getSelection()?.removeAllRanges();
@@ -248,6 +286,34 @@ export function ChapterPage({ id }: { id: string }) {
         </Sheet>
       )}
       {sheet === 'edit' && <EditText chapter={chapter} text={text ?? ''} onClose={() => setSheet(undefined)} />}
+      {sheet === 'translate' && book && (
+        <TranslateChapterSheet
+          book={book}
+          chapter={chapter}
+          text={text ?? ''}
+          hasEnglishHighlights={(notes ?? []).some((n) => n.kind === 'highlight' && n.on === 'translation')}
+          onClose={() => setSheet(undefined)}
+          onDone={() => {
+            setSheet(undefined);
+            setView('translation');
+          }}
+        />
+      )}
+      {card && (
+        <Sheet title={card.english} onClose={() => setCard(undefined)}>
+          <div className="person-card">
+            <Avatar entry={card} size={96} />
+            <p lang="zh" className="muted">
+              {card.original}
+            </p>
+            {card.gender && <span className="chip">{card.gender}</span>}
+            {card.note && <p>{card.note}</p>}
+            <a className="link" href={`#/glossary/${card.bookId}`}>
+              Open the glossary
+            </a>
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 }
@@ -443,6 +509,20 @@ function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs:
   );
 }
 
+/**
+ * Pairs paragraphs with a face, but only when the character changes from the paragraph before,
+ * so a long scene with one person does not get a circle on every line.
+ */
+function withFaces<P extends { text: string }>(list: P[], faceFor: (text: string) => GlossaryEntry | undefined) {
+  let last: string | undefined;
+  return list.map((p) => {
+    const found = faceFor(p.text);
+    const face = found && found.id !== last ? found : undefined;
+    if (found) last = found.id;
+    return { p, face };
+  });
+}
+
 /** Moves highlights into one paragraph's coordinates, cut to its edges. */
 function shiftNotes(notes: Note[], start: number, length: number): Note[] {
   return notes
@@ -473,7 +553,7 @@ function offsetOf(node: Node, offset: number): number | undefined {
   return Number(p.dataset.start) + before.toString().length;
 }
 
-function NoteSheet({ chapter, note, pending, onClose }: { chapter: Chapter; note?: Note; pending?: Selection; onClose: () => void }) {
+function NoteSheet({ chapter, note, pending, on, onClose }: { chapter: Chapter; note?: Note; pending?: Selection; on: View; onClose: () => void }) {
   const [body, setBody] = useState(note?.body ?? '');
   const quote = note?.quote ?? pending?.quote;
 
@@ -487,6 +567,7 @@ function NoteSheet({ chapter, note, pending, onClose }: { chapter: Chapter; note
         bookId: chapter.bookId,
         chapterId: chapter.id,
         kind: 'highlight',
+        on,
         start: pending.start,
         end: pending.end,
         quote: pending.quote,
@@ -584,6 +665,209 @@ function EditText({ chapter, text: original, onClose }: { chapter: Chapter; text
           </button>
         </div>
       </form>
+    </Sheet>
+  );
+}
+
+type Mode = 'translate' | 'compare';
+
+/** Translate this chapter, or compare two models on it and keep the better one. */
+function TranslateChapterSheet({
+  book,
+  chapter,
+  text,
+  hasEnglishHighlights,
+  onClose,
+  onDone,
+}: {
+  book: Book;
+  chapter: Chapter;
+  text: string;
+  hasEnglishHighlights: boolean;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [settings, setSettings] = useState<TranslateSettings>();
+  const [mode, setMode] = useState<Mode>('translate');
+  const [modelA, setModelA] = useState('');
+  const [modelB, setModelB] = useState('');
+  const [live, setLive] = useState<{ a: string; b: string }>({ a: '', b: '' });
+  const [runs, setRuns] = useState<{ a?: ChapterRun; b?: ChapterRun; aMs?: number; bMs?: number }>({});
+  const [tab, setTab] = useState<'a' | 'b'>('a');
+  const [error, setError] = useState('');
+  const [running, setRunning] = useState(false);
+  const [useForBook, setUseForBook] = useState(true);
+  const stop = useRef<AbortController>();
+
+  useEffect(() => {
+    void loadSettings().then((s) => {
+      setSettings(s);
+      const first = modelFor(s, book.model).id;
+      setModelA(first);
+      setModelB(s.models.find((m) => m.id !== first)?.id ?? first);
+    });
+  }, [book.model]);
+  useEffect(() => () => stop.current?.abort(), []);
+  if (!settings) return null;
+
+  const ready = settings.baseUrl.trim() && settings.apiKey.trim();
+  const tokens = estimateTokens(text);
+  const estimate = (id: string) => formatCost(costOf(modelFor(settings, id), tokens.input, tokens.output));
+  const shownCost = (r?: ChapterRun) => (r?.translation.cost !== undefined ? formatCost(r.translation.cost) : undefined);
+
+  async function translateOne() {
+    setRunning(true);
+    setError('');
+    setLive({ a: '', b: '' });
+    stop.current = new AbortController();
+    try {
+      if (useForBook && modelA !== book.model) await db.books.update(book.id, { model: modelA });
+      await translateChapter(chapter, {
+        settings: settings!,
+        model: modelA,
+        signal: stop.current.signal,
+        onText: (piece) => setLive((l) => ({ ...l, a: l.a + piece })),
+      });
+      onDone();
+    } catch (e) {
+      setError(stop.current.signal.aborted ? 'Stopped. Nothing was saved.' : e instanceof Error ? e.message : 'The translation failed.');
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  async function compare() {
+    setRunning(true);
+    setError('');
+    setRuns({});
+    setLive({ a: '', b: '' });
+    stop.current = new AbortController();
+    const one = async (slot: 'a' | 'b', model: string) => {
+      const started = Date.now();
+      try {
+        const run = await translateChapter(chapter, {
+          settings: settings!,
+          model,
+          save: false,
+          signal: stop.current!.signal,
+          onText: (piece) => setLive((l) => ({ ...l, [slot]: l[slot] + piece })),
+        });
+        setRuns((r) => ({ ...r, [slot]: run, [`${slot}Ms`]: Date.now() - started }));
+      } catch (e) {
+        setError((old) => `${old}${old ? ' ' : ''}${modelFor(settings!, model).label}: ${e instanceof Error ? e.message : 'failed'}`);
+      }
+    };
+    await Promise.all([one('a', modelA), one('b', modelB)]);
+    setRunning(false);
+  }
+
+  async function keep(slot: 'a' | 'b') {
+    const run = runs[slot];
+    if (!run) return;
+    await keepTranslation(run);
+    if (useForBook) await db.books.update(book.id, { model: run.translation.model });
+    onDone();
+  }
+
+  const picker = (value: string, set: (v: string) => void, label: string) => (
+    <label>
+      {label}
+      <select value={value} disabled={running} onChange={(e) => set(e.target.value)}>
+        {settings.models.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+
+  const preview = mode === 'translate' ? live.a : tab === 'a' ? runs.a?.translation.text ?? live.a : runs.b?.translation.text ?? live.b;
+
+  return (
+    <Sheet title={mode === 'compare' ? 'Compare two models' : 'Translate this chapter'} onClose={() => (running ? undefined : onClose())}>
+      <div className="form">
+        <div className="seg mode-toggle" role="group">
+          <button type="button" className={mode === 'translate' ? 'on' : ''} disabled={running} onClick={() => setMode('translate')}>
+            Translate
+          </button>
+          <button type="button" className={mode === 'compare' ? 'on' : ''} disabled={running || settings.models.length < 2} onClick={() => setMode('compare')}>
+            Compare
+          </button>
+        </div>
+        {!ready && (
+          <p className="warn small">
+            Add your provider address and API key in <a href="#/settings">Settings</a> first.
+          </p>
+        )}
+        {mode === 'translate' ? (
+          <>
+            {picker(modelA, setModelA, 'Model')}
+            <p className="small">About {estimate(modelA)} for this chapter (estimate).</p>
+          </>
+        ) : (
+          <>
+            <div className="row-2">
+              {picker(modelA, setModelA, 'A')}
+              {picker(modelB, setModelB, 'B')}
+            </div>
+            <p className="small">
+              About {estimate(modelA)} + {estimate(modelB)}. Nothing is saved until you keep one.
+            </p>
+          </>
+        )}
+        <label className="look-row small">
+          <span>Use the kept model for this book from now on</span>
+          <input type="checkbox" className="switch" checked={useForBook} onChange={(e) => setUseForBook(e.target.checked)} />
+        </label>
+        {hasEnglishHighlights && <p className="warn small">A new translation can move your highlights on the English text.</p>}
+
+        {mode === 'compare' && (runs.a || runs.b || live.a || live.b) && (
+          <div className="seg" role="tablist">
+            {(['a', 'b'] as const).map((slot) => {
+              const r = runs[slot];
+              const ms = slot === 'a' ? runs.aMs : runs.bMs;
+              return (
+                <button key={slot} type="button" role="tab" aria-selected={tab === slot} className={tab === slot ? 'on' : ''} onClick={() => setTab(slot)}>
+                  {slot.toUpperCase()}
+                  {r ? ` · ${shownCost(r) ?? '?'} · ${Math.round((ms ?? 0) / 1000)}s` : ' …'}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {preview && (
+          <div className="preview" aria-live="polite">
+            {preview.split(/\n+/).map((p, i) => (
+              <p key={i}>{p.split('===NEW TERMS===')[0]}</p>
+            ))}
+          </div>
+        )}
+        {error && <p className="warn small">{error}</p>}
+
+        {running ? (
+          <button type="button" className="btn" onClick={() => stop.current?.abort()}>
+            Stop
+          </button>
+        ) : mode === 'translate' ? (
+          <button type="button" className="pill-btn" disabled={!ready || !text} onClick={() => void translateOne()}>
+            <span>Translate</span>
+          </button>
+        ) : runs.a || runs.b ? (
+          <div className="row-2">
+            <button type="button" className="pill-btn small" disabled={!runs.a} onClick={() => void keep('a')}>
+              <span>Keep A</span>
+            </button>
+            <button type="button" className="pill-btn small" disabled={!runs.b} onClick={() => void keep('b')}>
+              <span>Keep B</span>
+            </button>
+          </div>
+        ) : (
+          <button type="button" className="pill-btn" disabled={!ready || !text} onClick={() => void compare()}>
+            <span>Compare</span>
+          </button>
+        )}
+      </div>
     </Sheet>
   );
 }

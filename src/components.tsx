@@ -64,10 +64,11 @@ export function TopBar({ back, title, right }: { back: string; title?: string; r
 }
 
 /** Big serif page title used on the tab pages. */
-export function PageTitle({ title, sub, right }: { title: string; sub?: string; right?: ReactNode }) {
+export function PageTitle({ title, sub, right, icon }: { title: string; sub?: string; right?: ReactNode; icon?: boolean }) {
   return (
     <header className="page-title">
-      <div>
+      {icon && <img className="app-icon" src="/icon-192.png" alt="" width={52} height={52} />}
+      <div className="page-title-text">
         <h1>{title}</h1>
         {sub && <p>{sub}</p>}
       </div>

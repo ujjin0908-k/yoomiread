@@ -26,6 +26,7 @@ export function Home() {
     <>
       <main className="page tabs-page">
         <PageTitle
+          icon
           title="My Library"
           sub="Pick up where you left off"
           right={
@@ -36,7 +37,10 @@ export function Home() {
         />
 
         {data && !books.length && (
-          <Empty title="Your shelves are empty">Import a PDF or write down a book you have read.</Empty>
+          <div className="welcome">
+            <img src="/icon-512.png" alt="" width={180} height={180} />
+            <Empty title="Your shelves are empty">Import a PDF or write down a book you have read.</Empty>
+          </div>
         )}
 
         {current && <ContinueCard book={current} chapters={data!.byBook.get(current.id) ?? []} />}

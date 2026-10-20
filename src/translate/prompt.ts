@@ -1,0 +1,174 @@
+import type { Gender, GlossaryEntry, GlossaryKind, ModelOption } from '../types';
+
+export interface ChatMessage {
+  role: 'system' | 'user';
+  content: string;
+}
+
+/** Marks where the translation ends and the list of new names begins in the model's reply. */
+export const NEW_TERMS = '===NEW TERMS===';
+
+function glossaryLines(entries: GlossaryEntry[]): string {
+  return entries
+    .map((g) => {
+      const parts = [`${g.original} = ${g.english}`];
+      if (g.kind === 'person' && g.gender) parts.push(`(${g.gender})`);
+      else if (g.kind !== 'person') parts.push(`(${g.kind})`);
+      if (g.note) parts.push(`- ${g.note}`);
+      return parts.join(' ');
+    })
+    .join('\n');
+}
+
+/**
+ * Instructions for translating one chapter. Only approved glossary entries are used:
+ * proposals waiting for review must not spread through the book.
+ */
+export function chapterMessages(input: { bookTitle: string; chapterTitle: string; text: string; glossary: GlossaryEntry[] }): ChatMessage[] {
+  const approved = input.glossary.filter((g) => g.status === 'ok');
+  const system = [
+    'You translate Chinese web novels into natural, readable English for a single reader.',
+    'Rules:',
+    '- Translate everything. Do not summarize, skip, shorten or add anything.',
+    '- Keep the paragraph breaks: one paragraph of the original becomes one paragraph in English, separated by a blank line.',
+    '- Use the glossary exactly for every name and term in it. Use each person\'s pronouns as given.',
+    '- Keep the tone of the original. Dialogue should sound like real speech.',
+    '- Output only the translation, with no notes, no title line and no commentary.',
+    `- After the translation, write a line "${NEW_TERMS}" and then one JSON object per line for each important name or term`,
+    '  that is NOT in the glossary: {"original": "...", "english": "...", "kind": "person|place|term", "gender": "he|she|they|it"}.',
+    '  Give gender only for people. If there are none, write the marker line and nothing after it.',
+  ].join('\n');
+  const user = [
+    `Book: ${input.bookTitle}`,
+    `Chapter: ${input.chapterTitle}`,
+    approved.length ? `Glossary:\n${glossaryLines(approved)}` : 'Glossary: (empty)',
+    '',
+    'Text to translate:',
+    input.text,
+  ].join('\n');
+  return [
+    { role: 'system', content: system },
+    { role: 'user', content: user },
+  ];
+}
+
+/** Instructions for building a glossary from the first chapters. */
+export function glossaryScanMessages(input: { bookTitle: string; sample: string; known: GlossaryEntry[] }): ChatMessage[] {
+  const system = [
+    'You prepare a glossary for translating a Chinese novel into English.',
+    'List the characters, places and special terms (sects, techniques, titles, items) that appear in the text.',
+    'For each, give the original, a natural English rendering (pinyin for personal names, meaning-based for most terms),',
+    'the kind (person, place or term) and, for people, the gender as he, she, they or it, judged from the text.',
+    'Answer with one JSON object per line and nothing else:',
+    '{"original": "...", "english": "...", "kind": "person|place|term", "gender": "he|she|they|it", "note": "short optional note"}',
+  ].join('\n');
+  const known = input.known.length ? `Already in the glossary (skip these): ${input.known.map((g) => g.original).join(', ')}\n\n` : '';
+  return [
+    { role: 'system', content: system },
+    { role: 'user', content: `Book: ${input.bookTitle}\n\n${known}Text:\n${input.sample}` },
+  ];
+}
+
+export interface ProposedTerm {
+  original: string;
+  english: string;
+  kind: GlossaryKind;
+  gender?: Gender;
+  note?: string;
+}
+
+const KINDS: GlossaryKind[] = ['person', 'place', 'term'];
+const GENDERS: Gender[] = ['he', 'she', 'they', 'it'];
+
+/** Reads "one JSON object per line"; skips anything that is not a usable entry. */
+export function parseTerms(raw: string): ProposedTerm[] {
+  const out: ProposedTerm[] = [];
+  const seen = new Set<string>();
+  for (const line of raw.split('\n')) {
+    const t = line.trim().replace(/^[-*]\s*/, '').replace(/,$/, '');
+    if (!t.startsWith('{')) continue;
+    try {
+      const o = JSON.parse(t) as Record<string, unknown>;
+      const original = String(o.original ?? '').trim();
+      const english = String(o.english ?? '').trim();
+      if (!original || !english || seen.has(original)) continue;
+      const kind = KINDS.includes(o.kind as GlossaryKind) ? (o.kind as GlossaryKind) : 'term';
+      const gender = kind === 'person' && GENDERS.includes(o.gender as Gender) ? (o.gender as Gender) : undefined;
+      const note = typeof o.note === 'string' && o.note.trim() ? o.note.trim() : undefined;
+      seen.add(original);
+      out.push({ original, english, kind, gender, note });
+    } catch {
+      // Not JSON: ignore the line.
+    }
+  }
+  return out;
+}
+
+/** Splits the model's reply into the translation and the proposed new terms. */
+export function splitReply(reply: string): { text: string; terms: ProposedTerm[] } {
+  const at = reply.indexOf(NEW_TERMS);
+  const body = at >= 0 ? reply.slice(0, at) : reply;
+  const terms = at >= 0 ? parseTerms(reply.slice(at + NEW_TERMS.length)) : [];
+  // Normalise paragraph breaks to the blank-line form the reader expects.
+  const text = body
+    .replace(/\r\n/g, '\n')
+    .split(/\n\s*\n|\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .join('\n\n');
+  return { text, terms };
+}
+
+const CJK = /[㐀-鿿豈-﫿]/g;
+
+/** Rough token counts for a cost estimate before anything is sent. */
+export function estimateTokens(text: string, glossaryCount = 0): { input: number; output: number } {
+  const cjk = (text.match(CJK) ?? []).length;
+  const other = text.length - cjk;
+  // About one token per Chinese character, plus the instructions and the glossary.
+  const input = Math.round(cjk * 1.1 + other / 4 + 450 + glossaryCount * 12);
+  // English comes out a little shorter in tokens than the Chinese characters going in.
+  const output = Math.round(cjk * 0.9 + other / 4 + 60);
+  return { input, output };
+}
+
+export function costOf(model: ModelOption | undefined, input: number, output: number): number | undefined {
+  if (!model || model.inputPrice === undefined || model.outputPrice === undefined) return undefined;
+  return (input * model.inputPrice + output * model.outputPrice) / 1_000_000;
+}
+
+export function formatCost(dollars?: number): string {
+  if (dollars === undefined) return 'price not set';
+  if (dollars < 0.01) return `${(dollars * 100).toFixed(2)}¢`;
+  return `$${dollars.toFixed(2)}`;
+}
+
+const PRONOUNS: Record<'he' | 'she', RegExp> = {
+  he: /\b(he|him|his|himself)\b/gi,
+  she: /\b(she|her|hers|herself)\b/gi,
+};
+
+/**
+ * Flags people whose pronouns look wrong: in paragraphs that mention only that one person,
+ * the opposite pronouns clearly outnumber the right ones.
+ */
+export function pronounWarnings(text: string, glossary: GlossaryEntry[]): string[] {
+  const people = glossary.filter((g) => g.kind === 'person' && (g.gender === 'he' || g.gender === 'she'));
+  const paragraphs = text.split(/\n\s*\n/);
+  const warnings: string[] = [];
+  for (const person of people) {
+    let right = 0;
+    let wrong = 0;
+    const other = person.gender === 'he' ? 'she' : 'he';
+    for (const p of paragraphs) {
+      const mentioned = people.filter((x) => p.includes(x.english));
+      if (mentioned.length !== 1 || mentioned[0] !== person) continue;
+      right += (p.match(PRONOUNS[person.gender as 'he' | 'she']) ?? []).length;
+      wrong += (p.match(PRONOUNS[other]) ?? []).length;
+    }
+    if (wrong >= 2 && wrong > right) {
+      warnings.push(`${person.english} is "${person.gender}" in the glossary, but this chapter mostly says "${other}".`);
+    }
+  }
+  return warnings;
+}

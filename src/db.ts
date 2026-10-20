@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { BackupChapter, Book, Chapter, ChapterText, Note, Session } from './types';
+import type { BackupChapter, Book, Chapter, ChapterText, GlossaryEntry, Note, Session, Translation } from './types';
 
 export class YoomiDB extends Dexie {
   books!: EntityTable<Book, 'id'>;
@@ -7,6 +7,10 @@ export class YoomiDB extends Dexie {
   texts!: EntityTable<ChapterText, 'chapterId'>;
   notes!: EntityTable<Note, 'id'>;
   sessions!: EntityTable<Session, 'id'>;
+  translations!: EntityTable<Translation, 'chapterId'>;
+  glossary!: EntityTable<GlossaryEntry, 'id'>;
+  /** Device-only settings (the API key lives here). Never exported. */
+  settings!: EntityTable<{ key: string; value: unknown }, 'key'>;
 
   constructor(name = 'yoomiread') {
     super(name);
@@ -34,6 +38,12 @@ export class YoomiDB extends Dexie {
           delete c.text;
         });
       });
+    // v4: translations, glossary and device settings.
+    this.version(4).stores({
+      translations: 'chapterId, bookId',
+      glossary: 'id, bookId, [bookId+original]',
+      settings: 'key',
+    });
   }
 
   /** Adds chapters together with their text. */
@@ -55,8 +65,15 @@ export class YoomiDB extends Dexie {
     });
   }
 
+  /** Tables that hold a book's own data (settings are not one of them). */
+  private bookTables() {
+    return [this.books, this.chapters, this.texts, this.notes, this.sessions, this.translations, this.glossary];
+  }
+
   async deleteBook(bookId: string): Promise<void> {
-    await this.transaction('rw', [this.books, this.chapters, this.texts, this.notes, this.sessions], async () => {
+    await this.transaction('rw', this.bookTables(), async () => {
+      await this.translations.where('bookId').equals(bookId).delete();
+      await this.glossary.where('bookId').equals(bookId).delete();
       await this.notes.where('bookId').equals(bookId).delete();
       await this.texts.where('bookId').equals(bookId).delete();
       await this.chapters.where('bookId').equals(bookId).delete();
@@ -66,39 +83,60 @@ export class YoomiDB extends Dexie {
   }
 
   async deleteChapter(chapterId: string): Promise<void> {
-    await this.transaction('rw', this.chapters, this.texts, this.notes, async () => {
+    await this.transaction('rw', this.chapters, this.texts, this.notes, this.translations, async () => {
       await this.notes.where('chapterId').equals(chapterId).delete();
       await this.texts.delete(chapterId);
+      await this.translations.delete(chapterId);
       await this.chapters.delete(chapterId);
     });
   }
 
-  /** Everything, with each chapter's text put back in (the backup file format). */
-  async exportAll() {
-    const [books, chapters, texts, notes, sessions] = await Promise.all([
+  /** Everything, with each chapter's text and translation put back in (the backup file format). */
+  async exportAll(): Promise<LibraryData> {
+    const [books, chapters, texts, translations, notes, sessions, glossary] = await Promise.all([
       this.books.toArray(),
       this.chapters.toArray(),
       this.texts.toArray(),
+      this.translations.toArray(),
       this.notes.toArray(),
       this.sessions.toArray(),
+      this.glossary.toArray(),
     ]);
-    const byId = new Map(texts.map((t) => [t.chapterId, t.text]));
-    const full: BackupChapter[] = chapters.map((c) => ({ ...c, text: byId.get(c.id) }));
-    return { books, chapters: full, notes, sessions };
+    const textOf = new Map(texts.map((t) => [t.chapterId, t.text]));
+    const translationOf = new Map(translations.map(({ chapterId, bookId: _b, ...rest }) => [chapterId, rest]));
+    const full: BackupChapter[] = chapters.map((c) => ({ ...c, text: textOf.get(c.id), translation: translationOf.get(c.id) }));
+    return { books, chapters: full, notes, sessions, glossary };
   }
 
-  /** Replaces everything, all or nothing. */
-  async restore(data: { books: Book[]; chapters: BackupChapter[]; notes: Note[]; sessions: Session[] }): Promise<void> {
-    await this.transaction('rw', [this.books, this.chapters, this.texts, this.notes, this.sessions], async () => {
-      await Promise.all([this.books.clear(), this.chapters.clear(), this.texts.clear(), this.notes.clear(), this.sessions.clear()]);
+  /** Replaces everything, all or nothing. Device settings (the API key) are kept. */
+  async restore(data: LibraryData): Promise<void> {
+    await this.transaction('rw', this.bookTables(), async () => {
+      await Promise.all(this.bookTables().map((t) => t.clear()));
       await this.books.bulkAdd(data.books);
       await this.addChapters(
-        data.chapters.map(({ text, ...chapter }) => ({ chapter: { ...chapter, length: text?.length ?? chapter.length }, text })),
+        data.chapters.map(({ text, translation: _t, ...chapter }) => ({
+          chapter: { ...chapter, length: text?.length ?? chapter.length },
+          text,
+        })),
+      );
+      await this.translations.bulkAdd(
+        data.chapters
+          .filter((c) => c.translation)
+          .map((c) => ({ ...c.translation!, chapterId: c.id, bookId: c.bookId })),
       );
       await this.notes.bulkAdd(data.notes);
       await this.sessions.bulkAdd(data.sessions);
+      await this.glossary.bulkAdd(data.glossary);
     });
   }
+}
+
+export interface LibraryData {
+  books: Book[];
+  chapters: BackupChapter[];
+  notes: Note[];
+  sessions: Session[];
+  glossary: GlossaryEntry[];
 }
 
 export const db = new YoomiDB();

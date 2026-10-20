@@ -1,5 +1,5 @@
-import { ChevronRight, ImagePlus, MessageCircle, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, PenLine, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { Cover, ProgressBar, Sheet, Stars, TopBar } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
@@ -15,15 +15,26 @@ import {
   nextChapterNumber,
   progress,
 } from '../logic';
-import type { Book, Shelf } from '../types';
+import { costOf, estimateTokens, formatCost } from '../translate/prompt';
+import { loadSettings, modelFor, translateChapter } from '../translate/run';
+import type { Book, BookLanguage, Chapter, Shelf, TranslateSettings } from '../types';
 
 export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const book = useLive(async () => (await db.books.get(id)) ?? null, [id]);
   const chapters = useLive(() => db.chapters.where('bookId').equals(id).sortBy('number'), [id]);
   const notes = useLive(() => db.notes.where('bookId').equals(id).toArray(), [id]);
+  const translated = useLive(async () => new Set(await db.translations.where('bookId').equals(id).primaryKeys()), [id]);
+  const glossaryCount = useLive(async () => {
+    const all = await db.glossary.where('bookId').equals(id).toArray();
+    return { all: all.length, review: all.filter((g) => g.status === 'review').length };
+  }, [id]);
   const [addingChapter, setAddingChapter] = useState(false);
   const [editingReview, setEditingReview] = useState(false);
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [translating, setTranslating] = useState(false);
   const finishing = sub === 'finish';
+  // Right after a PDF import: offer to fix the title.
+  const justImported = sub === 'imported' || sub === 'scanned';
 
   if (book === undefined) return <TopBar back="library" />;
   if (!book) {
@@ -65,6 +76,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
     ['Finished', formatDate(book.finishedAt)],
     ['Chapters', p.total ? `${p.read} of ${p.total} read` : ''],
     ['Highlights', highlights ? String(highlights) : ''],
+    ['Translated', translated?.size ? `${translated.size} of ${p.total} chapters` : ''],
   ];
 
   return (
@@ -73,6 +85,10 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
         back="library"
         title={SHELVES.find((s) => s.id === book.shelf)?.label}
         right={
+          <>
+          <button type="button" className="round-btn" aria-label="Edit details" onClick={() => setEditingDetails(true)}>
+            <PenLine size={17} />
+          </button>
           <label className="round-btn" aria-label="Change cover">
             <ImagePlus size={18} />
             <input
@@ -86,6 +102,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
               }}
             />
           </label>
+          </>
         }
       />
       <main className="page">
@@ -138,6 +155,22 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
           </label>
         </div>
 
+        <div className="tool-row">
+          <button type="button" className="tool" onClick={() => go(`glossary/${id}`)}>
+            <BookMarked size={18} />
+            <span>Glossary</span>
+            <span className="muted small">
+              {glossaryCount?.all ? `${glossaryCount.all} names` : 'empty'}
+              {glossaryCount?.review ? ` · ${glossaryCount.review} to check` : ''}
+            </span>
+          </button>
+          <button type="button" className="tool" disabled={!list.length} onClick={() => setTranslating(true)}>
+            <Languages size={18} />
+            <span>Translate</span>
+            <span className="muted small">{list.length ? `${list.length - (translated?.size ?? 0)} left` : 'no chapters'}</span>
+          </button>
+        </div>
+
         {book.shelf === 'finished' ? (
           <section className="card review-card">
             <div className="section-head">
@@ -180,11 +213,14 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
                     <span className="muted">{c.number}</span>
                     <span lang={book.language === 'zh' ? 'zh' : undefined}>{c.title}</span>
                   </span>
-                  {notesFor(c.id) > 0 && (
-                    <span className="chip">
-                      <MessageCircle size={12} /> {notesFor(c.id)}
-                    </span>
-                  )}
+                  <span className="chips">
+                    {translated?.has(c.id) && <span className="chip">EN</span>}
+                    {notesFor(c.id) > 0 && (
+                      <span className="chip">
+                        <MessageCircle size={12} /> {notesFor(c.id)}
+                      </span>
+                    )}
+                  </span>
                 </a>
               </li>
             ))}
@@ -199,6 +235,18 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
       {addingChapter && (
         <AddChapter bookId={id} next={nextChapterNumber(list)} onClose={() => setAddingChapter(false)} />
       )}
+      {(editingDetails || justImported) && (
+        <DetailsSheet
+          book={book}
+          justImported={justImported}
+          onClose={() => {
+            setEditingDetails(false);
+            // Replace the import step in history so Back does not ask again.
+            if (justImported) window.location.replace(`#/book/${id}`);
+          }}
+        />
+      )}
+      {translating && <TranslateSheet book={book} chapters={list} done={translated ?? new Set()} onClose={() => setTranslating(false)} />}
       {(finishing || editingReview) && (
         <FinishSheet
           book={book}
@@ -302,6 +350,186 @@ function AddChapter({ bookId, next, onClose }: { bookId: string; next: number; o
           <span>Add chapter</span>
         </button>
       </form>
+    </Sheet>
+  );
+}
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
+/** Rename a book and fix its details. After an import it asks "Keep this title?". */
+function DetailsSheet({ book, justImported, onClose }: { book: Book; justImported: boolean; onClose: () => void }) {
+  const [title, setTitle] = useState(book.title);
+  const [author, setAuthor] = useState(book.author);
+  const [originalTitle, setOriginalTitle] = useState(book.originalTitle ?? '');
+  const [language, setLanguage] = useState<BookLanguage>(book.language);
+
+  async function save() {
+    // An empty title is not allowed: keep the old one.
+    await db.books.update(book.id, {
+      title: title.trim() || book.title,
+      author: author.trim(),
+      originalTitle: originalTitle.trim() || undefined,
+      language,
+      updatedAt: Date.now(),
+    });
+    onClose();
+  }
+
+  return (
+    <Sheet title={justImported ? 'Keep this title?' : 'Edit details'} onClose={onClose}>
+      <form
+        className="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        {justImported && <p className="muted small">The title was guessed from the PDF. Fix it now if the file had a strange name.</p>}
+        <label>
+          Title
+          <input autoFocus={justImported} required value={title} onChange={(e) => setTitle(e.target.value)} />
+        </label>
+        <label>
+          Author
+          <input value={author} onChange={(e) => setAuthor(e.target.value)} />
+        </label>
+        <label>
+          Original title <span className="muted small">(optional)</span>
+          <input lang="zh" value={originalTitle} onChange={(e) => setOriginalTitle(e.target.value)} />
+        </label>
+        <label>
+          Language
+          <select value={language} onChange={(e) => setLanguage(e.target.value as BookLanguage)}>
+            <option value="zh">Chinese</option>
+            <option value="en">English</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <div className="row between">
+          {justImported ? (
+            <button type="button" className="btn" onClick={onClose}>
+              Keep it
+            </button>
+          ) : (
+            <span />
+          )}
+          <button className="pill-btn small" type="submit" disabled={!title.trim()}>
+            <span>Save</span>
+          </button>
+        </div>
+      </form>
+    </Sheet>
+  );
+}
+
+/** Translate several chapters in a row, with a cost estimate first and a Stop button. */
+function TranslateSheet({ book, chapters, done, onClose }: { book: Book; chapters: Chapter[]; done: Set<string>; onClose: () => void }) {
+  const [settings, setSettings] = useState<TranslateSettings>();
+  const [count, setCount] = useState(5);
+  const [model, setModel] = useState(book.model ?? '');
+  const [lengths, setLengths] = useState<Map<string, string>>();
+  const [status, setStatus] = useState('');
+  const [running, setRunning] = useState(false);
+  const stop = useRef<AbortController>();
+
+  useEffect(() => {
+    void loadSettings().then((loaded) => {
+      setSettings(loaded);
+      setModel((m) => m || loaded.defaultModel);
+    });
+  }, []);
+  const todo = chapters.filter((c) => !done.has(c.id) && c.length);
+  const batch = todo.slice(0, count);
+  const batchKey = batch.map((c) => c.id).join();
+  useEffect(() => {
+    // Read the chapter texts once for a fair estimate.
+    void Promise.all(batch.map(async (c) => [c.id, (await db.texts.get(c.id))?.text ?? ''] as const)).then((rows) =>
+      setLengths(new Map(rows)),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batchKey]);
+  if (!settings) return null;
+  const option = modelFor(settings, model);
+  let input = 0;
+  let output = 0;
+  for (const c of batch) {
+    const t = estimateTokens(lengths?.get(c.id) ?? '字'.repeat(c.length ?? 0));
+    input += t.input;
+    output += t.output;
+  }
+  const ready = settings.baseUrl.trim() && settings.apiKey.trim();
+
+  async function run() {
+    setRunning(true);
+    stop.current = new AbortController();
+    if (model !== book.model) await db.books.update(book.id, { model });
+    let finished = 0;
+    let newTerms = 0;
+    try {
+      for (const c of batch) {
+        setStatus(`Translating ${c.title} (${finished + 1} of ${batch.length})…`);
+        const r = await translateChapter(c, { settings: settings!, model: option.id, signal: stop.current.signal });
+        finished++;
+        newTerms += r.newTerms;
+      }
+      setStatus(`Done: ${plural(finished, 'chapter')}.${newTerms ? ` ${plural(newTerms, 'new name')} to check in the glossary.` : ''}`);
+    } catch (e) {
+      const why = stop.current.signal.aborted ? 'Stopped.' : e instanceof Error ? e.message : 'Something went wrong.';
+      setStatus(`${finished} of ${batch.length} done. ${why}`);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <Sheet title="Translate chapters" onClose={() => (running ? undefined : onClose())}>
+      <div className="form">
+        {!ready && (
+          <p className="warn small">
+            Add your provider address and API key in <a href="#/settings">Settings</a> first.
+          </p>
+        )}
+        <label>
+          Model for this book
+          <select value={option.id} disabled={running} onChange={(e) => setModel(e.target.value)}>
+            {settings.models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          How many
+          <select
+            value={count}
+            disabled={running}
+            onChange={(e) => setCount(Number(e.target.value))}
+          >
+            {[1, 5, 10, 25, 1000].map((n) => (
+              <option key={n} value={n}>
+                {n === 1000 ? `All ${todo.length} left` : `Next ${Math.min(n, todo.length)}`}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="small">
+          {plural(batch.length, 'chapter')} · about {formatCost(costOf(option, input, output))} (estimate)
+        </p>
+        <p className="muted small">The glossary is used for every chapter. New names are added for you to check, not used until approved.</p>
+        {status && <p className="small">{status}</p>}
+        {running ? (
+          <button type="button" className="btn" onClick={() => stop.current?.abort()}>
+            Stop after this
+          </button>
+        ) : (
+          <button type="button" className="pill-btn" disabled={!ready || !batch.length} onClick={() => void run()}>
+            <span>Translate {plural(batch.length, 'chapter')}</span>
+          </button>
+        )}
+      </div>
     </Sheet>
   );
 }
