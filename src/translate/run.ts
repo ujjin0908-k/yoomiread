@@ -4,10 +4,16 @@ import type { Chapter, GlossaryEntry, ModelOption, TranslateSettings, Translatio
 import { chat, type ChatResult } from './api';
 import { chapterMessages, cleanTitle, costOf, estimateTokens, glossaryScanMessages, isRefusal, parseTerms, pronounWarnings, splitReply, titleMessages, type ChatMessage, type ProposedTerm } from './prompt';
 
-/** Prices seen on the owner's provider on 2026-10-20 (change them in Settings when they move). */
+/**
+ * Prices seen on the owner's provider on 2026-10-20 (change them in Settings when they move).
+ * The MiniMax entries are not confirmed against the provider yet: their ids and prices come from
+ * public listings, so check them in Settings and correct the id if the provider names it differently.
+ */
 export const DEFAULT_MODELS: ModelOption[] = [
   { id: 'claude-haiku-5.5', label: 'Claude Haiku 5.5 (budget)', inputPrice: 0.066, outputPrice: 0.332 },
   { id: 'deepseek-v4-pro-0813', label: 'DeepSeek v4 Pro (quality)', inputPrice: 0.561, outputPrice: 1.683 },
+  { id: 'MiniMax-M2', label: 'MiniMax M2', inputPrice: 0.3, outputPrice: 1.2 },
+  { id: 'MiniMax-M3', label: 'MiniMax M3', inputPrice: 0.3, outputPrice: 1.2 },
 ];
 
 export const EMPTY_SETTINGS: TranslateSettings = { baseUrl: '', apiKey: '', models: DEFAULT_MODELS, defaultModel: DEFAULT_MODELS[0].id };
@@ -16,7 +22,11 @@ const KEY = 'translate';
 
 export async function loadSettings(): Promise<TranslateSettings> {
   const row = await db.settings.get(KEY);
-  return { ...EMPTY_SETTINGS, ...((row?.value as Partial<TranslateSettings>) ?? {}) };
+  const saved = { ...EMPTY_SETTINGS, ...((row?.value as Partial<TranslateSettings>) ?? {}) };
+  // Models added in a later version are missing from settings saved before it: add them, keep the owner's edits.
+  const have = new Set(saved.models.map((m) => m.id));
+  const missing = DEFAULT_MODELS.filter((m) => !have.has(m.id));
+  return missing.length ? { ...saved, models: [...saved.models, ...missing] } : saved;
 }
 
 export async function saveSettings(settings: TranslateSettings): Promise<void> {

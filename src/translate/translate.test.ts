@@ -1,7 +1,9 @@
+import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import type { GlossaryEntry, TranslateSettings } from '../types';
 import { chat, readStream, TranslateError } from './api';
-import { callCost } from './run';
+import { callCost, DEFAULT_MODELS, loadSettings, saveSettings } from './run';
+import { db } from '../db';
 import { isRefusal } from './prompt';
 import { chapterMessages, cleanTitle, costOf, estimateTokens, formatCost, NEW_TERMS, parseTerms, pronounWarnings, splitReply, titleMessages } from './prompt';
 
@@ -194,5 +196,16 @@ describe('refusals are not translations', () => {
   it('does not flag real translations', () => {
     expect(isRefusal('I can see the river from my window, and she waited.')).toBe(false);
     expect(isRefusal('Mei walked along the riverbank.')).toBe(false);
+  });
+});
+
+describe('model list', () => {
+  it('adds models that are new in this version, and keeps the owner\'s saved ones', async () => {
+    await db.settings.clear();
+    await saveSettings({ baseUrl: 'b', apiKey: 'k', defaultModel: 'claude-haiku-5.5', models: [{ id: 'claude-haiku-5.5', label: 'Mine', inputPrice: 1, outputPrice: 2 }] });
+    const s = await loadSettings();
+    expect(s.models.find((m) => m.id === 'claude-haiku-5.5')?.label).toBe('Mine');
+    expect(s.models.map((m) => m.id)).toEqual(['claude-haiku-5.5', ...DEFAULT_MODELS.slice(1).map((m) => m.id)]);
+    expect(s.models.map((m) => m.id)).toContain('MiniMax-M3');
   });
 });
