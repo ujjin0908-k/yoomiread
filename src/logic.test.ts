@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest';
+import { makeBackup, parseBackup } from './backup';
 import {
+  bookProgress,
   clampRating,
+  computeStats,
+  continueChapter,
   finishBook,
-  makeBackup,
+  formatDuration,
+  guessLanguage,
   moveToShelf,
   nextChapterNumber,
   paragraphs,
-  parseBackup,
+  readingMinutes,
   segmentText,
 } from './logic';
-import type { Book, Chapter, Note } from './types';
+import type { Book, Chapter, Note, Session } from './types';
 
 const book: Book = {
   id: 'b1',
@@ -94,10 +99,21 @@ describe('highlights', () => {
   });
 });
 
+const empty = { chapters: [] as Chapter[], notes: [] as Note[], sessions: [] as Session[] };
+
 describe('backups', () => {
-  it('round trips', () => {
-    const raw = JSON.stringify(makeBackup([book], [], [], 5));
-    expect(parseBackup(raw).books[0].title).toBe('Test Book');
+  it('round trips, covers included', async () => {
+    const cover = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' });
+    const raw = JSON.stringify(await makeBackup({ ...empty, books: [{ ...book, cover }] }, 5));
+    const back = parseBackup(raw);
+    expect(back.books[0].title).toBe('Test Book');
+    expect(back.books[0].cover?.type).toBe('image/jpeg');
+    expect([...new Uint8Array(await back.books[0].cover!.arrayBuffer())]).toEqual([1, 2, 3]);
+  });
+
+  it('still reads version 1 backups', () => {
+    const v1 = { app: 'yoomiread', version: 1, exportedAt: 1, books: [book], chapters: [], notes: [] };
+    expect(parseBackup(JSON.stringify(v1)).sessions).toEqual([]);
   });
 
   it('rejects other files', () => {
@@ -105,8 +121,75 @@ describe('backups', () => {
     expect(() => parseBackup('{"app":"other"}')).toThrow(/not a YoomiRead backup/);
   });
 
-  it('rejects notes for missing books', () => {
-    const bad = makeBackup([], [], [note('n', 0, 1)]);
+  it('rejects notes for missing books', async () => {
+    const bad = await makeBackup({ ...empty, books: [], notes: [note('n', 0, 1)] });
     expect(() => parseBackup(JSON.stringify(bad))).toThrow(/not in it/);
+  });
+});
+
+function ch(id: string, number: number, read = false, position?: number): Chapter {
+  return { id, bookId: 'b1', number, title: `C${number}`, read, position, createdAt: 1 };
+}
+
+describe('progress', () => {
+  it('counts read chapters and the scroll in unread ones', () => {
+    expect(bookProgress({ ...book, shelf: 'reading' }, [ch('a', 1, true), ch('b', 2, false, 0.5)])).toBe(0.75);
+    expect(bookProgress({ ...book, shelf: 'finished' }, [ch('a', 1)])).toBe(1);
+  });
+
+  it('continues in the last chapter, or the next unread one', () => {
+    const chapters = [ch('a', 1, true), ch('b', 2, true), ch('c', 3)];
+    expect(continueChapter({ ...book, lastChapterId: 'a' }, chapters)?.id).toBe('c');
+    expect(continueChapter({ ...book, lastChapterId: 'c' }, chapters)?.id).toBe('c');
+    expect(continueChapter(book, chapters)?.id).toBe('c');
+  });
+
+  it('estimates minutes for English and Chinese', () => {
+    expect(readingMinutes('word '.repeat(460))).toBe(2);
+    expect(readingMinutes('字'.repeat(800))).toBe(2);
+    expect(readingMinutes('word '.repeat(460), 0.5)).toBe(1);
+  });
+
+  it('guesses the language', () => {
+    expect(guessLanguage('她提着灯笼走过了小桥，河水很安静。'.repeat(3))).toBe('zh');
+    expect(guessLanguage('She carried the lantern across the bridge.')).toBe('en');
+  });
+});
+
+describe('stats', () => {
+  const day = 86_400_000;
+  const now = new Date(2026, 9, 20, 12).getTime();
+  const s = (daysAgo: number, minutes: number): Session => ({
+    id: String(daysAgo) + minutes,
+    bookId: 'b1',
+    chapterId: 'c1',
+    startedAt: now - daysAgo * day,
+    ms: minutes * 60_000,
+  });
+
+  it('adds up time, sessions, streak and daily minutes', () => {
+    const stats = computeStats([], [s(0, 10), s(0, 5), s(1, 20), s(3, 30)], now, 7);
+    expect(stats.totalMs).toBe(65 * 60_000);
+    expect(stats.sessions).toBe(4);
+    expect(stats.streak).toBe(2);
+    expect(stats.daily.at(-1)).toMatchObject({ minutes: 15 });
+    expect(stats.daily).toHaveLength(7);
+  });
+
+  it('counts this year\'s finished books and the average rating', () => {
+    const books = [
+      { ...book, shelf: 'finished' as const, finishedAt: now, rating: 4 },
+      { ...book, id: 'b2', shelf: 'finished' as const, finishedAt: now - 400 * day, rating: 5 },
+    ];
+    const stats = computeStats(books, [], now);
+    expect(stats.finishedThisYear).toBe(1);
+    expect(stats.averageRating).toBe(4.5);
+  });
+
+  it('formats durations', () => {
+    expect(formatDuration(530 * 60_000)).toBe('8h 50m');
+    expect(formatDuration(5 * 60_000)).toBe('5m');
+    expect(formatDuration(11_000)).toBe('<1m');
+    expect(formatDuration(0)).toBe('0m');
   });
 });

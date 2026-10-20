@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Header } from '../components';
+import { TopBar } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
-import { makeBackup, parseBackup } from '../logic';
+import { makeBackup, parseBackup } from '../backup';
 
 export function Settings() {
   const counts = useLive(
@@ -17,8 +17,7 @@ export function Settings() {
   }, []);
 
   async function exportBackup() {
-    const { books, chapters, notes } = await db.exportAll();
-    const blob = new Blob([JSON.stringify(makeBackup(books, chapters, notes), null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(await makeBackup(await db.exportAll()))], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `yoomiread-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -49,7 +48,7 @@ export function Settings() {
 
   return (
     <>
-      <Header title="Settings" back="" />
+      <TopBar back="" title="Settings" />
       <main className="page">
         <section className="card">
           <h3>Your data</h3>
@@ -90,7 +89,7 @@ export function Settings() {
         </section>
         <section className="card">
           <h3>Coming next</h3>
-          <p className="muted">Import ePub, PDF and chapter links, then Chinese to English translation.</p>
+          <p className="muted">Import ePub and chapter links, then Chinese to English translation.</p>
         </section>
       </main>
     </>

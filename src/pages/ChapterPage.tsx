@@ -1,23 +1,40 @@
+import { ChevronLeft, ChevronRight, Highlighter, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Header, Sheet } from '../components';
+import { ProgressBar, Sheet, TopBar } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
-import { formatDate, newId, paragraphs, segmentText } from '../logic';
-import type { Chapter, Note } from '../types';
+import { bookProgress, formatDate, moveToShelf, newId, paragraphs, readingMinutes, segmentText } from '../logic';
+import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
+import type { Book, Chapter, Note } from '../types';
+
+type Selection = { start: number; end: number; quote: string };
 
 export function ChapterPage({ id }: { id: string }) {
   const chapter = useLive(() => db.chapters.get(id), [id]);
+  const book = useLive(async () => (chapter ? db.books.get(chapter.bookId) : undefined), [chapter?.bookId]);
   const notes = useLive(() => db.notes.where('chapterId').equals(id).sortBy('createdAt'), [id]);
   const siblings = useLive(
     async () => (chapter ? db.chapters.where('bookId').equals(chapter.bookId).sortBy('number') : []),
     [chapter?.bookId],
   );
-  const [pending, setPending] = useState<{ start: number; end: number; quote: string }>();
+  const [prefs, setPrefs] = useReaderPrefs();
+  const [pending, setPending] = useState<Selection>();
   // The selection is copied here when the note opens; focusing the note box clears the live one.
-  const [open, setOpen] = useState<Note | { start: number; end: number; quote: string }>();
-  const [comment, setComment] = useState('');
-  const [editingText, setEditingText] = useState(false);
+  const [open, setOpen] = useState<Note | Selection>();
+  const [sheet, setSheet] = useState<'look' | 'chapters' | 'notes' | 'edit'>();
+  const [scroll, setScroll] = useState(0);
   const textRef = useRef<HTMLDivElement>(null);
+
+  useReadingSession(chapter, book);
+  useScrollMemory(chapter, setScroll);
+
+  // Reader theme colors the whole page while it is open.
+  useEffect(() => {
+    document.body.dataset.reader = prefs.theme;
+    return () => {
+      delete document.body.dataset.reader;
+    };
+  }, [prefs.theme]);
 
   // Shows the "Highlight" bar while text in the chapter is selected.
   useEffect(() => {
@@ -26,63 +43,59 @@ export function ChapterPage({ id }: { id: string }) {
     return () => document.removeEventListener('selectionchange', onSelect);
   }, []);
 
-  if (chapter === undefined) return <Header title="" back="" />;
+  if (chapter === undefined) return <TopBar back="" />;
   if (!chapter) {
     return (
       <>
-        <Header title="Not found" back="" />
+        <TopBar back="library" />
         <p className="empty">This chapter was deleted.</p>
       </>
     );
   }
 
-  const chapterComments = (notes ?? []).filter((n) => n.kind === 'chapter');
   const highlights = (notes ?? []).filter((n) => n.kind === 'highlight');
-  const index = (siblings ?? []).findIndex((c) => c.id === id);
-  const prev = siblings?.[index - 1];
-  const next = siblings?.[index + 1];
-
-  async function addComment() {
-    const body = comment.trim();
-    if (!body) return;
-    const now = Date.now();
-    await db.notes.add({
-      id: newId(),
-      bookId: chapter!.bookId,
-      chapterId: id,
-      kind: 'chapter',
-      body,
-      createdAt: now,
-      updatedAt: now,
-    });
-    setComment('');
-  }
+  const comments = (notes ?? []).filter((n) => n.kind === 'chapter');
+  const list = siblings ?? [];
+  const index = list.findIndex((c) => c.id === id);
+  const prev = list[index - 1];
+  const next = list[index + 1];
+  const live = list.map((c) => (c.id === id ? { ...c, position: Math.max(c.position ?? 0, scroll) } : c));
+  const bookPct = book ? bookProgress(book, live) : 0;
+  const minutesLeft = chapter.text ? readingMinutes(chapter.text, scroll) : 0;
+  const zh = book?.language === 'zh';
 
   async function finishChapter() {
-    await db.chapters.update(id, { read: true });
+    await db.chapters.update(id, { read: true, position: 1 });
     go(next ? `chapter/${next.id}` : `book/${chapter!.bookId}`);
   }
 
-  async function removeChapter() {
-    if (!confirm('Delete this chapter and its notes?')) return;
-    await db.deleteChapter(id);
-    go(`book/${chapter!.bookId}`);
-  }
-
   return (
-    <>
-      <Header
-        title={`${chapter.number}. ${chapter.title}`}
+    <div className={`reader-page font-${prefs.font} spacing-${prefs.spacing}`}>
+      <TopBar
         back={`book/${chapter.bookId}`}
         right={
-          <button type="button" className="icon-btn" aria-label="Edit text" onClick={() => setEditingText(true)}>
-            ✎
-          </button>
+          <>
+            <button type="button" className="round-btn plain" aria-label="Reading settings" onClick={() => setSheet('look')}>
+              <Type size={19} />
+            </button>
+            <button type="button" className="round-btn plain" aria-label="Chapters" onClick={() => setSheet('chapters')}>
+              <List size={19} />
+            </button>
+            <button type="button" className="round-btn plain" aria-label="Edit chapter" onClick={() => setSheet('edit')}>
+              <PenLine size={18} />
+            </button>
+          </>
         }
       />
-      <main className="page">
+      <main className="page reader-main" style={{ fontSize: FONT_SIZES[prefs.size] }}>
+        <p className="eyebrow">Chapter {chapter.number}</p>
+        <h1 className="chapter-title" lang={zh ? 'zh' : undefined}>
+          {chapter.title}
+        </h1>
+        <span className="title-rule" aria-hidden="true" />
+
         {chapter.text ? (
-          <div className="reader" ref={textRef}>
+          <div className={`reader ${prefs.dropCap ? 'drop' : ''}`} ref={textRef} lang={zh ? 'zh' : undefined}>
             {paragraphs(chapter.text).map((p) => (
               <p key={p.start} data-start={p.start}>
                 {segmentText(p.text, shiftNotes(highlights, p.start, p.text.length)).map((s) =>
@@ -104,90 +117,80 @@ export function ChapterPage({ id }: { id: string }) {
         ) : (
           <div className="card">
             <p className="muted">
-              No text for this chapter. You can still leave comments below, or tap ✎ to paste the text and highlight
-              lines.
+              No text for this chapter. You can still leave comments below, or paste the text to highlight lines.
             </p>
+            <button type="button" className="btn ghost" onClick={() => setSheet('edit')}>
+              <PenLine size={16} /> Paste text
+            </button>
           </div>
         )}
 
-        {highlights.length > 0 && (
-          <section>
-            <h3>Highlights</h3>
+        <section className="end-of-chapter">
+          <span className="end-orn" aria-hidden="true">
+            ❦
+          </span>
+          <CommentBox chapter={chapter} />
+          {comments.length > 0 && (
             <ul className="note-list">
-              {highlights.map((h) => (
-                <li key={h.id}>
-                  <button type="button" className="note hl-note" onClick={() => setOpen(h)}>
-                    <q>{h.quote}</q>
-                    {h.body && <span>{h.body}</span>}
+              {comments.map((c) => (
+                <li key={c.id}>
+                  <button type="button" className="note" onClick={() => setOpen(c)}>
+                    <span>{c.body}</span>
+                    <span className="muted small">{formatDate(c.createdAt)}</span>
                   </button>
                 </li>
               ))}
             </ul>
-          </section>
-        )}
-
-        <section>
-          <h3>Comments on this chapter</h3>
-          <ul className="note-list">
-            {chapterComments.map((c) => (
-              <li key={c.id}>
-                <button type="button" className="note" onClick={() => setOpen(c)}>
-                  <span>{c.body}</span>
-                  <span className="muted small">{formatDate(c.createdAt)}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-          <form
-            className="comment-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void addComment();
-            }}
-          >
-            <textarea
-              rows={2}
-              placeholder="Your thoughts on this chapter…"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-            />
-            <button className="btn primary" type="submit" disabled={!comment.trim()}>
-              Post
-            </button>
-          </form>
-        </section>
-
-        <nav className="chapter-nav">
-          {prev ? (
-            <a className="btn" href={`#/chapter/${prev.id}`}>
-              ‹ {prev.number}
-            </a>
-          ) : (
-            <span />
           )}
-          <button type="button" className="btn primary" onClick={() => void finishChapter()}>
-            {chapter.read ? (next ? `Next: ${next.number} ›` : 'Back to book') : 'Mark read' + (next ? ' & next ›' : '')}
-          </button>
-        </nav>
-
-        <button type="button" className="btn danger wide" onClick={() => void removeChapter()}>
-          Delete chapter
-        </button>
+          <nav className="chapter-nav">
+            {prev ? (
+              <a className="round-btn" href={`#/chapter/${prev.id}`} aria-label={`Previous: ${prev.title}`}>
+                <ChevronLeft size={20} />
+              </a>
+            ) : (
+              <span />
+            )}
+            <button type="button" className="pill-btn" onClick={() => void finishChapter()}>
+              <span>{next ? 'Next chapter' : 'Finish chapter'}</span>
+              <ChevronRight size={18} />
+            </button>
+          </nav>
+        </section>
       </main>
 
-      {pending && !open && (
+      {pending && !open ? (
         <div className="selection-bar">
-          <span className="muted small">“{pending.quote.slice(0, 40)}{pending.quote.length > 40 ? '…' : ''}”</span>
+          <span className="muted small">
+            “{pending.quote.slice(0, 36)}
+            {pending.quote.length > 36 ? '…' : ''}”
+          </span>
           <button
             type="button"
-            className="btn primary"
+            className="pill-btn small"
             // Keep the selection on iPhone when the button is pressed.
             onPointerDown={(e) => e.preventDefault()}
             onClick={() => setOpen(pending)}
           >
-            Highlight + note
+            <Highlighter size={16} />
+            <span>Highlight</span>
           </button>
         </div>
+      ) : (
+        <footer className="reader-foot">
+          {(highlights.length > 0 || comments.length > 0) && (
+            <button type="button" className="notes-pill" onClick={() => setSheet('notes')}>
+              <Highlighter size={14} /> {highlights.length + comments.length} notes
+            </button>
+          )}
+          <ProgressBar value={scroll} label="Chapter progress" />
+          <div className="foot-row small muted">
+            <span>{Math.round(bookPct * 100)}%</span>
+            <span>
+              Chapter {index + 1} of {list.length}
+            </span>
+            <span>{minutesLeft ? `${minutesLeft} min left` : ' '}</span>
+          </div>
+        </footer>
       )}
 
       {open && (
@@ -201,8 +204,234 @@ export function ChapterPage({ id }: { id: string }) {
           }}
         />
       )}
-      {editingText && <EditText chapter={chapter} onClose={() => setEditingText(false)} />}
-    </>
+      {sheet === 'look' && <LookSheet prefs={prefs} setPrefs={setPrefs} onClose={() => setSheet(undefined)} />}
+      {sheet === 'chapters' && (
+        <Sheet title="Chapters" onClose={() => setSheet(undefined)}>
+          <ul className="toc">
+            {list.map((c) => (
+              <li key={c.id}>
+                <a href={`#/chapter/${c.id}`} className={c.id === id ? 'on' : ''} onClick={() => setSheet(undefined)}>
+                  <span className="muted">{c.number}</span>
+                  <span lang={zh ? 'zh' : undefined}>{c.title}</span>
+                  {c.read && <span className="muted small">✓</span>}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </Sheet>
+      )}
+      {sheet === 'notes' && (
+        <Sheet title="Notes in this chapter" onClose={() => setSheet(undefined)}>
+          <ul className="note-list">
+            {[...highlights, ...comments].map((n) => (
+              <li key={n.id}>
+                <button
+                  type="button"
+                  className={n.kind === 'highlight' ? 'note hl-note' : 'note'}
+                  onClick={() => {
+                    setSheet(undefined);
+                    setOpen(n);
+                  }}
+                >
+                  {n.quote && <q>{n.quote}</q>}
+                  {n.body && (
+                    <span>
+                      {n.kind === 'chapter' && <MessageCircle size={13} />} {n.body}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Sheet>
+      )}
+      {sheet === 'edit' && <EditText chapter={chapter} onClose={() => setSheet(undefined)} />}
+    </div>
+  );
+}
+
+/** Saves reading time for this visit and marks the book as being read. */
+function useReadingSession(chapter: Chapter | undefined, book: Book | undefined) {
+  const chapterId = chapter?.id;
+  const bookRef = useRef(book);
+  bookRef.current = book;
+
+  useEffect(() => {
+    if (!chapterId || !chapter) return;
+    const bookId = chapter.bookId;
+    let startedAt = document.visibilityState === 'visible' ? Date.now() : 0;
+
+    void (async () => {
+      const b = await db.books.get(bookId);
+      if (!b) return;
+      const moved = b.shelf === 'want' ? moveToShelf(b, 'reading') : b;
+      await db.books.put({ ...moved, lastChapterId: chapterId, lastReadAt: Date.now() });
+    })();
+
+    const flush = () => {
+      if (!startedAt) return;
+      const ms = Date.now() - startedAt;
+      startedAt = 0;
+      // Under 10 seconds is just passing through.
+      if (ms < 10_000) return;
+      void db.sessions.add({ id: newId(), bookId, chapterId, startedAt: Date.now() - ms, ms: Math.min(ms, 3 * 3_600_000) });
+      void db.books.update(bookId, { lastReadAt: Date.now() });
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+      else startedAt = Date.now();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      flush();
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', flush);
+    };
+    // Only when the chapter changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapterId]);
+}
+
+/** Comes back to the same spot, and remembers how far down I got. */
+function useScrollMemory(chapter: Chapter | undefined, onScroll: (fraction: number) => void) {
+  const restored = useRef<string>();
+  useEffect(() => {
+    if (!chapter || restored.current === chapter.id) return;
+    restored.current = chapter.id;
+    const room = () => document.documentElement.scrollHeight - window.innerHeight;
+    requestAnimationFrame(() => {
+      const target = (chapter.position ?? 0) < 0.99 ? (chapter.position ?? 0) * room() : 0;
+      window.scrollTo(0, target);
+      onScroll(chapter.position && chapter.position < 0.99 ? chapter.position : 0);
+    });
+
+    let timer: number | undefined;
+    const handle = () => {
+      const r = room();
+      const fraction = r > 0 ? Math.min(1, window.scrollY / r) : 1;
+      onScroll(fraction);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        void db.chapters.get(chapter.id).then((c) => {
+          if (!c) return;
+          // Keep the furthest point, and tick the chapter off at the very end of a long chapter.
+          const longEnough = r > window.innerHeight * 0.5;
+          const changes: Partial<Chapter> = { position: fraction };
+          if (fraction > 0.995 && longEnough) changes.read = true;
+          void db.chapters.update(chapter.id, changes);
+        });
+      }, 600);
+    };
+    window.addEventListener('scroll', handle, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handle);
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapter?.id]);
+}
+
+function CommentBox({ chapter }: { chapter: Chapter }) {
+  const [comment, setComment] = useState('');
+  async function add() {
+    const body = comment.trim();
+    if (!body) return;
+    const now = Date.now();
+    await db.notes.add({ id: newId(), bookId: chapter.bookId, chapterId: chapter.id, kind: 'chapter', body, createdAt: now, updatedAt: now });
+    setComment('');
+  }
+  return (
+    <form
+      className="comment-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void add();
+      }}
+    >
+      <textarea
+        rows={2}
+        placeholder="Your thoughts on this chapter…"
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+      />
+      <button className="pill-btn small" type="submit" disabled={!comment.trim()}>
+        <span>Post</span>
+      </button>
+    </form>
+  );
+}
+
+function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs: (c: Partial<ReaderPrefs>) => void; onClose: () => void }) {
+  return (
+    <Sheet title="Reading" onClose={onClose}>
+      <div className="look">
+        <div className="look-row">
+          <span>Text size</span>
+          <div className="seg">
+            {FONT_SIZES.map((px, i) => (
+              <button
+                key={px}
+                type="button"
+                className={prefs.size === i ? 'on' : ''}
+                aria-label={`Text size ${i + 1}`}
+                style={{ fontSize: 12 + i * 3 }}
+                onClick={() => setPrefs({ size: i })}
+              >
+                A
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="look-row">
+          <span>Theme</span>
+          <div className="themes">
+            {(['paper', 'sepia', 'night'] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                className={`theme-dot theme-${t} ${prefs.theme === t ? 'on' : ''}`}
+                aria-label={t}
+                aria-pressed={prefs.theme === t}
+                onClick={() => setPrefs({ theme: t })}
+              >
+                Aa
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="look-row">
+          <span>Font</span>
+          <div className="seg">
+            <button type="button" className={prefs.font === 'serif' ? 'on serif' : 'serif'} onClick={() => setPrefs({ font: 'serif' })}>
+              Serif
+            </button>
+            <button type="button" className={prefs.font === 'sans' ? 'on' : ''} onClick={() => setPrefs({ font: 'sans' })}>
+              Sans
+            </button>
+          </div>
+        </div>
+        <div className="look-row">
+          <span>Line spacing</span>
+          <div className="seg">
+            {(['snug', 'normal', 'airy'] as const).map((s) => (
+              <button key={s} type="button" className={prefs.spacing === s ? 'on' : ''} onClick={() => setPrefs({ spacing: s })}>
+                {s[0].toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <label className="look-row">
+          <span>Big first letter</span>
+          <input
+            type="checkbox"
+            className="switch"
+            checked={prefs.dropCap}
+            onChange={(e) => setPrefs({ dropCap: e.target.checked })}
+          />
+        </label>
+      </div>
+    </Sheet>
   );
 }
 
@@ -214,7 +443,7 @@ function shiftNotes(notes: Note[], start: number, length: number): Note[] {
 }
 
 /** Turns the browser selection into offsets in the chapter text. */
-function readSelection(root: HTMLElement | null) {
+function readSelection(root: HTMLElement | null): Selection | undefined {
   const sel = window.getSelection();
   if (!root || !sel || sel.isCollapsed || sel.rangeCount === 0) return undefined;
   const range = sel.getRangeAt(0);
@@ -236,17 +465,7 @@ function offsetOf(node: Node, offset: number): number | undefined {
   return Number(p.dataset.start) + before.toString().length;
 }
 
-function NoteSheet({
-  chapter,
-  note,
-  pending,
-  onClose,
-}: {
-  chapter: Chapter;
-  note?: Note;
-  pending?: { start: number; end: number; quote: string };
-  onClose: () => void;
-}) {
+function NoteSheet({ chapter, note, pending, onClose }: { chapter: Chapter; note?: Note; pending?: Selection; onClose: () => void }) {
   const [body, setBody] = useState(note?.body ?? '');
   const quote = note?.quote ?? pending?.quote;
 
@@ -293,13 +512,13 @@ function NoteSheet({
         <div className="row between">
           {note ? (
             <button type="button" className="btn danger" onClick={() => void remove()}>
-              Delete
+              <Trash2 size={16} /> Delete
             </button>
           ) : (
             <span />
           )}
-          <button className="btn primary" type="submit" disabled={note?.kind === 'chapter' && !body.trim()}>
-            Save
+          <button className="pill-btn small" type="submit" disabled={note?.kind === 'chapter' && !body.trim()}>
+            <span>Save</span>
           </button>
         </div>
       </form>
@@ -319,6 +538,12 @@ function EditText({ chapter, onClose }: { chapter: Chapter; onClose: () => void 
     const clean = text.replace(/\r\n/g, '\n');
     await db.chapters.update(chapter.id, { title: title.trim() || chapter.title, text: clean.trim() ? clean : undefined });
     onClose();
+  }
+
+  async function removeChapter() {
+    if (!confirm('Delete this chapter and its notes?')) return;
+    await db.deleteChapter(chapter.id);
+    go(`book/${chapter.bookId}`);
   }
 
   return (
@@ -341,9 +566,14 @@ function EditText({ chapter, onClose }: { chapter: Chapter; onClose: () => void 
         {!!hasHighlights && text !== (chapter.text ?? '') && (
           <p className="warn small">Changing the text can move your highlights.</p>
         )}
-        <button className="btn primary" type="submit">
-          Save
-        </button>
+        <div className="row between">
+          <button type="button" className="btn danger" onClick={() => void removeChapter()}>
+            <Trash2 size={16} /> Delete chapter
+          </button>
+          <button className="pill-btn small" type="submit">
+            <span>Save</span>
+          </button>
+        </div>
       </form>
     </Sheet>
   );

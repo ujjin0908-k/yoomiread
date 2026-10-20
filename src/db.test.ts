@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it } from 'vitest';
 import { YoomiDB } from './db';
-import { makeBackup } from './logic';
+import { makeBackup, parseBackup } from './backup';
 import type { Book, Chapter, Note } from './types';
 
 const book: Book = { id: 'b1', title: 'A', author: '', language: 'en', shelf: 'reading', createdAt: 1, updatedAt: 1 };
@@ -28,7 +28,7 @@ describe('database', () => {
   it('restore replaces everything', async () => {
     db = new YoomiDB('t2');
     await db.books.add({ ...book, id: 'old' });
-    await db.restore(makeBackup([book], [chapter], [note]));
+    await db.restore(parseBackup(JSON.stringify(await makeBackup({ books: [book], chapters: [chapter], notes: [note], sessions: [] }))));
     expect((await db.books.toArray()).map((b) => b.id)).toEqual(['b1']);
     expect(await db.notes.count()).toBe(1);
   });
