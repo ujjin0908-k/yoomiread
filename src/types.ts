@@ -11,7 +11,7 @@ export interface Book {
   shelf: Shelf;
   /** Cover image: taken from the PDF's first page, or added by hand. */
   cover?: Blob;
-  source?: 'manual' | 'pdf';
+  source?: 'manual' | 'pdf' | 'epub';
   /** 0.5 to 5 in half steps; set when the book is finished. */
   rating?: number;
   review?: string;

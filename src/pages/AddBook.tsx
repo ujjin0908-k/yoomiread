@@ -1,16 +1,52 @@
-import { FileText, PenLine } from 'lucide-react';
+import { BookOpen, FileText, PenLine } from 'lucide-react';
 import { useState } from 'react';
 import { Sheet } from '../components';
 import { db } from '../db';
 import { go } from '../hooks';
 import { shrinkImage } from '../images';
 import { SHELVES, moveToShelf, newId } from '../logic';
+import type { DraftChapter } from '../import/chapters';
 import type { Book, BookLanguage, Shelf } from '../types';
 
 export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose: () => void }) {
   const [mode, setMode] = useState<'pick' | 'manual'>('pick');
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+
+  /** Saves an imported book with its chapters, then asks "Keep this title?". */
+  async function save(
+    result: { title: string; author: string; language: BookLanguage; cover?: Blob; chapters: DraftChapter[]; scanned?: boolean },
+    source: 'pdf' | 'epub',
+  ) {
+    setStatus('Saving…');
+    const now = Date.now();
+    const book: Book = moveToShelf(
+      {
+        id: newId(),
+        title: result.title,
+        author: result.author,
+        language: result.language,
+        shelf: 'want',
+        cover: result.cover,
+        source,
+        createdAt: now,
+        updatedAt: now,
+      },
+      shelf === 'finished' ? 'reading' : shelf,
+      now,
+    );
+    await db.transaction('rw', db.books, db.chapters, db.texts, async () => {
+      await db.books.add(book);
+      await db.addChapters(
+        result.chapters.map((c, i) => ({
+          chapter: { id: newId(), bookId: book.id, number: i + 1, title: c.title, read: false, createdAt: now },
+          text: c.text,
+        })),
+      );
+    });
+    onClose();
+    go(`book/${book.id}/${result.scanned ? 'scanned' : 'imported'}`);
+  }
 
   async function fromPdf(file: File) {
     setError('');
@@ -19,38 +55,36 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
       // Loaded only when needed: the PDF reader is big.
       const { importPdf } = await import('../import/pdf');
       const result = await importPdf(file, (page, pages) => setStatus(`Reading page ${page} of ${pages}…`));
-      setStatus('Saving…');
-      const now = Date.now();
-      const book: Book = moveToShelf(
-        {
-          id: newId(),
-          title: result.title,
-          author: result.author,
-          language: result.language,
-          shelf: 'want',
-          cover: result.cover,
-          source: 'pdf',
-          createdAt: now,
-          updatedAt: now,
-        },
-        shelf === 'finished' ? 'reading' : shelf,
-        now,
-      );
-      await db.transaction('rw', db.books, db.chapters, db.texts, async () => {
-        await db.books.add(book);
-        await db.addChapters(
-          result.chapters.map((c, i) => ({
-            chapter: { id: newId(), bookId: book.id, number: i + 1, title: c.title, read: false, createdAt: now },
-            text: c.text,
-          })),
-        );
-      });
-      onClose();
-      go(`book/${book.id}/${result.scanned ? 'scanned' : 'imported'}`);
+      await save(result, 'pdf');
     } catch (e) {
       console.error(e);
       setStatus('');
       setError('Could not read this PDF. Is it password protected or damaged?');
+    }
+  }
+
+  async function fromEpub(file: File) {
+    setError('');
+    setStatus('Opening the ePub…');
+    try {
+      const { readEpub, EpubError } = await import('../import/epub');
+      let parsed;
+      try {
+        parsed = readEpub(new Uint8Array(await file.arrayBuffer()));
+      } catch (e) {
+        throw e instanceof EpubError ? e : new Error('Could not read this ePub. Is it damaged?');
+      }
+      let cover: Blob | undefined;
+      if (parsed.cover) {
+        const raw = new Blob([parsed.cover.bytes], { type: parsed.cover.type });
+        // Smaller covers keep the phone light; keep the original if it cannot be shrunk.
+        cover = await shrinkImage(raw).catch(() => raw);
+      }
+      await save({ ...parsed, title: parsed.title || file.name.replace(/\.epub$/i, ''), cover }, 'epub');
+    } catch (e) {
+      console.error(e);
+      setStatus('');
+      setError(e instanceof Error ? e.message : 'Could not read this ePub.');
     }
   }
 
@@ -77,6 +111,24 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
             }}
           />
         </label>
+        <label className={`add-option ${status ? 'busy' : ''}`}>
+          <BookOpen size={26} strokeWidth={1.5} />
+          <span>
+            <strong>Import an ePub</strong>
+            <span className="muted small">Cover, title and chapters from the book file</span>
+          </span>
+          <input
+            type="file"
+            accept="application/epub+zip,.epub"
+            hidden
+            disabled={!!status}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void fromEpub(f);
+              e.target.value = '';
+            }}
+          />
+        </label>
         <button type="button" className="add-option" disabled={!!status} onClick={() => setMode('manual')}>
           <PenLine size={26} strokeWidth={1.5} />
           <span>
@@ -86,7 +138,7 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
         </button>
         {status && <p className="muted small center">{status}</p>}
         {error && <p className="warn small center">{error}</p>}
-        <p className="muted small center">ePub and chapter links are coming next.</p>
+        <p className="muted small center">Chapter links are coming next.</p>
       </div>
     </Sheet>
   );
