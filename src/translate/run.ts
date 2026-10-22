@@ -33,6 +33,24 @@ export async function saveSettings(settings: TranslateSettings): Promise<void> {
   await db.settings.put({ key: KEY, value: settings });
 }
 
+/**
+ * Asks the provider which models it offers. Prices and labels already set on this phone are kept;
+ * models the provider does not list stay too, so the owner's own entries are never lost.
+ */
+export async function fetchModels(settings: TranslateSettings): Promise<ModelOption[]> {
+  const base = settings.baseUrl.trim().replace(/\/+$/, '').replace(/\/chat\/completions$/, '');
+  const res = await fetch(`${base}/models`, { headers: { Authorization: `Bearer ${settings.apiKey.trim()}` } });
+  if (!res.ok) throw new Error(`The provider did not list its models (${res.status}).`);
+  const data = (await res.json()) as { data?: { id?: unknown }[] };
+  const ids = (data.data ?? []).map((m) => String(m.id ?? '')).filter(Boolean);
+  if (!ids.length) throw new Error('The provider listed no models.');
+  const saved = new Map(settings.models.map((m) => [m.id, m]));
+  const defaults = new Map(DEFAULT_MODELS.map((m) => [m.id, m]));
+  const listed = ids.map((id) => saved.get(id) ?? defaults.get(id) ?? { id, label: id });
+  const unlisted = settings.models.filter((m) => !ids.includes(m.id));
+  return [...listed, ...unlisted];
+}
+
 export function modelFor(settings: TranslateSettings, id?: string): ModelOption {
   return settings.models.find((m) => m.id === id) ?? settings.models.find((m) => m.id === settings.defaultModel) ?? settings.models[0];
 }

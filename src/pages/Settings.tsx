@@ -5,7 +5,7 @@ import { db } from '../db';
 import { useLive } from '../hooks';
 import { makeBackup, parseBackup } from '../backup';
 import { chat } from '../translate/api';
-import { EMPTY_SETTINGS, loadSettings, saveSettings } from '../translate/run';
+import { EMPTY_SETTINGS, fetchModels, loadSettings, saveSettings } from '../translate/run';
 import type { ModelOption, TranslateSettings } from '../types';
 
 export function Settings() {
@@ -123,6 +123,16 @@ function TranslationSettings() {
     update({ models: s.models.map((m, j) => (j === i ? { ...m, ...change } : m)) });
   const price = (v: string) => (v.trim() === '' ? undefined : Number(v));
 
+  async function refreshModels() {
+    try {
+      const models = await fetchModels(s!);
+      update({ models });
+      setNote(`Found ${models.length} models. Set their prices if they are missing.`);
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : 'Could not refresh the models.');
+    }
+  }
+
   async function test() {
     setTesting(true);
     setNote('Testing…');
@@ -221,6 +231,9 @@ function TranslationSettings() {
         <div className="row between">
           <button type="button" className="link" onClick={() => update({ models: [...s.models, { id: '', label: 'New model' }] })}>
             <Plus size={16} /> Add model
+          </button>
+          <button type="button" className="link" onClick={() => void refreshModels()}>
+            Refresh from provider
           </button>
           <button type="button" className="link" onClick={() => update({ models: EMPTY_SETTINGS.models })}>
             Reset prices
