@@ -59,6 +59,13 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
     await db.glossary.bulkUpdate(review.map((g) => ({ key: g.id, changes: { status: 'ok' as const, updatedAt: Date.now() } })));
   }
 
+  // Entries from before the stricter rules: English words that are not from the Chinese text.
+  async function removeEnglishOnly() {
+    const junk = review.filter((g) => !/[㐀-鿿豈-﫿]/.test(g.original));
+    if (!junk.length || !confirm(`Remove ${junk.length} entries that are not Chinese names or terms?`)) return;
+    await db.glossary.bulkDelete(junk.map((g) => g.id));
+  }
+
   return (
     <>
       <TopBar
@@ -89,6 +96,9 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
               <h2>Needs review</h2>
               <button type="button" className="link" onClick={() => void approveAll()}>
                 <Check size={16} /> Approve all
+              </button>
+              <button type="button" className="link" onClick={() => void removeEnglishOnly()}>
+                Remove English-only
               </button>
             </div>
             <EntryList entries={review} onOpen={setOpen} />

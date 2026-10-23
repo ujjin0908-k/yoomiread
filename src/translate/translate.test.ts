@@ -63,6 +63,11 @@ describe('reading the reply', () => {
     expect(terms).toEqual([{ original: '灯', english: 'lantern', kind: 'term', gender: undefined, note: undefined }]);
   });
 
+  it('keeps only terms that come from the Chinese text', () => {
+    const terms = parseTerms('{"original":"enigma","english":"enigma"}\n{"original":"HE","english":"HE"}\n{"original":"灯","english":"lantern"}');
+    expect(terms.map((t) => t.original)).toEqual(['灯']);
+  });
+
   it('drops gender for places and terms', () => {
     expect(parseTerms('{"original":"河","english":"River","kind":"place","gender":"she"}')[0].gender).toBeUndefined();
   });

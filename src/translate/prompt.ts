@@ -34,9 +34,10 @@ export function chapterMessages(input: { bookTitle: string; chapterTitle: string
     '- Use the glossary exactly for every name and term in it. Use each person\'s pronouns as given.',
     '- Keep the tone of the original. Dialogue should sound like real speech.',
     '- Output only the translation, with no notes, no title line and no commentary.',
-    `- After the translation, write a line "${NEW_TERMS}" and then one JSON object per line for each important name or term`,
+    `- After the translation, write a line "${NEW_TERMS}" and then one JSON object per line for each name or plot term`,
     '  that is NOT in the glossary: {"original": "...", "english": "...", "kind": "person|place|term", "gender": "he|she|they|it"}.',
-    '  Give gender only for people. If there are none, write the marker line and nothing after it.',
+    '  Only people, places and plot-relevant items (sects, techniques, titles, key objects). Never ordinary words or phrases.',
+    '  "original" is the Chinese text from the chapter. Give gender only for people. If there are none, write the marker line and nothing after it.',
   ].join('\n');
   const user = [
     `Book: ${input.bookTitle}`,
@@ -56,7 +57,9 @@ export function chapterMessages(input: { bookTitle: string; chapterTitle: string
 export function glossaryScanMessages(input: { bookTitle: string; sample: string; known: GlossaryEntry[] }): ChatMessage[] {
   const system = [
     'You prepare a glossary for translating a Chinese novel into English.',
-    'List the characters, places and special terms (sects, techniques, titles, items) that appear in the text.',
+    'List the characters, places and plot-relevant terms (sects, techniques, titles, key items) that appear in the text.',
+    'Skip ordinary words, common phrases, slang, English words and anything that is not a name or a plot term.',
+    'The "original" must be the Chinese text as written.',
     'For each, give the original, a natural English rendering (pinyin for personal names, meaning-based for most terms),',
     'the kind (person, place or term) and, for people, the gender as he, she, they or it, judged from the text.',
     'Answer with one JSON object per line and nothing else:',
@@ -91,7 +94,8 @@ export function parseTerms(raw: string): ProposedTerm[] {
       const o = JSON.parse(t) as Record<string, unknown>;
       const original = String(o.original ?? '').trim();
       const english = String(o.english ?? '').trim();
-      if (!original || !english || seen.has(original)) continue;
+      // A term must come from the Chinese text: English words in the list are never kept.
+      if (!original || !english || seen.has(original) || !/[㐀-鿿豈-﫿]/.test(original)) continue;
       const kind = KINDS.includes(o.kind as GlossaryKind) ? (o.kind as GlossaryKind) : 'term';
       const gender = kind === 'person' && GENDERS.includes(o.gender as Gender) ? (o.gender as Gender) : undefined;
       const note = typeof o.note === 'string' && o.note.trim() ? o.note.trim() : undefined;

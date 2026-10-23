@@ -393,7 +393,7 @@ function useScrollMemory(chapter: Chapter | null | undefined, ready: boolean, on
           // Keep the furthest point, and tick the chapter off at the very end of a long chapter.
           const longEnough = r > window.innerHeight * 0.5;
           const changes: Partial<Chapter> = { position: fraction };
-          if (fraction > 0.995 && longEnough) changes.read = true;
+          if (fraction > 0.9 && longEnough) changes.read = true;
           void db.chapters.update(chapter.id, changes);
         });
       }, 600);
