@@ -73,6 +73,34 @@ body[data-reader='sepia'] {
   --pill-ink: #f5ead6;
   color-scheme: light;
 }
+/* Aged print paper, like an old illustrated book page. */
+body[data-reader='parchment'] {
+  --bg: #efe4c8;
+  --surface: #f6eedb;
+  --ink: #3a2e1e;
+  --ink-2: #5e4f3a;
+  --muted: #8f7d5f;
+  --line: #d9c9a4;
+  --hl: #e8d48e;
+  --hl-2: #d9b65c;
+  --pill: #3a2e1e;
+  --pill-ink: #f6eedb;
+  color-scheme: light;
+}
+/* Pale sage paper, after the greens in old botanical borders. */
+body[data-reader='mint'] {
+  --bg: #e3eadc;
+  --surface: #eff4e9;
+  --ink: #24332a;
+  --ink-2: #4b5d50;
+  --muted: #71837a;
+  --line: #c8d6c4;
+  --hl: #c9e0b8;
+  --hl-2: #a9cc95;
+  --pill: #24332a;
+  --pill-ink: #eff4e9;
+  color-scheme: light;
+}
 body[data-reader='night'] {
   --bg: #161614;
   --surface: #20201d;
@@ -1073,6 +1101,16 @@ button {
   font-family: var(--sans);
 }
 
+.font-garamond .reader {
+  font-family: 'EB Garamond', 'Noto Serif SC', 'Songti SC', Georgia, serif;
+  font-size: 1.08em;
+}
+
+.font-old .reader {
+  font-family: 'IM Fell English', 'Noto Serif SC', 'Songti SC', Georgia, serif;
+  font-size: 1.05em;
+}
+
 .spacing-snug .reader {
   line-height: 1.55;
 }
@@ -1333,6 +1371,14 @@ button {
 .theme-sepia {
   background: #eee0c6;
   color: #3b2f22;
+}
+.theme-parchment {
+  background: #efe4c8;
+  color: #3a2e1e;
+}
+.theme-mint {
+  background: #e3eadc;
+  color: #24332a;
 }
 .theme-night {
   background: #161614;

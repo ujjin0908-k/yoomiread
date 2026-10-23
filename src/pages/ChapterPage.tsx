@@ -461,7 +461,7 @@ function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs:
         <div className="look-row">
           <span>Theme</span>
           <div className="themes">
-            {(['paper', 'sepia', 'night'] as const).map((t) => (
+            {(['paper', 'sepia', 'parchment', 'mint', 'night'] as const).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -483,6 +483,12 @@ function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs:
             </button>
             <button type="button" className={prefs.font === 'sans' ? 'on' : ''} onClick={() => setPrefs({ font: 'sans' })}>
               Sans
+            </button>
+            <button type="button" className={prefs.font === 'garamond' ? 'on serif' : 'serif'} onClick={() => setPrefs({ font: 'garamond' })}>
+              Garamond
+            </button>
+            <button type="button" className={prefs.font === 'old' ? 'on serif' : 'serif'} onClick={() => setPrefs({ font: 'old' })}>
+              Old print
             </button>
           </div>
         </div>
