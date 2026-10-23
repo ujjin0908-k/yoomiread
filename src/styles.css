@@ -101,6 +101,20 @@ body[data-reader='mint'] {
   --pill-ink: #eff4e9;
   color-scheme: light;
 }
+/* Soft pink paper. */
+body[data-reader='rose'] {
+  --bg: #f4e2e1;
+  --surface: #faf0ef;
+  --ink: #3d2a2c;
+  --ink-2: #69494c;
+  --muted: #987c7e;
+  --line: #e6cbcb;
+  --hl: #f3d0d1;
+  --hl-2: #e6b2b5;
+  --pill: #3d2a2c;
+  --pill-ink: #faf0ef;
+  color-scheme: light;
+}
 body[data-reader='night'] {
   --bg: #161614;
   --surface: #20201d;
@@ -1379,6 +1393,10 @@ button {
 .theme-mint {
   background: #e3eadc;
   color: #24332a;
+}
+.theme-rose {
+  background: #f4e2e1;
+  color: #3d2a2c;
 }
 .theme-night {
   background: #161614;

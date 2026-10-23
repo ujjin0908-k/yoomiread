@@ -461,7 +461,7 @@ function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs:
         <div className="look-row">
           <span>Theme</span>
           <div className="themes">
-            {(['paper', 'sepia', 'parchment', 'mint', 'night'] as const).map((t) => (
+            {(['paper', 'sepia', 'parchment', 'mint', 'rose', 'night'] as const).map((t) => (
               <button
                 key={t}
                 type="button"

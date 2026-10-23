@@ -4,7 +4,7 @@ export interface ReaderPrefs {
   /** 0 (small) to 4 (large). */
   size: number;
   font: 'serif' | 'sans' | 'garamond' | 'old';
-  theme: 'paper' | 'sepia' | 'parchment' | 'mint' | 'night';
+  theme: 'paper' | 'sepia' | 'parchment' | 'mint' | 'rose' | 'night';
   spacing: 'snug' | 'normal' | 'airy';
   dropCap: boolean;
 }
