@@ -2214,3 +2214,11 @@ blockquote {
     animation: none;
   }
 }
+
+.sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 12px 0 4px;
+}

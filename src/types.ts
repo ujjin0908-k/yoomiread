@@ -19,6 +19,10 @@ export interface Book {
   finishedAt?: number;
   lastChapterId?: string;
   lastReadAt?: number;
+  /** Novel Updates series page, for finding the book again. */
+  novelUpdatesUrl?: string;
+  /** Where the book can be read online: a name and a web link each. */
+  sources?: { name: string; url: string }[];
   /** Model id used to translate this book (falls back to the default in Settings). */
   model?: string;
   /** US dollars spent on AI for this book: every call, kept or not (comparisons, glossary, title). */

@@ -18,6 +18,7 @@ import {
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
 import { keepTranslation, loadSettings, modelFor, translateChapter, translateTitle, type ChapterRun } from '../translate/run';
 import type { Book, BookLanguage, Chapter, Shelf, TranslateSettings } from '../types';
+import { parseSources, sourcesText, webLink } from '../sources';
 
 export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const book = useLive(async () => (await db.books.get(id)) ?? null, [id]);
@@ -144,6 +145,21 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
               </div>
             ))}
         </dl>
+
+        {(book.novelUpdatesUrl || book.sources?.length) && (
+          <div className="sources">
+            {book.novelUpdatesUrl && (
+              <a className="btn ghost" href={book.novelUpdatesUrl} target="_blank" rel="noopener noreferrer">
+                Novel Updates
+              </a>
+            )}
+            {book.sources?.map((src) => (
+              <a key={src.url} className="btn ghost" href={src.url} target="_blank" rel="noopener noreferrer">
+                Read on {src.name}
+              </a>
+            ))}
+          </div>
+        )}
 
         <div className="actions">
           {next && (
@@ -373,6 +389,8 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
   const [author, setAuthor] = useState(book.author);
   const [originalTitle, setOriginalTitle] = useState(book.originalTitle ?? '');
   const [language, setLanguage] = useState<BookLanguage>(book.language);
+  const [novelUpdates, setNovelUpdates] = useState(book.novelUpdatesUrl ?? '');
+  const [sources, setSources] = useState(sourcesText(book.sources));
   const [naming, setNaming] = useState('');
   const hasChinese = /[\u3400-\u9fff]/.test(title);
 
@@ -403,6 +421,8 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
       author: author.trim(),
       originalTitle: originalTitle.trim() || undefined,
       language,
+      novelUpdatesUrl: webLink(novelUpdates),
+      sources: parseSources(sources),
       updatedAt: Date.now(),
     });
     onClose();
@@ -443,6 +463,14 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
             <option value="en">English</option>
             <option value="other">Other</option>
           </select>
+        </label>
+        <label>
+          Novel Updates link <span className="muted small">(optional)</span>
+          <input inputMode="url" autoCapitalize="off" value={novelUpdates} onChange={(e) => setNovelUpdates(e.target.value)} />
+        </label>
+        <label>
+          Where to read <span className="muted small">(one per line: name | link)</span>
+          <textarea rows={3} value={sources} onChange={(e) => setSources(e.target.value)} />
         </label>
         <div className="row between">
           {justImported ? (
