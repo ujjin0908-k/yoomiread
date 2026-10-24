@@ -1,4 +1,4 @@
-import { BookOpen, FileText, Globe, PenLine } from 'lucide-react';
+import { BookOpen, ClipboardPaste, FileText, Globe, PenLine } from 'lucide-react';
 import { useState } from 'react';
 import { Sheet } from '../components';
 import { db } from '../db';
@@ -11,7 +11,9 @@ import { webLink } from '../sources';
 import type { Book, BookLanguage, Shelf } from '../types';
 
 export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose: () => void }) {
-  const [mode, setMode] = useState<'pick' | 'manual' | 'link'>('pick');
+  const [mode, setMode] = useState<'pick' | 'manual' | 'link' | 'paste'>('pick');
+  const [pasteTitle, setPasteTitle] = useState('');
+  const [pasteText, setPasteText] = useState('');
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [link, setLink] = useState('');
@@ -19,7 +21,7 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
   /** Saves an imported book with its chapters, then asks "Keep this title?". */
   async function save(
     result: { title: string; author: string; language: BookLanguage; cover?: Blob; chapters: DraftChapter[]; scanned?: boolean },
-    source: 'pdf' | 'epub' | 'web',
+    source: 'pdf' | 'epub' | 'web' | 'paste',
   ) {
     setStatus('Saving…');
     const now = Date.now();
@@ -67,6 +69,13 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
     }
   }
 
+  async function fromPaste() {
+    const text = pasteText.replace(/\r\n/g, '\n').trim();
+    if (!text) return setError('Paste the chapter text first.');
+    const title = pasteTitle.trim() || 'Pasted chapter';
+    await save({ title, author: '', language: /[\u3400-\u9fff]/.test(text) ? 'zh' : 'other', chapters: [{ title, text }] }, 'paste');
+  }
+
   async function fromPdf(file: File) {
     setError('');
     setStatus('Opening the PDF…');
@@ -108,6 +117,34 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
   }
 
   if (mode === 'manual') return <ManualBook shelf={shelf} onClose={onClose} />;
+  if (mode === 'paste') {
+    return (
+      <Sheet title="Paste a chapter" onClose={onClose}>
+        <form
+          className="form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void fromPaste();
+          }}
+        >
+          <p className="muted small">Copy the text from any page or app and paste it here. Nothing is fetched.</p>
+          <label>
+            Title <span className="muted small">(the book and chapter name)</span>
+            <input value={pasteTitle} onChange={(e) => setPasteTitle(e.target.value)} />
+          </label>
+          <label>
+            Chapter text
+            <textarea rows={12} value={pasteText} onChange={(e) => setPasteText(e.target.value)} />
+          </label>
+          {status && <p className="small">{status}</p>}
+          {error && <p className="warn small">{error}</p>}
+          <button className="btn primary" type="submit" disabled={!pasteText.trim() || !!status}>
+            Save chapter
+          </button>
+        </form>
+      </Sheet>
+    );
+  }
   if (mode === 'link') {
     return (
       <Sheet title="From a web link" onClose={onClose}>
@@ -177,6 +214,13 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
           <span>
             <strong>From a web link</strong>
             <span className="muted small">Paste a chapter's link and read it here</span>
+          </span>
+        </button>
+        <button type="button" className="add-option" disabled={!!status} onClick={() => setMode('paste')}>
+          <ClipboardPaste size={26} strokeWidth={1.5} />
+          <span>
+            <strong>Paste a chapter</strong>
+            <span className="muted small">Copy the text from anywhere and paste it</span>
           </span>
         </button>
         <button type="button" className="add-option" disabled={!!status} onClick={() => setMode('manual')}>
