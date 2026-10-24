@@ -5,6 +5,7 @@ import { db } from '../db';
 import { go, useLive } from '../hooks';
 import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, wordAt } from '../logic';
 import { WordSheet } from './WordSheet';
+import { Mascot } from '../mascot/Mascot';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
 import { keepTranslation, loadSettings, modelFor, translateChapter, type ChapterRun } from '../translate/run';
@@ -274,6 +275,7 @@ export function ChapterPage({ id }: { id: string }) {
         />
       )}
       {lookup && <WordSheet word={lookup.word} lang={lookup.lang} bookId={chapter.bookId} onClose={() => setLookup(undefined)} />}
+      {book && <Mascot book={book} chapter={chapter} chapters={siblings ?? []} />}
       {sheet === 'look' && <LookSheet prefs={prefs} setPrefs={setPrefs} onClose={() => setSheet(undefined)} />}
       {sheet === 'chapters' && (
         <Sheet title="Chapters" onClose={() => setSheet(undefined)}>

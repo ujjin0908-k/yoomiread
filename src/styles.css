@@ -2277,3 +2277,71 @@ blockquote {
 .swatch-green { background: rgb(140 200 120); }
 .swatch-blue { background: rgb(110 170 230); }
 .swatch-pink { background: rgb(240 140 170); }
+
+.wizard {
+  display: block;
+  overflow: visible;
+}
+.wizard .smoke {
+  animation: puff 3s ease-in-out infinite;
+  transform-origin: 80px 60px;
+}
+@keyframes puff {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wizard .smoke {
+    animation: none;
+  }
+}
+
+/* The wizard in the corner of the chapter. Nothing runs for him until he is tapped. */
+.mascot {
+  position: fixed;
+  left: 12px;
+  bottom: 96px;
+  z-index: 30;
+}
+.mascot-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.mascot-bubble {
+  position: absolute;
+  left: 0;
+  bottom: 68px;
+  width: min(300px, calc(100vw - 40px));
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  font-size: 0.9rem;
+}
+.mascot-bubble p {
+  margin: 0 0 8px;
+}
+.mascot-bubble form {
+  display: flex;
+  gap: 6px;
+}
+.mascot-bubble input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
