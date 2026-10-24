@@ -2434,8 +2434,8 @@ html[data-reader='night'] { background: #161614; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(180deg, #0b1230 0%, #11193a 55%, #0b1230 100%);
-  color: #f6eedb;
+  background: #f4efe4;
+  color: #2d5997;
   padding: calc(env(safe-area-inset-top) + 40px) 24px calc(env(safe-area-inset-bottom) + 32px);
   text-align: center;
 }
@@ -2452,11 +2452,11 @@ html[data-reader='night'] { background: #161614; }
   font-size: 2.6rem;
   font-weight: 600;
   margin: 18px 0 4px;
-  color: #f0c24e;
+  color: #2d5997;
 }
 .welcome p {
   margin: 0 0 28px;
-  color: #c9cfef;
+  color: #2d5997;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   font-size: 0.8rem;
@@ -2469,7 +2469,7 @@ html[data-reader='night'] { background: #161614; }
   padding: 16px;
   font: inherit;
   font-weight: 600;
-  background: #f0c24e;
-  color: #1d2140;
+  background: #2d5997;
+  color: #fbf6e4;
   cursor: pointer;
 }
