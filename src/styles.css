@@ -1,21 +1,21 @@
 /* YoomiRead: cream paper, serif titles, dark pill buttons, olive accents, arched frames. */
 :root {
-  --bg: #0a1636;
-  --surface: #0f1f47;
-  --surface-2: #152a5a;
-  --ink: #fbf6e4;
-  --ink-2: #d9deef;
-  --muted: #c5c38f;
-  --line: #22386c;
-  --olive: #f2d976;
-  --olive-soft: #2b4378;
-  --pill: #f2d976;
-  --pill-ink: #1f2d52;
-  --star: #f2d976;
-  --hl: #5e5a2c;
-  --hl-2: #7d7638;
-  --danger: #e89a87;
-  --chart: #f2d976;
+  --bg: #f4efe4;
+  --surface: #fbf8f1;
+  --surface-2: #efe8da;
+  --ink: #2a2823;
+  --ink-2: #57524a;
+  --muted: #8b8476;
+  --line: #e3dccd;
+  --olive: #5c5f2a;
+  --olive-soft: #e6e5cf;
+  --pill: #2d2b26;
+  --pill-ink: #f7f3ea;
+  --star: #c9a24a;
+  --hl: #f4e3a0;
+  --hl-2: #ecd17a;
+  --danger: #a33b2b;
+  --chart: #6f7424;
   --shadow: 0 1px 2px rgb(60 50 30 / 0.06), 0 8px 24px rgb(60 50 30 / 0.08);
   --radius: 22px;
   --display: 'Cormorant Garamond', 'Noto Serif SC', 'Songti SC', Georgia, serif;
@@ -26,21 +26,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #0a1636;
-    --surface: #0f1f47;
-    --surface-2: #152a5a;
-    --ink: #fbf6e4;
-    --ink-2: #d9deef;
-    --muted: #c5c38f;
-    --line: #22386c;
-    --olive: #f2d976;
-    --olive-soft: #2b4378;
-    --pill: #f2d976;
-    --pill-ink: #1f2d52;
-    --hl: #5e5a2c;
-    --hl-2: #7d7638;
-    --danger: #e89a87;
-    --chart: #f2d976;
+    --bg: #1c1b18;
+    --surface: #25241f;
+    --surface-2: #2e2c26;
+    --ink: #ede7da;
+    --ink-2: #c9c1b2;
+    --muted: #9c9484;
+    --line: #38352e;
+    --olive: #b9bb78;
+    --olive-soft: #34351f;
+    --pill: #ede7da;
+    --pill-ink: #1c1b18;
+    --hl: #5f5224;
+    --hl-2: #7a6a26;
+    --danger: #e07a68;
+    --chart: #8f9632;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.3);
     color-scheme: dark;
   }
@@ -2434,8 +2434,8 @@ html[data-reader='night'] { background: #161614; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(180deg, #071130 0%, #0a1636 55%, #071130 100%);
-  color: var(--ink);
+  background: linear-gradient(180deg, #0b1230 0%, #11193a 55%, #0b1230 100%);
+  color: #f6eedb;
   padding: calc(env(safe-area-inset-top) + 40px) 24px calc(env(safe-area-inset-bottom) + 32px);
   text-align: center;
 }
@@ -2452,11 +2452,11 @@ html[data-reader='night'] { background: #161614; }
   font-size: 2.6rem;
   font-weight: 600;
   margin: 18px 0 4px;
-  color: var(--olive);
+  color: #f0c24e;
 }
 .welcome p {
   margin: 0 0 28px;
-  color: var(--ink-2);
+  color: #c9cfef;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   font-size: 0.8rem;
@@ -2469,7 +2469,7 @@ html[data-reader='night'] { background: #161614; }
   padding: 16px;
   font: inherit;
   font-weight: 600;
-  background: var(--pill);
-  color: var(--pill-ink);
+  background: #f0c24e;
+  color: #1d2140;
   cursor: pointer;
 }
