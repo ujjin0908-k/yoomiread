@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
-import { bookProgress, folderNames, formatDate, moveToShelf, newId, paragraphs, readingMinutes, segmentText } from '../logic';
+import { bookProgress, folderNames, formatDate, moveToShelf, newId, paragraphs, readingMinutes, segmentText, wordAt } from '../logic';
+import { WordSheet } from './WordSheet';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
 import { keepTranslation, loadSettings, modelFor, translateChapter, type ChapterRun } from '../translate/run';
@@ -35,6 +36,8 @@ export function ChapterPage({ id }: { id: string }) {
   // English first when there is a translation; I can switch any time.
   const [chosenView, setView] = useState<View>();
   const [card, setCard] = useState<GlossaryEntry>();
+  // A word tapped in the reader, looked up in a dictionary and Wikipedia.
+  const [lookup, setLookup] = useState<{ word: string; lang: 'en' | 'zh' }>();
   const [scroll, setScroll] = useState(0);
   const textRef = useRef<HTMLDivElement>(null);
 
@@ -137,7 +140,20 @@ export function ChapterPage({ id }: { id: string }) {
         ) : null}
 
         {text === undefined || translation === undefined ? null : shown ? (
-          <div className={`reader ${prefs.dropCap ? 'drop' : ''}`} ref={textRef} lang={zh ? 'zh' : 'en'}>
+          <div
+            className={`reader ${prefs.dropCap ? 'drop' : ''}`}
+            ref={textRef}
+            lang={zh ? 'zh' : 'en'}
+            onClick={(e) => {
+              // A tap on a word looks it up; a highlight opens its note; a drag selects text instead.
+              const sel = window.getSelection();
+              if ((sel && !sel.isCollapsed) || (e.target as HTMLElement).closest('mark')) return;
+              const range = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+              if (!range || range.startContainer.nodeType !== Node.TEXT_NODE) return;
+              const word = wordAt((range.startContainer as Text).data, range.startOffset, zh ? 'zh' : 'en');
+              if (word) setLookup({ word, lang: zh ? 'zh' : 'en' });
+            }}
+          >
             {withFaces(paragraphs(shown), faceFor).map(({ p, face }) => (
               <p key={`${view}-${p.start}`} data-start={p.start} className={face ? 'has-face' : undefined}>
                 {face && <Avatar entry={face} size={26} onClick={() => setCard(face)} />}
@@ -248,6 +264,7 @@ export function ChapterPage({ id }: { id: string }) {
           }}
         />
       )}
+      {lookup && <WordSheet word={lookup.word} lang={lookup.lang} bookId={chapter.bookId} onClose={() => setLookup(undefined)} />}
       {sheet === 'look' && <LookSheet prefs={prefs} setPrefs={setPrefs} onClose={() => setSheet(undefined)} />}
       {sheet === 'chapters' && (
         <Sheet title="Chapters" onClose={() => setSheet(undefined)}>

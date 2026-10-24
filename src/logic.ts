@@ -211,3 +211,12 @@ export function folderNames(notes: Note[]): string[] {
   return [...new Set(notes.map((n) => n.folder).filter((f): f is string => !!f))].sort((a, b) => a.localeCompare(b));
 }
 
+
+/** The word under a position in a text (Chinese and English words are found with the browser's word splitter). */
+export function wordAt(text: string, offset: number, locale: string): string | undefined {
+  const segmenter = new Intl.Segmenter(locale, { granularity: 'word' });
+  for (const s of segmenter.segment(text)) {
+    if (offset >= s.index && offset < s.index + s.segment.length) return s.isWordLike ? s.segment : undefined;
+  }
+  return undefined;
+}
