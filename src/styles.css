@@ -2361,3 +2361,11 @@ blockquote {
   margin: 0;
   color: var(--ink-2);
 }
+
+/* The top of the screen takes the reader's page colour, so no strip of another colour shows. */
+html[data-reader='paper'] { background: #f7f3ea; }
+html[data-reader='sepia'] { background: #eee0c6; }
+html[data-reader='parchment'] { background: #efe4c8; }
+html[data-reader='mint'] { background: #e3eadc; }
+html[data-reader='rose'] { background: #f4e2e1; }
+html[data-reader='night'] { background: #161614; }

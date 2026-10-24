@@ -12,6 +12,16 @@ import { keepTranslation, loadSettings, modelFor, translateChapter, type Chapter
 import { useTranslateAhead } from '../translate/ahead';
 import type { Book, Chapter, GlossaryEntry, HighlightColor, Note, TranslateSettings } from '../types';
 
+/** The page colour of each reader theme (also used for the status bar). */
+const READER_COLORS: Record<ReaderPrefs['theme'], string> = {
+  paper: '#f7f3ea',
+  sepia: '#eee0c6',
+  parchment: '#efe4c8',
+  mint: '#e3eadc',
+  rose: '#f4e2e1',
+  night: '#161614',
+};
+
 const COLORS: { id: HighlightColor; label: string }[] = [
   { id: 'yellow', label: 'Yellow' },
   { id: 'green', label: 'Green' },
@@ -53,11 +63,18 @@ export function ChapterPage({ id }: { id: string }) {
   const aheadStatus = useTranslateAhead(chapter, book);
   useScrollMemory(chapter, text !== undefined && translation !== undefined, setScroll);
 
-  // Reader theme colors the whole page while it is open.
+  // Reader theme colors the whole page while it is open, including the top of the screen (the status bar).
   useEffect(() => {
+    const root = document.documentElement;
+    const meta = [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')];
+    const before = meta.map((m) => m.content);
     document.body.dataset.reader = prefs.theme;
+    root.dataset.reader = prefs.theme;
+    meta.forEach((m) => (m.content = READER_COLORS[prefs.theme]));
     return () => {
       delete document.body.dataset.reader;
+      delete root.dataset.reader;
+      meta.forEach((m, i) => (m.content = before[i]));
     };
   }, [prefs.theme]);
 
