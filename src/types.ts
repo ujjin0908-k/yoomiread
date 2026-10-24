@@ -98,6 +98,7 @@ export interface GlossaryEntry {
 export type BackupChapter = Chapter & { text?: string; translation?: Omit<Translation, 'chapterId' | 'bookId'> };
 
 export type NoteKind = 'chapter' | 'highlight';
+export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink';
 
 export interface Note {
   id: string;
@@ -112,6 +113,8 @@ export interface Note {
   quote?: string;
   /** Highlights can be sorted into folders (e.g. "Lines", "Plot"). */
   folder?: string;
+  /** Highlight color; yellow when not set. */
+  color?: HighlightColor;
   body: string;
   createdAt: number;
   updatedAt: number;

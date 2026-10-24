@@ -2244,3 +2244,36 @@ blockquote {
   color: var(--pill-ink);
   border-color: var(--pill);
 }
+
+/* Highlight colors: translucent, so they read on every paper and in night mode. */
+.hl-yellow {
+  background: linear-gradient(transparent 8%, rgb(240 205 80 / 0.55) 8%, rgb(240 205 80 / 0.55) 92%, transparent 92%);
+}
+.hl-green {
+  background: linear-gradient(transparent 8%, rgb(140 200 120 / 0.5) 8%, rgb(140 200 120 / 0.5) 92%, transparent 92%);
+}
+.hl-blue {
+  background: linear-gradient(transparent 8%, rgb(110 170 230 / 0.45) 8%, rgb(110 170 230 / 0.45) 92%, transparent 92%);
+}
+.hl-pink {
+  background: linear-gradient(transparent 8%, rgb(240 140 170 / 0.5) 8%, rgb(240 140 170 / 0.5) 92%, transparent 92%);
+}
+.swatches {
+  display: flex;
+  gap: 10px;
+}
+.swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+.swatch.on {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.swatch-yellow { background: rgb(240 205 80); }
+.swatch-green { background: rgb(140 200 120); }
+.swatch-blue { background: rgb(110 170 230); }
+.swatch-pink { background: rgb(240 140 170); }

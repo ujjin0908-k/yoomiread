@@ -37,8 +37,13 @@ export function finishBook(book: Book, rating: number, review: string, now = Dat
   return { ...moved, rating: clampRating(rating), review: trimmed || undefined };
 }
 
+/** A chapter counts as read when it was ticked, or scrolled to (nearly) the end. */
+export function isRead(c: Chapter): boolean {
+  return !!c.read || (c.position ?? 0) >= 0.9;
+}
+
 export function progress(chapters: Chapter[]): { read: number; total: number } {
-  return { read: chapters.filter((c) => c.read).length, total: chapters.length };
+  return { read: chapters.filter(isRead).length, total: chapters.length };
 }
 
 /** Share of the book read, 0 to 1: finished chapters plus the scroll position in unfinished ones. */

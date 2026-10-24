@@ -10,6 +10,7 @@ import {
   continueChapter,
   finishBook,
   formatDate,
+  isRead,
   moveToShelf,
   newId,
   nextChapterNumber,
@@ -227,11 +228,11 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
               <li key={c.id}>
                 <button
                   type="button"
-                  className={c.read ? 'check on' : 'check'}
-                  aria-label={c.read ? `Mark ${c.title} unread` : `Mark ${c.title} read`}
-                  onClick={() => void db.chapters.update(c.id, { read: !c.read })}
+                  className={isRead(c) ? 'check on' : 'check'}
+                  aria-label={isRead(c) ? `Mark ${c.title} unread` : `Mark ${c.title} read`}
+                  onClick={() => void db.chapters.update(c.id, { read: !isRead(c), position: isRead(c) ? 0 : 1 })}
                 >
-                  {c.read ? '✓' : ''}
+                  {isRead(c) ? '✓' : (c.position ?? 0) > 0.02 ? `${Math.round((c.position ?? 0) * 100)}` : ''}
                 </button>
                 <a href={`#/chapter/${c.id}`} className="chapter-link">
                   <span className="chapter-name">

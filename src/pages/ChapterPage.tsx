@@ -3,13 +3,20 @@ import { useEffect, useRef, useState } from 'react';
 import { ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
-import { bookProgress, folderNames, formatDate, moveToShelf, newId, paragraphs, readingMinutes, segmentText, wordAt } from '../logic';
+import { bookProgress, folderNames, formatDate, isRead, moveToShelf, newId, paragraphs, readingMinutes, segmentText, wordAt } from '../logic';
 import { WordSheet } from './WordSheet';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
 import { keepTranslation, loadSettings, modelFor, translateChapter, type ChapterRun } from '../translate/run';
 import { useTranslateAhead } from '../translate/ahead';
-import type { Book, Chapter, GlossaryEntry, Note, TranslateSettings } from '../types';
+import type { Book, Chapter, GlossaryEntry, HighlightColor, Note, TranslateSettings } from '../types';
+
+const COLORS: { id: HighlightColor; label: string }[] = [
+  { id: 'yellow', label: 'Yellow' },
+  { id: 'green', label: 'Green' },
+  { id: 'blue', label: 'Blue' },
+  { id: 'pink', label: 'Pink' },
+];
 import { Avatar } from './Glossary';
 
 type View = 'original' | 'translation';
@@ -161,7 +168,7 @@ export function ChapterPage({ id }: { id: string }) {
                   s.noteIds.length ? (
                     <mark
                       key={s.start}
-                      className={s.noteIds.length > 1 ? 'hl hl-2' : 'hl'}
+                      className={`hl hl-${highlights.find((h) => h.id === s.noteIds[s.noteIds.length - 1])?.color ?? 'yellow'}`}
                       onClick={() => setOpen(highlights.find((h) => h.id === s.noteIds[s.noteIds.length - 1]))}
                     >
                       {s.text}
@@ -274,7 +281,7 @@ export function ChapterPage({ id }: { id: string }) {
                 <a href={`#/chapter/${c.id}`} className={c.id === id ? 'on' : ''} onClick={() => setSheet(undefined)}>
                   <span className="muted">{c.number}</span>
                   <span lang={zh ? 'zh' : undefined}>{c.title}</span>
-                  {c.read && <span className="muted small">✓</span>}
+                  {isRead(c) && <span className="muted small">✓</span>}
                 </a>
               </li>
             ))}
@@ -583,13 +590,14 @@ function offsetOf(node: Node, offset: number): number | undefined {
 function NoteSheet({ chapter, note, pending, on, onClose }: { chapter: Chapter; note?: Note; pending?: Selection; on: View; onClose: () => void }) {
   const [body, setBody] = useState(note?.body ?? '');
   const [folder, setFolder] = useState(note?.folder ?? '');
+  const [color, setColor] = useState<HighlightColor>(note?.color ?? 'yellow');
   const folders = useLive(async () => folderNames(await db.notes.where('kind').equals('highlight').toArray()), []) ?? [];
   const quote = note?.quote ?? pending?.quote;
 
   async function save() {
     const now = Date.now();
     if (note) {
-      await db.notes.update(note.id, { body: body.trim(), folder: folder.trim() || undefined, updatedAt: now });
+      await db.notes.update(note.id, { body: body.trim(), folder: folder.trim() || undefined, color: note.kind === 'highlight' ? color : undefined, updatedAt: now });
     } else if (pending) {
       await db.notes.add({
         id: newId(),
@@ -601,6 +609,7 @@ function NoteSheet({ chapter, note, pending, on, onClose }: { chapter: Chapter; 
         end: pending.end,
         quote: pending.quote,
         folder: folder.trim() || undefined,
+        color,
         body: body.trim(),
         createdAt: now,
         updatedAt: now,
@@ -628,6 +637,23 @@ function NoteSheet({ chapter, note, pending, on, onClose }: { chapter: Chapter; 
           {note?.kind === 'chapter' ? 'Comment' : 'Note (optional)'}
           <textarea autoFocus rows={4} value={body} onChange={(e) => setBody(e.target.value)} />
         </label>
+        {note?.kind !== 'chapter' && (
+          <div className="look-row">
+            <span>Color</span>
+            <div className="swatches">
+              {COLORS.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={`swatch swatch-${c.id} ${color === c.id ? 'on' : ''}`}
+                  aria-label={c.label}
+                  aria-pressed={color === c.id}
+                  onClick={() => setColor(c.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
         {note?.kind !== 'chapter' && (
           <label>
             Folder <span className="muted small">(optional)</span>
