@@ -1,12 +1,12 @@
 /* YoomiRead: cream paper, serif titles, dark pill buttons, olive accents, arched frames. */
 :root {
-  --bg: #13244a;
-  --surface: #1c3564;
-  --surface-2: #244077;
+  --bg: #0a1636;
+  --surface: #0f1f47;
+  --surface-2: #152a5a;
   --ink: #fbf6e4;
   --ink-2: #d9deef;
   --muted: #c5c38f;
-  --line: #2f4d84;
+  --line: #22386c;
   --olive: #f2d976;
   --olive-soft: #2b4378;
   --pill: #f2d976;
@@ -26,13 +26,13 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #13244a;
-    --surface: #1c3564;
-    --surface-2: #244077;
+    --bg: #0a1636;
+    --surface: #0f1f47;
+    --surface-2: #152a5a;
     --ink: #fbf6e4;
     --ink-2: #d9deef;
     --muted: #c5c38f;
-    --line: #2f4d84;
+    --line: #22386c;
     --olive: #f2d976;
     --olive-soft: #2b4378;
     --pill: #f2d976;
@@ -2434,7 +2434,7 @@ html[data-reader='night'] { background: #161614; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(180deg, #0d1a3a 0%, #13244a 55%, #0d1a3a 100%);
+  background: linear-gradient(180deg, #071130 0%, #0a1636 55%, #071130 100%);
   color: var(--ink);
   padding: calc(env(safe-area-inset-top) + 40px) 24px calc(env(safe-area-inset-bottom) + 32px);
   text-align: center;
