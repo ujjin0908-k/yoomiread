@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Cover, Empty, PageTitle, TabBar, TopBar } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
-import { formatDate } from '../logic';
+import { folderNames, formatDate } from '../logic';
 import type { Book, Chapter, Note } from '../types';
 
 function useQuotes() {
@@ -23,9 +23,14 @@ export function Quotes() {
   const quotes = useQuotes();
   const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState('');
+  // undefined: every folder; '': lines with no folder; otherwise one folder.
+  const [folder, setFolder] = useState<string>();
   const q = search.trim().toLowerCase();
+  const folders = folderNames((quotes ?? []).map((x) => x.note));
   const shown = (quotes ?? []).filter(
-    (x) => !q || [x.note.quote ?? '', x.note.body, x.book.title].some((s) => s.toLowerCase().includes(q)),
+    (x) =>
+      (folder === undefined || (x.note.folder ?? '') === folder) &&
+      (!q || [x.note.quote ?? '', x.note.body, x.book.title].some((s) => s.toLowerCase().includes(q))),
   );
 
   // Group by book, keeping the newest book first.
@@ -58,6 +63,22 @@ export function Quotes() {
         />
         {searching && (
           <input className="search" type="search" autoFocus placeholder="Search quotes and notes" value={search} onChange={(e) => setSearch(e.target.value)} />
+        )}
+
+        {folders.length > 0 && (
+          <div className="folder-chips">
+            <button type="button" className={folder === undefined ? 'on' : ''} onClick={() => setFolder(undefined)}>
+              All
+            </button>
+            {folders.map((f) => (
+              <button key={f} type="button" className={folder === f ? 'on' : ''} onClick={() => setFolder(f)}>
+                {f}
+              </button>
+            ))}
+            <button type="button" className={folder === '' ? 'on' : ''} onClick={() => setFolder('')}>
+              No folder
+            </button>
+          </div>
         )}
 
         {quotes && !shown.length && (

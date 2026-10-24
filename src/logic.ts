@@ -205,3 +205,9 @@ export function formatDate(ms?: number): string {
   if (!ms) return '';
   return new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
+
+/** The folder names used so far, A to Z. */
+export function folderNames(notes: Note[]): string[] {
+  return [...new Set(notes.map((n) => n.folder).filter((f): f is string => !!f))].sort((a, b) => a.localeCompare(b));
+}
+

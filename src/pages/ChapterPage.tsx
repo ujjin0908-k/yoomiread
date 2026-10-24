@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
-import { bookProgress, formatDate, moveToShelf, newId, paragraphs, readingMinutes, segmentText } from '../logic';
+import { bookProgress, folderNames, formatDate, moveToShelf, newId, paragraphs, readingMinutes, segmentText } from '../logic';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
 import { keepTranslation, loadSettings, modelFor, translateChapter, type ChapterRun } from '../translate/run';
@@ -565,12 +565,14 @@ function offsetOf(node: Node, offset: number): number | undefined {
 
 function NoteSheet({ chapter, note, pending, on, onClose }: { chapter: Chapter; note?: Note; pending?: Selection; on: View; onClose: () => void }) {
   const [body, setBody] = useState(note?.body ?? '');
+  const [folder, setFolder] = useState(note?.folder ?? '');
+  const folders = useLive(async () => folderNames(await db.notes.where('kind').equals('highlight').toArray()), []) ?? [];
   const quote = note?.quote ?? pending?.quote;
 
   async function save() {
     const now = Date.now();
     if (note) {
-      await db.notes.update(note.id, { body: body.trim(), updatedAt: now });
+      await db.notes.update(note.id, { body: body.trim(), folder: folder.trim() || undefined, updatedAt: now });
     } else if (pending) {
       await db.notes.add({
         id: newId(),
@@ -581,6 +583,7 @@ function NoteSheet({ chapter, note, pending, on, onClose }: { chapter: Chapter; 
         start: pending.start,
         end: pending.end,
         quote: pending.quote,
+        folder: folder.trim() || undefined,
         body: body.trim(),
         createdAt: now,
         updatedAt: now,
@@ -608,6 +611,17 @@ function NoteSheet({ chapter, note, pending, on, onClose }: { chapter: Chapter; 
           {note?.kind === 'chapter' ? 'Comment' : 'Note (optional)'}
           <textarea autoFocus rows={4} value={body} onChange={(e) => setBody(e.target.value)} />
         </label>
+        {note?.kind !== 'chapter' && (
+          <label>
+            Folder <span className="muted small">(optional)</span>
+            <input list="highlight-folders" value={folder} onChange={(e) => setFolder(e.target.value)} placeholder="e.g. Lines, Plot" />
+            <datalist id="highlight-folders">
+              {folders.map((f) => (
+                <option key={f} value={f} />
+              ))}
+            </datalist>
+          </label>
+        )}
         <div className="row between">
           {note ? (
             <button type="button" className="btn danger" onClick={() => void remove()}>

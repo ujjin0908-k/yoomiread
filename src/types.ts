@@ -110,6 +110,8 @@ export interface Note {
   start?: number;
   end?: number;
   quote?: string;
+  /** Highlights can be sorted into folders (e.g. "Lines", "Plot"). */
+  folder?: string;
   body: string;
   createdAt: number;
   updatedAt: number;

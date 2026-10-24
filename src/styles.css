@@ -2222,3 +2222,25 @@ blockquote {
   justify-content: center;
   margin: 12px 0 4px;
 }
+
+.folder-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 16px;
+}
+.folder-chips button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.folder-chips button.on {
+  background: var(--pill);
+  color: var(--pill-ink);
+  border-color: var(--pill);
+}
