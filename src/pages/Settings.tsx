@@ -241,6 +241,17 @@ function TranslationSettings() {
         </div>
       </div>
 
+      <div className="look-row">
+        <span>Translate ahead while reading</span>
+        <div className="seg">
+          {[0, 1, 2, 3].map((n) => (
+            <button key={n} type="button" className={(s.ahead ?? 1) === n ? 'on' : ''} onClick={() => update({ ahead: n })}>
+              {n === 0 ? 'Off' : `Next ${n}`}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <button type="button" className="btn" disabled={testing} onClick={() => void test()}>
         Test connection
       </button>

@@ -7,6 +7,7 @@ import { bookProgress, formatDate, moveToShelf, newId, paragraphs, readingMinute
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
 import { keepTranslation, loadSettings, modelFor, translateChapter, type ChapterRun } from '../translate/run';
+import { useTranslateAhead } from '../translate/ahead';
 import type { Book, Chapter, GlossaryEntry, Note, TranslateSettings } from '../types';
 import { Avatar } from './Glossary';
 
@@ -38,6 +39,7 @@ export function ChapterPage({ id }: { id: string }) {
   const textRef = useRef<HTMLDivElement>(null);
 
   useReadingSession(chapter, book);
+  const aheadStatus = useTranslateAhead(chapter, book);
   useScrollMemory(chapter, text !== undefined && translation !== undefined, setScroll);
 
   // Reader theme colors the whole page while it is open.
@@ -110,6 +112,7 @@ export function ChapterPage({ id }: { id: string }) {
       />
       <main className="page reader-main" style={{ fontSize: FONT_SIZES[prefs.size] }}>
         <p className="eyebrow">Chapter {chapter.number}</p>
+        {aheadStatus && <p className="small muted">{aheadStatus}</p>}
         <h1 className="chapter-title" lang={zh ? 'zh' : undefined}>
           {chapter.title}
         </h1>

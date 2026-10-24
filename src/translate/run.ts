@@ -4,19 +4,18 @@ import type { Chapter, GlossaryEntry, ModelOption, TranslateSettings, Translatio
 import { chat, type ChatResult } from './api';
 import { chapterMessages, cleanTitle, costOf, estimateTokens, glossaryScanMessages, isRefusal, parseTerms, pronounWarnings, splitReply, titleMessages, type ChatMessage, type ProposedTerm } from './prompt';
 
-/**
- * Prices seen on the owner's provider on 2026-10-20 (change them in Settings when they move).
- * The MiniMax entries are not confirmed against the provider yet: their ids and prices come from
- * public listings, so check them in Settings and correct the id if the provider names it differently.
- */
+/** Prices and ids as the owner's provider lists them on 2026-10-24 (change them in Settings when they move). */
 export const DEFAULT_MODELS: ModelOption[] = [
   { id: 'claude-haiku-5.5', label: 'Claude Haiku 5.5 (budget)', inputPrice: 0.066, outputPrice: 0.332 },
   { id: 'deepseek-v4-pro-0813', label: 'DeepSeek v4 Pro (quality)', inputPrice: 0.561, outputPrice: 1.683 },
-  { id: 'MiniMax-M2', label: 'MiniMax M2', inputPrice: 0.3, outputPrice: 1.2 },
-  { id: 'MiniMax-M3', label: 'MiniMax M3', inputPrice: 0.3, outputPrice: 1.2 },
+  { id: 'minimax-m2', label: 'MiniMax M2', inputPrice: 0.195, outputPrice: 0.78 },
+  { id: 'minimax-m3', label: 'MiniMax M3', inputPrice: 0.225, outputPrice: 0.9 },
 ];
 
-export const EMPTY_SETTINGS: TranslateSettings = { baseUrl: '', apiKey: '', models: DEFAULT_MODELS, defaultModel: DEFAULT_MODELS[0].id };
+export const EMPTY_SETTINGS: TranslateSettings = { baseUrl: '', apiKey: '', models: DEFAULT_MODELS, defaultModel: DEFAULT_MODELS[0].id, ahead: 1 };
+
+/** Names saved by earlier versions, replaced by the provider's ids. */
+const RETIRED_MODEL_IDS = ['MiniMax-M2', 'MiniMax-M3'];
 
 const KEY = 'translate';
 
@@ -24,9 +23,10 @@ export async function loadSettings(): Promise<TranslateSettings> {
   const row = await db.settings.get(KEY);
   const saved = { ...EMPTY_SETTINGS, ...((row?.value as Partial<TranslateSettings>) ?? {}) };
   // Models added in a later version are missing from settings saved before it: add them, keep the owner's edits.
-  const have = new Set(saved.models.map((m) => m.id));
+  const kept = saved.models.filter((m) => !RETIRED_MODEL_IDS.includes(m.id));
+  const have = new Set(kept.map((m) => m.id));
   const missing = DEFAULT_MODELS.filter((m) => !have.has(m.id));
-  return missing.length ? { ...saved, models: [...saved.models, ...missing] } : saved;
+  return kept.length === saved.models.length && !missing.length ? saved : { ...saved, models: [...kept, ...missing] };
 }
 
 export async function saveSettings(settings: TranslateSettings): Promise<void> {

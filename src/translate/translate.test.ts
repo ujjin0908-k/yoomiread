@@ -211,6 +211,14 @@ describe('model list', () => {
     const s = await loadSettings();
     expect(s.models.find((m) => m.id === 'claude-haiku-5.5')?.label).toBe('Mine');
     expect(s.models.map((m) => m.id)).toEqual(['claude-haiku-5.5', ...DEFAULT_MODELS.slice(1).map((m) => m.id)]);
-    expect(s.models.map((m) => m.id)).toContain('MiniMax-M3');
+    expect(s.models.map((m) => m.id)).toContain('minimax-m3');
+  });
+
+  it('drops the model names from earlier versions', async () => {
+    await db.settings.clear();
+    await saveSettings({ baseUrl: 'b', apiKey: 'k', defaultModel: 'MiniMax-M2', models: [{ id: 'MiniMax-M2', label: 'Old', inputPrice: 1, outputPrice: 2 }] });
+    const s = await loadSettings();
+    expect(s.models.map((m) => m.id)).not.toContain('MiniMax-M2');
+    expect(s.models.map((m) => m.id)).toContain('minimax-m2');
   });
 });

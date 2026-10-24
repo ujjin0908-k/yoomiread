@@ -150,4 +150,6 @@ export interface TranslateSettings {
   apiKey: string;
   models: ModelOption[];
   defaultModel: string;
+  /** How many of the next chapters to translate in the background while reading (0 turns it off). */
+  ahead?: number;
 }
