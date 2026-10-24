@@ -1,21 +1,21 @@
 /* YoomiRead: cream paper, serif titles, dark pill buttons, olive accents, arched frames. */
 :root {
-  --bg: #f4efe4;
-  --surface: #fbf8f1;
-  --surface-2: #efe8da;
-  --ink: #2a2823;
-  --ink-2: #57524a;
-  --muted: #8b8476;
-  --line: #e3dccd;
-  --olive: #5c5f2a;
-  --olive-soft: #e6e5cf;
-  --pill: #2d2b26;
-  --pill-ink: #f7f3ea;
-  --star: #c9a24a;
-  --hl: #f4e3a0;
-  --hl-2: #ecd17a;
-  --danger: #a33b2b;
-  --chart: #6f7424;
+  --bg: #11193a;
+  --surface: #1a2550;
+  --surface-2: #22305f;
+  --ink: #f6eedb;
+  --ink-2: #c9cfef;
+  --muted: #8e97c8;
+  --line: #2a3970;
+  --olive: #f0c24e;
+  --olive-soft: #2a3560;
+  --pill: #f0c24e;
+  --pill-ink: #1d2140;
+  --star: #f0c24e;
+  --hl: #6a5a22;
+  --hl-2: #8a7430;
+  --danger: #e07a68;
+  --chart: #f0c24e;
   --shadow: 0 1px 2px rgb(60 50 30 / 0.06), 0 8px 24px rgb(60 50 30 / 0.08);
   --radius: 22px;
   --display: 'Cormorant Garamond', 'Noto Serif SC', 'Songti SC', Georgia, serif;
@@ -26,21 +26,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #1c1b18;
-    --surface: #25241f;
-    --surface-2: #2e2c26;
-    --ink: #ede7da;
-    --ink-2: #c9c1b2;
-    --muted: #9c9484;
-    --line: #38352e;
-    --olive: #b9bb78;
-    --olive-soft: #34351f;
-    --pill: #ede7da;
-    --pill-ink: #1c1b18;
-    --hl: #5f5224;
-    --hl-2: #7a6a26;
+    --bg: #11193a;
+    --surface: #1a2550;
+    --surface-2: #22305f;
+    --ink: #f6eedb;
+    --ink-2: #c9cfef;
+    --muted: #8e97c8;
+    --line: #2a3970;
+    --olive: #f0c24e;
+    --olive-soft: #2a3560;
+    --pill: #f0c24e;
+    --pill-ink: #1d2140;
+    --hl: #6a5a22;
+    --hl-2: #8a7430;
     --danger: #e07a68;
-    --chart: #8f9632;
+    --chart: #f0c24e;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.3);
     color-scheme: dark;
   }
@@ -2426,4 +2426,50 @@ html[data-reader='night'] { background: #161614; }
   .wizard {
     animation: none !important;
   }
+}
+
+/* Welcome: the scene from the splash picture, with the app's name and one button. */
+.welcome {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(180deg, #0b1230 0%, #11193a 55%, #0b1230 100%);
+  color: var(--ink);
+  padding: calc(env(safe-area-inset-top) + 40px) 24px calc(env(safe-area-inset-bottom) + 32px);
+  text-align: center;
+}
+.welcome-scene {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 24px;
+  object-fit: cover;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+}
+.welcome h1 {
+  font-family: var(--display);
+  font-size: 2.6rem;
+  font-weight: 600;
+  margin: 18px 0 4px;
+  color: var(--olive);
+}
+.welcome p {
+  margin: 0 0 28px;
+  color: var(--ink-2);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+.welcome button {
+  width: 100%;
+  max-width: 340px;
+  border: 0;
+  border-radius: 999px;
+  padding: 16px;
+  font: inherit;
+  font-weight: 600;
+  background: var(--pill);
+  color: var(--pill-ink);
+  cursor: pointer;
 }
