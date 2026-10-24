@@ -86,17 +86,14 @@ export function Wizard({ mood, size = 64 }: { mood: Mood; size?: number }) {
         {/* beard, with a soft shade at the bottom */}
         <path d="M41 62 Q37 88 50 94 Q60 98 70 94 Q83 88 79 62 Q60 72 41 62 Z" fill={C.beard} />
         <path d="M50 94 Q60 90 70 94" fill="none" stroke={C.beardShade} strokeWidth="2" />
-        {/* hat: plum cone with a bent tip and a brim */}
-        <path
-          d={sad ? 'M30 46 Q60 38 90 46 Q88 30 100 18 Q78 28 66 36 Q46 32 30 46 Z' : 'M30 46 Q60 38 90 46 Q84 26 96 2 Q72 20 64 34 Q46 30 30 46 Z'}
-          fill={C.hat}
-        />
+        {/* hat: one smooth cone from the brim up to a bent tip */}
+        <path d={sad ? 'M32 46 C40 30 60 22 84 20 C82 30 80 38 88 46 Z' : 'M32 46 C38 26 58 14 88 4 C84 20 80 34 88 46 Z'} fill={C.hat} />
         <ellipse cx="60" cy="46" rx="40" ry="8" fill={C.hatDark} />
         <path d="M24 46 Q60 56 96 46" fill="none" stroke={C.line} strokeWidth="1.6" opacity="0.5" />
-        <Star x={44} y={28} r={3.6} />
-        <Star x={74} y={18} r={2.8} />
-        <Star x={84} y={38} r={2} />
-        <Star x={38} y={40} r={2} />
+        <Star x={50} y={30} r={3.4} />
+        <Star x={68} y={18} r={2.6} />
+        <Star x={76} y={36} r={2} />
+        <Star x={42} y={40} r={2} />
         {/* face */}
         {happy && (
           <>
