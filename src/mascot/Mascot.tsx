@@ -94,7 +94,7 @@ export function Mascot({ book, chapter, chapters }: { book: Book; chapter: Chapt
   return (
     <div className="mascot">
       <button type="button" className="mascot-btn" aria-label="Talk to the wizard" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Wizard mood={mood} size={56} />
+        <Wizard mood={mood} size={96} />
       </button>
       {open && (
         <div className="mascot-bubble" role="dialog" aria-label="Wizard">
