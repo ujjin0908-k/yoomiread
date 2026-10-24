@@ -5,3 +5,7 @@
 [[edge_functions]]
   path = "/api/ci/*"
   function = "ci-proxy"
+
+[[edge_functions]]
+  path = "/api/fetch"
+  function = "fetch-page"

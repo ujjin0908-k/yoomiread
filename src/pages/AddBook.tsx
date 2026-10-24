@@ -1,4 +1,4 @@
-import { BookOpen, FileText, PenLine } from 'lucide-react';
+import { BookOpen, FileText, Globe, PenLine } from 'lucide-react';
 import { useState } from 'react';
 import { Sheet } from '../components';
 import { db } from '../db';
@@ -6,17 +6,20 @@ import { go } from '../hooks';
 import { shrinkImage } from '../images';
 import { SHELVES, moveToShelf, newId } from '../logic';
 import type { DraftChapter } from '../import/chapters';
+import { extractChapter, fetchPage } from '../import/web';
+import { webLink } from '../sources';
 import type { Book, BookLanguage, Shelf } from '../types';
 
 export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose: () => void }) {
-  const [mode, setMode] = useState<'pick' | 'manual'>('pick');
+  const [mode, setMode] = useState<'pick' | 'manual' | 'link'>('pick');
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const [link, setLink] = useState('');
 
   /** Saves an imported book with its chapters, then asks "Keep this title?". */
   async function save(
     result: { title: string; author: string; language: BookLanguage; cover?: Blob; chapters: DraftChapter[]; scanned?: boolean },
-    source: 'pdf' | 'epub',
+    source: 'pdf' | 'epub' | 'web',
   ) {
     setStatus('Saving…');
     const now = Date.now();
@@ -46,6 +49,22 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
     });
     onClose();
     go(`book/${book.id}/${result.scanned ? 'scanned' : 'imported'}`);
+  }
+
+  async function fromLink(raw: string) {
+    setError('');
+    const url = webLink(raw);
+    if (!url) return setError('Paste a web address that starts with https://');
+    setStatus('Reading the page…');
+    try {
+      const page = await fetchPage(url);
+      const chapter = extractChapter(page.html);
+      if (!chapter.text) throw new Error('No story text was found on that page.');
+      await save({ title: chapter.title, author: '', language: /[\u3400-\u9fff]/.test(chapter.text) ? 'zh' : 'other', chapters: [chapter] }, 'web');
+    } catch (e) {
+      setStatus('');
+      setError(e instanceof Error ? e.message : 'Could not read that page.');
+    }
   }
 
   async function fromPdf(file: File) {
@@ -89,6 +108,30 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
   }
 
   if (mode === 'manual') return <ManualBook shelf={shelf} onClose={onClose} />;
+  if (mode === 'link') {
+    return (
+      <Sheet title="From a web link" onClose={onClose}>
+        <form
+          className="form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void fromLink(link);
+          }}
+        >
+          <p className="muted small">Paste the link to one chapter. The page is read through YoomiRead's own server, and only the sites it allows.</p>
+          <label>
+            Chapter link
+            <input inputMode="url" autoCapitalize="off" autoCorrect="off" required value={link} onChange={(e) => setLink(e.target.value)} />
+          </label>
+          {status && <p className="small">{status}</p>}
+          {error && <p className="warn small">{error}</p>}
+          <button className="btn primary" type="submit" disabled={!link.trim() || !!status}>
+            Read this page
+          </button>
+        </form>
+      </Sheet>
+    );
+  }
 
   return (
     <Sheet title="Add a book" onClose={onClose}>
@@ -129,6 +172,13 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
             }}
           />
         </label>
+        <button type="button" className="add-option" disabled={!!status} onClick={() => setMode('link')}>
+          <Globe size={26} strokeWidth={1.5} />
+          <span>
+            <strong>From a web link</strong>
+            <span className="muted small">Paste a chapter's link and read it here</span>
+          </span>
+        </button>
         <button type="button" className="add-option" disabled={!!status} onClick={() => setMode('manual')}>
           <PenLine size={26} strokeWidth={1.5} />
           <span>
@@ -138,7 +188,6 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
         </button>
         {status && <p className="muted small center">{status}</p>}
         {error && <p className="warn small center">{error}</p>}
-        <p className="muted small center">Chapter links are coming next.</p>
       </div>
     </Sheet>
   );
