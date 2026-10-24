@@ -1,0 +1,8 @@
+Dictionaries bundled with YoomiRead
+
+English (en.json.gz): a shortened copy of ECDICT by Linwei (skywind3000/ECDICT), MIT License.
+  Only common words are kept, and definitions are shortened.
+
+Chinese (zh.json.gz): a shortened copy of CC-CEDICT (mdbg.net), licensed under CC BY-SA 4.0.
+  Pinyin and English glosses are kept; the entries are shortened.
+  Share-alike: this copy is under the same license.

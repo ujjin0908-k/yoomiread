@@ -45,9 +45,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Built files have a hash in their name and never change; fonts barely do. Saved copy first.
+  // Built files have a hash in their name and never change; fonts and dictionaries barely do. Saved copy first.
   const fonts = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
-  if ((url.origin === self.location.origin && url.pathname.startsWith('/assets/')) || fonts) {
+  if ((url.origin === self.location.origin && (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/dict/'))) || fonts) {
     event.respondWith(
       caches.match(req).then(
         (hit) =>
