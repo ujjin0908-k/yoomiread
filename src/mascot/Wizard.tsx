@@ -3,10 +3,10 @@ import type { Mood } from './mood';
 /** Palette for the wizard, so he reads well on every paper and in night mode. */
 const C = {
   line: '#3a3530',
-  robe: '#9bbf96',
-  robeDark: '#7aa374',
-  hat: '#7d5ba6',
-  hatDark: '#644a8a',
+  robe: '#5d84c9',
+  robeDark: '#4a6db0',
+  hat: '#3f5fa8',
+  hatDark: '#2f4a88',
   star: '#f0c24e',
   skin: '#fbd7b8',
   beard: '#fff6e4',
@@ -63,6 +63,10 @@ export function Wizard({ mood, size = 64 }: { mood: Mood; size?: number }) {
         <Star x={60} y={106} r={4} />
         <Star x={38} y={108} r={2.8} />
         <Star x={82} y={107} r={2.8} />
+        <Star x={30} y={98} r={2.2} />
+        <Star x={90} y={98} r={2.2} />
+        <Star x={52} y={116} r={2} />
+        <Star x={70} y={116} r={2} />
         {/* arms: mitten hands, up when happy */}
         {happy ? (
           <>
@@ -84,12 +88,15 @@ export function Wizard({ mood, size = 64 }: { mood: Mood; size?: number }) {
         <path d="M50 94 Q60 90 70 94" fill="none" stroke={C.beardShade} strokeWidth="2" />
         {/* hat: plum cone with a bent tip and a brim */}
         <path
-          d={sad ? 'M26 44 Q60 36 94 44 Q92 28 98 14 Q80 26 62 34 Q44 28 26 44 Z' : 'M26 44 Q60 36 94 44 Q86 26 80 4 Q68 22 60 34 Q42 30 26 44 Z'}
+          d={sad ? 'M30 46 Q60 38 90 46 Q88 30 100 18 Q78 28 66 36 Q46 32 30 46 Z' : 'M30 46 Q60 38 90 46 Q84 26 96 2 Q72 20 64 34 Q46 30 30 46 Z'}
           fill={C.hat}
         />
-        <ellipse cx="60" cy="44" rx="36" ry="7" fill={C.hatDark} />
-        <Star x={46} y={28} r={3.8} />
-        <Star x={72} y={18} r={2.6} />
+        <ellipse cx="60" cy="46" rx="40" ry="8" fill={C.hatDark} />
+        <path d="M24 46 Q60 56 96 46" fill="none" stroke={C.line} strokeWidth="1.6" opacity="0.5" />
+        <Star x={44} y={28} r={3.6} />
+        <Star x={74} y={18} r={2.8} />
+        <Star x={84} y={38} r={2} />
+        <Star x={38} y={40} r={2} />
         {/* face */}
         {happy && (
           <>
