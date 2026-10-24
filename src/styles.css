@@ -2369,3 +2369,61 @@ html[data-reader='parchment'] { background: #efe4c8; }
 html[data-reader='mint'] { background: #e3eadc; }
 html[data-reader='rose'] { background: #f4e2e1; }
 html[data-reader='night'] { background: #161614; }
+
+/* Wizard motion: each mood moves a little differently. Off when the phone asks for less motion. */
+.wizard {
+  transform-origin: 50% 100%;
+}
+.wizard-idle {
+  animation: wizard-breathe 3.6s ease-in-out infinite;
+}
+.wizard-happy {
+  animation: wizard-bounce 1.1s ease-in-out infinite;
+}
+.wizard-sad {
+  animation: wizard-sway 5s ease-in-out infinite;
+}
+.wizard-high {
+  animation: wizard-drift 4.2s ease-in-out infinite;
+}
+@keyframes wizard-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02, 0.98);
+  }
+}
+@keyframes wizard-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5%);
+  }
+}
+@keyframes wizard-sway {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+@keyframes wizard-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(2px, -3px) rotate(1.5deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wizard {
+    animation: none !important;
+  }
+}
