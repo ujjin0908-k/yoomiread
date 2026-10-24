@@ -10,19 +10,11 @@ import { Stats } from './pages/Stats';
 import { Welcome } from './pages/Welcome';
 import { useState } from 'react';
 
-const WELCOMED = 'yoomiread.welcomed';
-
-function readWelcomed(): boolean {
-  try {
-    return localStorage.getItem(WELCOMED) === '1';
-  } catch {
-    return false;
-  }
-}
 
 export function App() {
   const [page, id, sub] = useRoute();
-  const [welcomed, setWelcomed] = useState(readWelcomed);
+  // The first page shows every time the app is opened, then the app opens as usual.
+  const [welcomed, setWelcomed] = useState(false);
   if (page === 'book' && id) return <BookPage key={id} id={id} sub={sub} />;
   if (page === 'chapter' && id) return <ChapterPage key={id} id={id} />;
   if (page === 'quote' && id) return <QuoteCard id={id} />;
@@ -34,14 +26,7 @@ export function App() {
   if (!welcomed) {
     return (
       <Welcome
-        onStart={() => {
-          try {
-            localStorage.setItem(WELCOMED, '1');
-          } catch {
-            // Private mode: the welcome shows again next time.
-          }
-          setWelcomed(true);
-        }}
+        onStart={() => setWelcomed(true)}
       />
     );
   }
