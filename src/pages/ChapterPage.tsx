@@ -79,7 +79,7 @@ export function ChapterPage({ id }: { id: string }) {
 
   const view: View = chosenView ?? (translation ? 'translation' : 'original');
   const shown = view === 'translation' && translation ? translation.text : text;
-  const english = view === 'translation' && !!translation;
+  const english = view === 'translation' && !!translation && needsTranslation(book, text);
   const highlights = (notes ?? []).filter((n) => n.kind === 'highlight' && (n.on ?? 'original') === view);
   // Faces only for people who have a picture; nobody else gets a circle.
   const faces = (glossary ?? []).filter((g) => g.kind === 'person' && g.picture && g.status === 'ok');
@@ -105,7 +105,7 @@ export function ChapterPage({ id }: { id: string }) {
         back={`book/${chapter.bookId}`}
         right={
           <>
-            {needsTranslation(book) && (
+            {needsTranslation(book, text) && (
               <button type="button" className="round-btn plain" aria-label="Translate" disabled={!text} onClick={() => setSheet('translate')}>
                 <Languages size={19} />
               </button>
@@ -130,7 +130,7 @@ export function ChapterPage({ id }: { id: string }) {
         </h1>
         <span className="title-rule" aria-hidden="true" />
 
-        {translation && (
+        {translation && needsTranslation(book, text) && (
           <div className="view-toggle seg" role="group" aria-label="Show">
             <button type="button" className={view === 'original' ? 'on' : ''} aria-pressed={view === 'original'} onClick={() => setView('original')}>
               中文

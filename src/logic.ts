@@ -37,9 +37,19 @@ export function finishBook(book: Book, rating: number, review: string, now = Dat
   return { ...moved, rating: clampRating(rating), review: trimmed || undefined };
 }
 
-/** English books are read as they are; every other book is translated. */
-export function needsTranslation(book?: Pick<Book, 'language'>): boolean {
-  return book?.language !== 'en';
+/**
+ * Whether a book needs translating. English books are read as they are, and so is any text that
+ * is written in Latin letters only (the book's language setting can be wrong).
+ */
+export function needsTranslation(book?: Pick<Book, 'language'>, text?: string): boolean {
+  if (book?.language === 'en') return false;
+  if (text) {
+    const sample = text.slice(0, 4000);
+    const latin = (sample.match(/[a-zA-Z]/g) ?? []).length;
+    const other = (sample.match(/[㐀-鿿가-힣぀-ヿ]/g) ?? []).length;
+    if (latin > 0 && other === 0) return false;
+  }
+  return true;
 }
 
 /** A chapter counts as read when it was ticked, or scrolled to (nearly) the end. */

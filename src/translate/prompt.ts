@@ -109,7 +109,7 @@ export function parseTerms(raw: string): ProposedTerm[] {
 }
 
 /** Splits the model's reply into the translation and the proposed new terms. */
-const REFUSAL = /^\s*(i can(?:not|'t)|i won(?:'|’)t|i am (?:unable|not able)|i'm (?:unable|not able)|sorry,? (?:but )?i (?:can|cannot|won))/i;
+const REFUSAL = /^\s*(i can(?:not|'t)|i won(?:'|’)t|i am (?:unable|not able)|i'm (?:unable|not able)|sorry,? (?:but )?i (?:can|cannot|won)|the (?:provided )?text is already in english)/i;
 
 /** True when the model answered with a refusal instead of a translation (no text should be saved). */
 export function isRefusal(reply: string): boolean {

@@ -222,3 +222,9 @@ describe('model list', () => {
     expect(s.models.map((m) => m.id)).toContain('minimax-m2');
   });
 });
+
+describe('English replies are not translations', () => {
+  it('treats "already in English" as a refusal', () => {
+    expect(isRefusal('The provided text is already in English. Please provide the Chinese source text.')).toBe(true);
+  });
+});

@@ -29,7 +29,8 @@ export function useTranslateAhead(chapter: Chapter | null | undefined, book: Boo
       for (const c of next) {
         if (controller.signal.aborted) return;
         if (await db.translations.get(c.id)) continue;
-        if (!(await db.texts.get(c.id))?.text) continue;
+        const body = (await db.texts.get(c.id))?.text;
+        if (!body || !needsTranslation(book, body)) continue;
         setStatus(`Translating chapter ${c.number} in the background…`);
         try {
           await translateChapter(c, { settings, model, signal: controller.signal });
