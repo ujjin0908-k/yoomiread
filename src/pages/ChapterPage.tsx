@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
-import { bookProgress, folderNames, formatDate, isRead, moveToShelf, newId, paragraphs, readingMinutes, segmentText, wordAt } from '../logic';
+import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, wordAt } from '../logic';
 import { WordSheet } from './WordSheet';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
@@ -105,9 +105,11 @@ export function ChapterPage({ id }: { id: string }) {
         back={`book/${chapter.bookId}`}
         right={
           <>
-            <button type="button" className="round-btn plain" aria-label="Translate" disabled={!text} onClick={() => setSheet('translate')}>
-              <Languages size={19} />
-            </button>
+            {needsTranslation(book) && (
+              <button type="button" className="round-btn plain" aria-label="Translate" disabled={!text} onClick={() => setSheet('translate')}>
+                <Languages size={19} />
+              </button>
+            )}
             <button type="button" className="round-btn plain" aria-label="Reading settings" onClick={() => setSheet('look')}>
               <Type size={19} />
             </button>

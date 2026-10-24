@@ -37,6 +37,11 @@ export function finishBook(book: Book, rating: number, review: string, now = Dat
   return { ...moved, rating: clampRating(rating), review: trimmed || undefined };
 }
 
+/** English books are read as they are; every other book is translated. */
+export function needsTranslation(book?: Pick<Book, 'language'>): boolean {
+  return book?.language !== 'en';
+}
+
 /** A chapter counts as read when it was ticked, or scrolled to (nearly) the end. */
 export function isRead(c: Chapter): boolean {
   return !!c.read || (c.position ?? 0) >= 0.9;

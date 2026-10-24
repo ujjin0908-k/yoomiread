@@ -12,6 +12,7 @@ import {
   formatDate,
   isRead,
   moveToShelf,
+  needsTranslation,
   newId,
   nextChapterNumber,
   progress,
@@ -82,7 +83,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
     ['Finished', formatDate(book.finishedAt)],
     ['Chapters', p.total ? `${p.read} of ${p.total} read` : ''],
     ['Highlights', highlights ? String(highlights) : ''],
-    ['Translated', translated?.size ? `${translated.size} of ${p.total} chapters` : ''],
+    ['Translated', needsTranslation(book) && translated?.size ? `${translated.size} of ${p.total} chapters` : ''],
     ['AI spent', book.spent ? `${book.spentEstimated ? 'about ' : ''}${formatCost(book.spent)}` : ''],
     [
       'Per chapter',
@@ -190,11 +191,19 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
               {glossaryCount?.review ? ` · ${glossaryCount.review} to check` : ''}
             </span>
           </button>
-          <button type="button" className="tool" disabled={!list.length} onClick={() => setTranslating(true)}>
-            <Languages size={18} />
-            <span>Translate</span>
-            <span className="muted small">{list.length ? `${list.length - (translated?.size ?? 0)} left` : 'no chapters'}</span>
-          </button>
+          {needsTranslation(book) ? (
+            <button type="button" className="tool" disabled={!list.length} onClick={() => setTranslating(true)}>
+              <Languages size={18} />
+              <span>Translate</span>
+              <span className="muted small">{list.length ? `${list.length - (translated?.size ?? 0)} left` : 'no chapters'}</span>
+            </button>
+          ) : (
+            <div className="tool" aria-disabled="true">
+              <Languages size={18} />
+              <span>English book</span>
+              <span className="muted small">Nothing to translate</span>
+            </div>
+          )}
         </div>
 
         {book.shelf === 'finished' ? (
@@ -240,7 +249,12 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
                     <span lang={book.language === 'zh' ? 'zh' : undefined}>{c.title}</span>
                   </span>
                   <span className="chips">
-                    {translated?.has(c.id) && <span className="chip">EN</span>}
+                    {isRead(c) ? (
+                      <span className="chip">read</span>
+                    ) : (c.position ?? 0) > 0.02 ? (
+                      <span className="chip">{Math.round((c.position ?? 0) * 100)}%</span>
+                    ) : null}
+                    {needsTranslation(book) && translated?.has(c.id) && <span className="chip">EN</span>}
                     {notesFor(c.id) > 0 && (
                       <span className="chip">
                         <MessageCircle size={12} /> {notesFor(c.id)}

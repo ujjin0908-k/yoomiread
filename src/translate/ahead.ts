@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { db } from '../db';
+import { needsTranslation } from '../logic';
 import type { Book, Chapter } from '../types';
 import { loadSettings, modelFor, translateChapter } from './run';
 
@@ -15,7 +16,7 @@ export function useTranslateAhead(chapter: Chapter | null | undefined, book: Boo
   const bookModel = book?.model;
 
   useEffect(() => {
-    if (!chapterId || !bookId) return;
+    if (!chapterId || !bookId || !needsTranslation(book)) return;
     const controller = new AbortController();
     void (async () => {
       const settings = await loadSettings();
@@ -43,7 +44,7 @@ export function useTranslateAhead(chapter: Chapter | null | undefined, book: Boo
       controller.abort();
       setStatus('');
     };
-  }, [chapterId, bookId, bookModel]);
+  }, [chapterId, bookId, bookModel, book?.language]);
 
   return status;
 }
