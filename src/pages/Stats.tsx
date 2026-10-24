@@ -4,6 +4,9 @@ import { db } from '../db';
 import { useLive } from '../hooks';
 import { computeStats, formatDuration, type Stats as StatsData } from '../logic';
 import { formatCost } from '../translate/prompt';
+import { lineFor } from '../mascot/lines';
+import { moodFrom } from '../mascot/mood';
+import { Wizard } from '../mascot/Wizard';
 
 export function Stats() {
   const stats = useLive(async () => computeStats(await db.books.toArray(), await db.sessions.toArray()), []);
@@ -12,10 +15,19 @@ export function Stats() {
     return { total: books.reduce((sum, b) => sum + (b.spent ?? 0), 0), estimated: books.some((b) => b.spentEstimated) };
   }, []);
 
+  const sessions = useLive(() => db.sessions.toArray(), []);
+  const mood = sessions ? moodFrom(sessions, Date.now()) : undefined;
+
   return (
     <>
       <main className="page tabs-page">
         <PageTitle title="Stats" sub="Time spent with my books" />
+        {mood && (
+          <section className="wizard-card">
+            <Wizard mood={mood} size={120} />
+            <p>{lineFor(mood, new Date().toDateString())}</p>
+          </section>
+        )}
         {stats && (
           <>
             <section className="hero-stats">
