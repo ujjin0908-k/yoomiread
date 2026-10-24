@@ -1,21 +1,21 @@
 /* YoomiRead: cream paper, serif titles, dark pill buttons, olive accents, arched frames. */
 :root {
-  --bg: #11193a;
-  --surface: #1a2550;
-  --surface-2: #22305f;
-  --ink: #f6eedb;
-  --ink-2: #c9cfef;
-  --muted: #8e97c8;
-  --line: #2a3970;
-  --olive: #f0c24e;
-  --olive-soft: #2a3560;
-  --pill: #f0c24e;
-  --pill-ink: #1d2140;
-  --star: #f0c24e;
-  --hl: #6a5a22;
-  --hl-2: #8a7430;
-  --danger: #e07a68;
-  --chart: #f0c24e;
+  --bg: #13244a;
+  --surface: #1c3564;
+  --surface-2: #244077;
+  --ink: #fbf6e4;
+  --ink-2: #d9deef;
+  --muted: #c5c38f;
+  --line: #2f4d84;
+  --olive: #f2d976;
+  --olive-soft: #2b4378;
+  --pill: #f2d976;
+  --pill-ink: #1f2d52;
+  --star: #f2d976;
+  --hl: #5e5a2c;
+  --hl-2: #7d7638;
+  --danger: #e89a87;
+  --chart: #f2d976;
   --shadow: 0 1px 2px rgb(60 50 30 / 0.06), 0 8px 24px rgb(60 50 30 / 0.08);
   --radius: 22px;
   --display: 'Cormorant Garamond', 'Noto Serif SC', 'Songti SC', Georgia, serif;
@@ -26,21 +26,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #11193a;
-    --surface: #1a2550;
-    --surface-2: #22305f;
-    --ink: #f6eedb;
-    --ink-2: #c9cfef;
-    --muted: #8e97c8;
-    --line: #2a3970;
-    --olive: #f0c24e;
-    --olive-soft: #2a3560;
-    --pill: #f0c24e;
-    --pill-ink: #1d2140;
-    --hl: #6a5a22;
-    --hl-2: #8a7430;
-    --danger: #e07a68;
-    --chart: #f0c24e;
+    --bg: #13244a;
+    --surface: #1c3564;
+    --surface-2: #244077;
+    --ink: #fbf6e4;
+    --ink-2: #d9deef;
+    --muted: #c5c38f;
+    --line: #2f4d84;
+    --olive: #f2d976;
+    --olive-soft: #2b4378;
+    --pill: #f2d976;
+    --pill-ink: #1f2d52;
+    --hl: #5e5a2c;
+    --hl-2: #7d7638;
+    --danger: #e89a87;
+    --chart: #f2d976;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.3);
     color-scheme: dark;
   }
@@ -2434,7 +2434,7 @@ html[data-reader='night'] { background: #161614; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(180deg, #0b1230 0%, #11193a 55%, #0b1230 100%);
+  background: linear-gradient(180deg, #0d1a3a 0%, #13244a 55%, #0d1a3a 100%);
   color: var(--ink);
   padding: calc(env(safe-area-inset-top) + 40px) 24px calc(env(safe-area-inset-bottom) + 32px);
   text-align: center;
