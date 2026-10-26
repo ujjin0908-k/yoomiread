@@ -50,8 +50,10 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   browser both show no story text without a login. Not built.
 - **Naver Series:** answered 403 from the test environment. Untested on a real phone.
 - **Novel Updates:** blocked by its Cloudflare check.
-- **WTR-LAB, Wuxia World, Fanqie:** declined. They host unlicensed translated novels, and fetching chapters from them
+- **WTR-LAB, Wuxia World:** declined. They host unlicensed translated novels, and fetching chapters from them
   would copy the books. Please don't ask for these.
+- **Fanqie:** declined as a link source. It publishes original novels, so the reason is not licensing: a link reader
+  would copy the text in bulk, and the site's terms likely restrict that. Use paste or file import for chapters you read there.
 - **Highlights:** a highlight shows only in the language it was made in (original or English).
 
 ## Open items
