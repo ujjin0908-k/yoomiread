@@ -36,7 +36,8 @@ export function chapterMessages(input: { bookTitle: string; chapterTitle: string
     '- Output only the translation, with no notes, no title line and no commentary.',
     `- After the translation, write a line "${NEW_TERMS}" and then one JSON object per line for each name or plot term`,
     '  that is NOT in the glossary: {"original": "...", "english": "...", "kind": "person|place|term", "gender": "he|she|they|it"}.',
-    '  Only people, places and plot-relevant items (sects, techniques, titles, key objects). Never ordinary words or phrases.',
+    '  Only three kinds: character names (person), place names (place), and terms invented or specific to this novel\'s world (term).',
+    '  Never ordinary words, common phrases, English words, titles of rank that are common vocabulary, or anything already in the glossary.',
     '  "original" is the Chinese text from the chapter. Give gender only for people. If there are none, write the marker line and nothing after it.',
   ].join('\n');
   const user = [
@@ -57,8 +58,9 @@ export function chapterMessages(input: { bookTitle: string; chapterTitle: string
 export function glossaryScanMessages(input: { bookTitle: string; sample: string; known: GlossaryEntry[] }): ChatMessage[] {
   const system = [
     'You prepare a glossary for translating a Chinese novel into English.',
-    'List the characters, places and plot-relevant terms (sects, techniques, titles, key items) that appear in the text.',
-    'Skip ordinary words, common phrases, slang, English words and anything that is not a name or a plot term.',
+    'List only three kinds of entry: character names (person), place names (place), and terms that are new to this novel\'s world (term),',
+    'such as invented techniques, sects, realms or items that the story explains or uses as its own vocabulary.',
+    'Skip everything else: ordinary words, common phrases, slang, English words, common titles of rank, and anything that is not a name or a novel-specific term.',
     'The "original" must be the Chinese text as written.',
     'For each, give the original, a natural English rendering (pinyin for personal names, meaning-based for most terms),',
     'the kind (person, place or term) and, for people, the gender as he, she, they or it, judged from the text.',
