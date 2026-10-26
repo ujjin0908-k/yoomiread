@@ -5,7 +5,7 @@ import { chat, readStream, TranslateError } from './api';
 import { callCost, DEFAULT_MODELS, loadSettings, saveSettings } from './run';
 import { db } from '../db';
 import { isRefusal } from './prompt';
-import { chapterMessages, cleanTitle, costOf, estimateTokens, formatCost, NEW_TERMS, parseTerms, pronounWarnings, splitReply, titleMessages } from './prompt';
+import { chapterMessages, cleanTitle, costOf, estimateTokens, formatCost, NEW_TERMS, parseTerms, pronounWarnings, SUMMARY, splitReply, titleMessages } from './prompt';
 
 const entry = (over: Partial<GlossaryEntry>): GlossaryEntry => ({
   id: over.original ?? 'x',
@@ -70,6 +70,25 @@ describe('reading the reply', () => {
 
   it('drops gender for places and terms', () => {
     expect(parseTerms('{"original":"河","english":"River","kind":"place","gender":"she"}')[0].gender).toBeUndefined();
+  });
+
+  it('takes the story-so-far summary out of the reply, before the new names', () => {
+    const reply = `Mei walked on.\n${SUMMARY}\nMei crossed the river to find the ferryman.\n${NEW_TERMS}\n{"original": "船夫", "english": "the ferryman", "kind": "person", "gender": "he"}`;
+    const { text, summary, terms } = splitReply(reply);
+    expect(text).toBe('Mei walked on.');
+    expect(summary).toBe('Mei crossed the river to find the ferryman.');
+    expect(terms).toHaveLength(1);
+  });
+
+  it('has no summary when the model left the marker out', () => {
+    expect(splitReply(`Mei walked on.\n${NEW_TERMS}\n`).summary).toBeUndefined();
+  });
+
+  it('passes the story so far into the next chapter, or says it is the start', () => {
+    const next = chapterMessages({ bookTitle: 'B', chapterTitle: '第二章', text: '梅。', glossary: [], previousSummary: 'Mei crossed the river.' });
+    expect(next[1].content).toContain('Story so far (before this chapter):\nMei crossed the river.');
+    const first = chapterMessages({ bookTitle: 'B', chapterTitle: '第一章', text: '梅。', glossary: [] });
+    expect(first[1].content).toContain('this is the start of the book');
   });
 });
 

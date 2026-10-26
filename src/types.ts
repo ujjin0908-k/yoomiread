@@ -67,6 +67,8 @@ export interface Translation {
   costEstimated?: boolean;
   /** Things worth a look, e.g. pronouns that do not match the glossary. */
   warnings?: string[];
+  /** The story so far, up to and including this chapter; the next chapter starts from it. */
+  summary?: string;
   createdAt: number;
 }
 

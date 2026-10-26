@@ -96,20 +96,41 @@ export interface ChapterRun {
   newTerms: number;
 }
 
+/**
+ * The story so far before this chapter: the summary saved with the nearest earlier chapter
+ * that has one. Works even when chapters were translated out of order, or some were skipped.
+ */
+async function summaryBefore(chapter: Chapter): Promise<string | undefined> {
+  const [chapters, translations] = await Promise.all([
+    db.chapters.where('bookId').equals(chapter.bookId).toArray(),
+    db.translations.where('bookId').equals(chapter.bookId).toArray(),
+  ]);
+  const summaryOf = new Map(translations.filter((t) => t.summary).map((t) => [t.chapterId, t.summary]));
+  const earlier = chapters.filter((c) => c.number < chapter.number && summaryOf.has(c.id)).sort((a, b) => b.number - a.number);
+  return earlier.length ? summaryOf.get(earlier[0].id) : undefined;
+}
+
 /** Translates one chapter, saves the English next to the original, and queues new names for review. */
 export async function translateChapter(
   chapter: Chapter,
   options: { settings: TranslateSettings; model: string; onText?: (piece: string) => void; signal?: AbortSignal; save?: boolean },
 ): Promise<ChapterRun> {
-  const [book, text, glossary] = await Promise.all([
+  const [book, text, glossary, previousSummary] = await Promise.all([
     db.books.get(chapter.bookId),
     db.texts.get(chapter.id),
     db.glossary.where('bookId').equals(chapter.bookId).toArray(),
+    summaryBefore(chapter),
   ]);
   if (!text?.text) throw new Error('This chapter has no text to translate.');
-  const messages = chapterMessages({ bookTitle: book?.title ?? '', chapterTitle: chapter.title, text: text.text, glossary });
+  const messages = chapterMessages({
+    bookTitle: book?.title ?? '',
+    chapterTitle: chapter.title,
+    text: text.text,
+    glossary,
+    previousSummary,
+  });
   const result = await chat(options.settings, options.model, messages, options.onText, options.signal);
-  const { text: english, terms } = splitReply(result.text);
+  const { text: english, terms, summary } = splitReply(result.text);
   const option = modelFor(options.settings, options.model);
   const spend = callCost(option, messages, result);
   // A refusal is not a translation: show it as an error and keep the chapter untranslated.
@@ -131,6 +152,7 @@ export async function translateChapter(
     cost: spend.cost,
     costEstimated: spend.estimated,
     warnings: pronounWarnings(english, glossary.filter((g) => g.status === 'ok')),
+    summary,
     createdAt: Date.now(),
   };
   let newTerms = 0;

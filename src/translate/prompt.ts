@@ -7,6 +7,8 @@ export interface ChatMessage {
 
 /** Marks where the translation ends and the list of new names begins in the model's reply. */
 export const NEW_TERMS = '===NEW TERMS===';
+/** Marks the short story-so-far summary, written after the translation and before the new names. */
+export const SUMMARY = '===SUMMARY===';
 
 function glossaryLines(entries: GlossaryEntry[]): string {
   return entries
@@ -24,7 +26,14 @@ function glossaryLines(entries: GlossaryEntry[]): string {
  * Instructions for translating one chapter. Only approved glossary entries are used:
  * proposals waiting for review must not spread through the book.
  */
-export function chapterMessages(input: { bookTitle: string; chapterTitle: string; text: string; glossary: GlossaryEntry[] }): ChatMessage[] {
+export function chapterMessages(input: {
+  bookTitle: string;
+  chapterTitle: string;
+  text: string;
+  glossary: GlossaryEntry[];
+  /** The story so far, from the last translated chapter before this one. */
+  previousSummary?: string;
+}): ChatMessage[] {
   const approved = input.glossary.filter((g) => g.status === 'ok');
   const system = [
     'You translate Chinese web novels into natural, readable English for a single reader.',
@@ -34,7 +43,10 @@ export function chapterMessages(input: { bookTitle: string; chapterTitle: string
     '- Use the glossary exactly for every name and term in it. Use each person\'s pronouns as given.',
     '- Keep the tone of the original. Dialogue should sound like real speech.',
     '- Output only the translation, with no notes, no title line and no commentary.',
-    `- After the translation, write a line "${NEW_TERMS}" and then one JSON object per line for each name or plot term`,
+    `- After the translation, write a line "${SUMMARY}" and then the story so far in English: 3 to 6 sentences covering`,
+    '  who is who, what has happened, and where things stand at the end of this chapter. Update the earlier summary given in the message',
+    '  with this chapter. Keep it under 200 words: compress older events, keep names and the current situation.',
+    `- Then write a line "${NEW_TERMS}" and then one JSON object per line for each name or plot term`,
     '  that is NOT in the glossary: {"original": "...", "english": "...", "kind": "person|place|term", "gender": "he|she|they|it"}.',
     '  Only three kinds: character names (person), place names (place), and terms invented or specific to this novel\'s world (term).',
     '  Never ordinary words, common phrases, English words, titles of rank that are common vocabulary, or anything already in the glossary.',
@@ -44,6 +56,7 @@ export function chapterMessages(input: { bookTitle: string; chapterTitle: string
     `Book: ${input.bookTitle}`,
     `Chapter: ${input.chapterTitle}`,
     approved.length ? `Glossary:\n${glossaryLines(approved)}` : 'Glossary: (empty)',
+    input.previousSummary ? `Story so far (before this chapter):\n${input.previousSummary}` : 'Story so far: (this is the start of the book)',
     '',
     'Text to translate:',
     input.text,
@@ -118,10 +131,13 @@ export function isRefusal(reply: string): boolean {
   return REFUSAL.test(reply.trim().slice(0, 200));
 }
 
-export function splitReply(reply: string): { text: string; terms: ProposedTerm[] } {
+export function splitReply(reply: string): { text: string; terms: ProposedTerm[]; summary?: string } {
   const at = reply.indexOf(NEW_TERMS);
-  const body = at >= 0 ? reply.slice(0, at) : reply;
+  const beforeTerms = at >= 0 ? reply.slice(0, at) : reply;
   const terms = at >= 0 ? parseTerms(reply.slice(at + NEW_TERMS.length)) : [];
+  const marker = beforeTerms.indexOf(SUMMARY);
+  const body = marker >= 0 ? beforeTerms.slice(0, marker) : beforeTerms;
+  const summary = marker >= 0 ? beforeTerms.slice(marker + SUMMARY.length).trim() : '';
   // Normalise paragraph breaks to the blank-line form the reader expects.
   const text = body
     .replace(/\r\n/g, '\n')
@@ -129,7 +145,7 @@ export function splitReply(reply: string): { text: string; terms: ProposedTerm[]
     .map((p) => p.trim())
     .filter(Boolean)
     .join('\n\n');
-  return { text, terms };
+  return { text, terms, summary: summary || undefined };
 }
 
 const CJK = /[㐀-鿿豈-﫿]/g;
@@ -141,7 +157,8 @@ export function estimateTokens(text: string, glossaryCount = 0): { input: number
   // About one token per Chinese character, plus the instructions and the glossary.
   const input = Math.round(cjk * 1.1 + other / 4 + 450 + glossaryCount * 12);
   // English comes out a little shorter in tokens than the Chinese characters going in.
-  const output = Math.round(cjk * 0.9 + other / 4 + 60);
+  // The story-so-far summary adds about 200 tokens of output per chapter.
+  const output = Math.round(cjk * 0.9 + other / 4 + 60 + 200);
   return { input, output };
 }
 
