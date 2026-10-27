@@ -1865,10 +1865,10 @@ blockquote {
   font-size: 15px;
 }
 
+/* A speaker's face floats at the start of the paragraph, so the text wraps around it. */
 .reader .avatar-btn {
-  display: inline-block;
-  vertical-align: -0.4em;
-  margin-right: 0.45em;
+  float: left;
+  margin: 0.15em 0.6em 0.2em 0;
 }
 
 .reader.drop p.has-face:first-child::first-letter {

@@ -183,7 +183,7 @@ export function ChapterPage({ id }: { id: string }) {
           >
             {withFaces(paragraphs(shown), faceFor).map(({ p, face }) => (
               <p key={`${view}-${p.start}`} data-start={p.start} className={face ? 'has-face' : undefined}>
-                {face && <Avatar entry={face} size={26} onClick={() => setCard(face)} />}
+                {face && <Avatar entry={face} size={48} onClick={() => setCard(face)} />}
                 {segmentText(p.text, shiftNotes(highlights, p.start, p.text.length)).map((s) =>
                   s.noteIds.length ? (
                     <mark
@@ -564,16 +564,20 @@ function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs:
   );
 }
 
+/** Quotation marks around speech, in English or Chinese text. */
+const SPEECH = /[“”"「」『』]/;
+
 /**
- * Pairs paragraphs with a face, but only when the character changes from the paragraph before,
- * so a long scene with one person does not get a circle on every line.
+ * Pairs paragraphs with a face, but only when the character is speaking (the paragraph has speech)
+ * and the character changes from the speaker before, so a long conversation does not get a circle on every line.
  */
 function withFaces<P extends { text: string }>(list: P[], faceFor: (text: string) => GlossaryEntry | undefined) {
   let last: string | undefined;
   return list.map((p) => {
     const found = faceFor(p.text);
-    const face = found && found.id !== last ? found : undefined;
-    if (found) last = found.id;
+    const speaking = SPEECH.test(p.text);
+    const face = found && speaking && found.id !== last ? found : undefined;
+    if (found && speaking) last = found.id;
     return { p, face };
   });
 }
