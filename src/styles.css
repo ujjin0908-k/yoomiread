@@ -2433,6 +2433,7 @@ html[data-reader='night'] { background: #161614; }
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
   background: #f4efe4;
   color: #2d5997;
@@ -2441,7 +2442,7 @@ html[data-reader='night'] { background: #161614; }
 }
 .welcome-scene {
   width: 100%;
-  max-width: 420px;
+  max-width: 300px;
   border-radius: 24px;
   object-fit: cover;
   -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
@@ -2461,45 +2462,59 @@ html[data-reader='night'] { background: #161614; }
   text-transform: uppercase;
   font-size: 0.8rem;
 }
-/* What the app does, in three short rows, so the lower half of the screen is not empty. */
-.welcome-points {
-  list-style: none;
-  margin: 28px 0 0;
-  padding: 0;
-  width: 100%;
-  max-width: 340px;
+/* The layered heart: tap it and the layers pulse in colour, then the app opens. */
+.heart-start {
+  position: relative;
   display: grid;
-  gap: 12px;
-  text-align: left;
-}
-.welcome-points li {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: #fbf6e4;
-  border: 1px solid #e3dccb;
-  color: #2d5997;
-  font-size: 0.95rem;
-  line-height: 1.35;
-  letter-spacing: 0;
-  text-transform: none;
-}
-.welcome-points svg {
-  flex: none;
-  color: #c9a24a;
-}
-.welcome button {
-  width: 100%;
-  max-width: 340px;
-  margin-top: auto;
+  place-items: center;
+  width: 230px;
+  height: 207px;
+  margin: 36px auto 8px;
+  padding: 0;
   border: 0;
-  border-radius: 999px;
-  padding: 16px;
+  background: none;
   font: inherit;
-  font-weight: 600;
-  background: #2d5997;
+  font-weight: 700;
+  font-size: 1.3rem;
+  letter-spacing: 0.08em;
   color: #fbf6e4;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.heart-start svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 10px 18px rgb(45 89 151 / 0.35));
+}
+.heart-start span {
+  position: relative;
+  margin-top: -6px;
+  text-shadow: 0 1px 6px rgb(20 40 90 / 0.45);
+}
+.heart-layer {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.heart-start.tapped .heart-layer {
+  animation: layer-pulse 0.9s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.12s);
+}
+@keyframes layer-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    transform: scale(1.1);
+    filter: hue-rotate(28deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .heart-start.tapped .heart-layer {
+    animation: none;
+  }
 }
