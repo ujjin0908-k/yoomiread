@@ -10,6 +10,7 @@ export const DEFAULT_MODELS: ModelOption[] = [
   { id: 'deepseek-v4-pro-0813', label: 'DeepSeek v4 Pro (quality)', inputPrice: 0.561, outputPrice: 1.683 },
   { id: 'minimax-m2', label: 'MiniMax M2', inputPrice: 0.195, outputPrice: 0.78 },
   { id: 'minimax-m3', label: 'MiniMax M3', inputPrice: 0.225, outputPrice: 0.9 },
+  { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna (budget, untested)', inputPrice: 0.08, outputPrice: 0.48 },
 ];
 
 export const EMPTY_SETTINGS: TranslateSettings = { baseUrl: '', apiKey: '', models: DEFAULT_MODELS, defaultModel: DEFAULT_MODELS[0].id, ahead: 1 };
