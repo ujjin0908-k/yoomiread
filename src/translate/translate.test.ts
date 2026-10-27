@@ -59,17 +59,18 @@ describe('reading the reply', () => {
 
   it('copes with no marker, bullets, junk and duplicates', () => {
     expect(splitReply('Just text.').terms).toEqual([]);
-    const terms = parseTerms('- {"original":"灯","english":"lantern","kind":"weird"}\nnot json\n{"original":"灯","english":"again"}\n{"english":"no original"}');
-    expect(terms).toEqual([{ original: '灯', english: 'lantern', kind: 'term', gender: undefined, note: undefined }]);
+    const terms = parseTerms('- {"original":"灯","english":"Deng","kind":"person","gender":"he"}\nnot json\n{"original":"灯","english":"again","kind":"person"}\n{"english":"no original"}');
+    expect(terms).toEqual([{ original: '灯', english: 'Deng', kind: 'person', gender: 'he', note: undefined }]);
   });
 
-  it('keeps only terms that come from the Chinese text', () => {
-    const terms = parseTerms('{"original":"enigma","english":"enigma"}\n{"original":"HE","english":"HE"}\n{"original":"灯","english":"lantern"}');
+  it('keeps only names from the Chinese text', () => {
+    const terms = parseTerms('{"original":"enigma","english":"enigma","kind":"person"}\n{"original":"HE","english":"HE","kind":"person"}\n{"original":"灯","english":"Deng","kind":"person"}');
     expect(terms.map((t) => t.original)).toEqual(['灯']);
   });
 
-  it('drops gender for places and terms', () => {
-    expect(parseTerms('{"original":"河","english":"River","kind":"place","gender":"she"}')[0].gender).toBeUndefined();
+  it('proposes only character names: places and terms are dropped', () => {
+    expect(parseTerms('{"original":"河","english":"River","kind":"place"}\n{"original":"灵气","english":"qi","kind":"term"}')).toEqual([]);
+    expect(parseTerms('{"original":"梅","english":"Mei","kind":"person","gender":"she"}')[0].gender).toBe('she');
   });
 
   it('takes the story-so-far summary out of the reply, before the new names', () => {
@@ -82,6 +83,24 @@ describe('reading the reply', () => {
 
   it('has no summary when the model left the marker out', () => {
     expect(splitReply(`Mei walked on.\n${NEW_TERMS}\n`).summary).toBeUndefined();
+  });
+
+  it('adds the book style and the sample to the request, and leaves them out when unset', () => {
+    const styled = chapterMessages({
+      bookTitle: 'B',
+      chapterTitle: '第一章',
+      text: '梅。',
+      glossary: [],
+      style: { tone: 'literary', honorifics: 'romanised', notes: 'Keep cultivation terms in pinyin', sample: 'A sample line.' },
+    });
+    expect(styled[0].content).toContain('Literary English');
+    expect(styled[0].content).toContain('romanised');
+    expect(styled[0].content).toContain('Keep cultivation terms in pinyin');
+    expect(styled[1].content).toContain('Style sample');
+    expect(styled[1].content).toContain('A sample line.');
+    const plain = chapterMessages({ bookTitle: 'B', chapterTitle: '第一章', text: '梅。', glossary: [] });
+    expect(plain[0].content).not.toContain('Style for this book');
+    expect(plain[1].content).not.toContain('Style sample');
   });
 
   it('passes the story so far into the next chapter, or says it is the start', () => {

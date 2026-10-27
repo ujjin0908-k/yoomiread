@@ -2,8 +2,21 @@ export type Shelf = 'want' | 'reading' | 'finished' | 'dropped';
 
 export type BookLanguage = 'zh' | 'en' | 'other';
 
+/** How this book should read in English. Applied to every chapter translated for it. */
+export interface BookStyle {
+  tone?: 'natural' | 'literary' | 'punchy' | 'formal';
+  /** 'romanised' keeps titles like Senior Brother; 'english' translates them. */
+  honorifics?: 'romanised' | 'english';
+  /** Free notes, e.g. "keep cultivation terms in pinyin". */
+  notes?: string;
+  /** One or two paragraphs of the English style wanted, pasted by the owner. Stays on the phone. */
+  sample?: string;
+}
+
 export interface Book {
   id: string;
+  /** The style for this book's translations (optional). */
+  style?: BookStyle;
   title: string;
   author: string;
   originalTitle?: string;

@@ -130,6 +130,7 @@ export async function translateChapter(
     text: text.text,
     glossary,
     previousSummary,
+    style: book?.style,
   });
   const result = await chat(options.settings, options.model, messages, options.onText, options.signal);
   const { text: english, terms, summary } = splitReply(result.text);

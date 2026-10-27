@@ -1,4 +1,4 @@
-import type { Gender, GlossaryEntry, GlossaryKind, ModelOption } from '../types';
+import type { BookStyle, Gender, GlossaryEntry, GlossaryKind, ModelOption } from '../types';
 
 export interface ChatMessage {
   role: 'system' | 'user';
@@ -22,6 +22,24 @@ function glossaryLines(entries: GlossaryEntry[]): string {
     .join('\n');
 }
 
+const TONE: Record<NonNullable<BookStyle['tone']>, string> = {
+  natural: 'Natural, easy modern English.',
+  literary: 'Literary English: richer word choice and sentence rhythm, but the same meaning.',
+  punchy: 'Punchy, fast English: short sentences in action scenes, vivid verbs.',
+  formal: 'Formal, measured English.',
+};
+
+/** Extra instructions from the book's style settings. Empty when no style is set. */
+function styleRules(style?: BookStyle): string[] {
+  if (!style) return [];
+  const rules = ['Style for this book (translation first: stay faithful to the meaning, and polish only the wording):'];
+  if (style.tone) rules.push(`- ${TONE[style.tone]}`);
+  if (style.honorifics === 'romanised') rules.push('- Keep titles of respect romanised as in the original (e.g. Senior Brother, Master), capitalised.');
+  if (style.honorifics === 'english') rules.push('- Translate titles of respect into natural English.');
+  if (style.notes?.trim()) rules.push(`- ${style.notes.trim()}`);
+  return rules;
+}
+
 /**
  * Instructions for translating one chapter. Only approved glossary entries are used:
  * proposals waiting for review must not spread through the book.
@@ -33,6 +51,8 @@ export function chapterMessages(input: {
   glossary: GlossaryEntry[];
   /** The story so far, from the last translated chapter before this one. */
   previousSummary?: string;
+  /** The book's style settings (tone, honorifics, notes, and a sample paragraph). */
+  style?: BookStyle;
 }): ChatMessage[] {
   const approved = input.glossary.filter((g) => g.status === 'ok');
   const system = [
@@ -46,17 +66,19 @@ export function chapterMessages(input: {
     `- After the translation, write a line "${SUMMARY}" and then the story so far in English: 3 to 6 sentences covering`,
     '  who is who, what has happened, and where things stand at the end of this chapter. Update the earlier summary given in the message',
     '  with this chapter. Keep it under 200 words: compress older events, keep names and the current situation.',
-    `- Then write a line "${NEW_TERMS}" and then one JSON object per line for each name or plot term`,
-    '  that is NOT in the glossary: {"original": "...", "english": "...", "kind": "person|place|term", "gender": "he|she|they|it"}.',
-    '  Only three kinds: character names (person), place names (place), and terms invented or specific to this novel\'s world (term).',
-    '  Never ordinary words, common phrases, English words, titles of rank that are common vocabulary, or anything already in the glossary.',
+    `- Then write a line "${NEW_TERMS}" and then one JSON object per line for each character name`,
+    '  that is NOT in the glossary: {"original": "...", "english": "...", "kind": "person", "gender": "he|she|they|it"}.',
+    '  Only character names. Never places, items, techniques, sects, titles, ordinary words, English words or anything already in the glossary.',
     '  "original" is the Chinese text from the chapter. Give gender only for people. If there are none, write the marker line and nothing after it.',
+    ...styleRules(input.style),
   ].join('\n');
+  const sample = input.style?.sample?.trim();
   const user = [
     `Book: ${input.bookTitle}`,
     `Chapter: ${input.chapterTitle}`,
     approved.length ? `Glossary:\n${glossaryLines(approved)}` : 'Glossary: (empty)',
     input.previousSummary ? `Story so far (before this chapter):\n${input.previousSummary}` : 'Story so far: (this is the start of the book)',
+    ...(sample ? [`Style sample (match its rhythm and word choice; do not copy its content):\n${sample}`] : []),
     '',
     'Text to translate:',
     input.text,
@@ -71,9 +93,8 @@ export function chapterMessages(input: {
 export function glossaryScanMessages(input: { bookTitle: string; sample: string; known: GlossaryEntry[] }): ChatMessage[] {
   const system = [
     'You prepare a glossary for translating a Chinese novel into English.',
-    'List only three kinds of entry: character names (person), place names (place), and terms that are new to this novel\'s world (term),',
-    'such as invented techniques, sects, realms or items that the story explains or uses as its own vocabulary.',
-    'Skip everything else: ordinary words, common phrases, slang, English words, common titles of rank, and anything that is not a name or a novel-specific term.',
+    'List only character names (kind "person"). Skip places, items, techniques, sects, titles, ordinary words, common phrases, slang,',
+    'English words, and anything that is not a character\'s name.',
     'The "original" must be the Chinese text as written.',
     'For each, give the original, a natural English rendering (pinyin for personal names, meaning-based for most terms),',
     'the kind (person, place or term) and, for people, the gender as he, she, they or it, judged from the text.',
@@ -95,7 +116,6 @@ export interface ProposedTerm {
   note?: string;
 }
 
-const KINDS: GlossaryKind[] = ['person', 'place', 'term'];
 const GENDERS: Gender[] = ['he', 'she', 'they', 'it'];
 
 /** Reads "one JSON object per line"; skips anything that is not a usable entry. */
@@ -111,11 +131,12 @@ export function parseTerms(raw: string): ProposedTerm[] {
       const english = String(o.english ?? '').trim();
       // A term must come from the Chinese text: English words in the list are never kept.
       if (!original || !english || seen.has(original) || !/[㐀-鿿豈-﫿]/.test(original)) continue;
-      const kind = KINDS.includes(o.kind as GlossaryKind) ? (o.kind as GlossaryKind) : 'term';
-      const gender = kind === 'person' && GENDERS.includes(o.gender as Gender) ? (o.gender as Gender) : undefined;
+      // Only character names are proposed: places, items and terms are never added.
+      if (o.kind !== 'person') continue;
+      const gender = GENDERS.includes(o.gender as Gender) ? (o.gender as Gender) : undefined;
       const note = typeof o.note === 'string' && o.note.trim() ? o.note.trim() : undefined;
       seen.add(original);
-      out.push({ original, english, kind, gender, note });
+      out.push({ original, english, kind: 'person', gender, note });
     } catch {
       // Not JSON: ignore the line.
     }

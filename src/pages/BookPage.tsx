@@ -19,7 +19,7 @@ import {
 } from '../logic';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
 import { keepTranslation, loadSettings, modelFor, translateChapter, translateTitle, type ChapterRun } from '../translate/run';
-import type { Book, BookLanguage, Chapter, Shelf, TranslateSettings } from '../types';
+import type { Book, BookLanguage, BookStyle, Chapter, Shelf, TranslateSettings } from '../types';
 import { parseSources, sourcesText, webLink } from '../sources';
 
 export function BookPage({ id, sub }: { id: string; sub?: string }) {
@@ -398,6 +398,16 @@ function plural(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? '' : 's'}`;
 }
 
+/** Turns the form's style fields into a BookStyle, or nothing when all are empty. */
+function styleFrom(input: { tone: BookStyle['tone'] | ''; honorifics: BookStyle['honorifics'] | ''; notes: string; sample: string }): BookStyle | undefined {
+  const style: BookStyle = {};
+  if (input.tone) style.tone = input.tone;
+  if (input.honorifics) style.honorifics = input.honorifics;
+  if (input.notes.trim()) style.notes = input.notes.trim();
+  if (input.sample.trim()) style.sample = input.sample.trim();
+  return Object.keys(style).length ? style : undefined;
+}
+
 /** Rename a book and fix its details. After an import it asks "Keep this title?". */
 function DetailsSheet({ book, justImported, onClose }: { book: Book; justImported: boolean; onClose: () => void }) {
   const [title, setTitle] = useState(book.title);
@@ -406,6 +416,10 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
   const [language, setLanguage] = useState<BookLanguage>(book.language);
   const [novelUpdates, setNovelUpdates] = useState(book.novelUpdatesUrl ?? '');
   const [sources, setSources] = useState(sourcesText(book.sources));
+  const [tone, setTone] = useState<BookStyle['tone'] | ''>(book.style?.tone ?? '');
+  const [honorifics, setHonorifics] = useState<BookStyle['honorifics'] | ''>(book.style?.honorifics ?? '');
+  const [styleNotes, setStyleNotes] = useState(book.style?.notes ?? '');
+  const [styleSample, setStyleSample] = useState(book.style?.sample ?? '');
   const [naming, setNaming] = useState('');
   const hasChinese = /[\u3400-\u9fff]/.test(title);
 
@@ -438,6 +452,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
       language,
       novelUpdatesUrl: webLink(novelUpdates),
       sources: parseSources(sources),
+      style: styleFrom({ tone, honorifics, notes: styleNotes, sample: styleSample }),
       updatedAt: Date.now(),
     });
     onClose();
@@ -487,6 +502,35 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
           Where to read <span className="muted small">(one per line: name | link)</span>
           <textarea rows={3} value={sources} onChange={(e) => setSources(e.target.value)} />
         </label>
+        <fieldset className="style-fields">
+          <legend>How it should read in English</legend>
+          <label>
+            Tone
+            <select value={tone} onChange={(e) => setTone(e.target.value as BookStyle['tone'] | '')}>
+              <option value="">Default (natural)</option>
+              <option value="natural">Natural, easy modern English</option>
+              <option value="literary">Literary, richer wording</option>
+              <option value="punchy">Punchy, fast action</option>
+              <option value="formal">Formal, measured</option>
+            </select>
+          </label>
+          <label>
+            Titles of respect
+            <select value={honorifics} onChange={(e) => setHonorifics(e.target.value as BookStyle['honorifics'] | '')}>
+              <option value="">Default</option>
+              <option value="romanised">Keep romanised (Senior Brother, Master)</option>
+              <option value="english">Translate into English</option>
+            </select>
+          </label>
+          <label>
+            Notes <span className="muted small">(optional, e.g. keep cultivation terms in pinyin)</span>
+            <textarea rows={2} value={styleNotes} onChange={(e) => setStyleNotes(e.target.value)} />
+          </label>
+          <label>
+            Style sample <span className="muted small">(optional: one or two paragraphs of English you like; stays on this phone)</span>
+            <textarea rows={4} value={styleSample} onChange={(e) => setStyleSample(e.target.value)} />
+          </label>
+        </fieldset>
         <div className="row between">
           {justImported ? (
             <button type="button" className="btn" onClick={onClose}>
