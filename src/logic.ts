@@ -257,10 +257,13 @@ function insideQuotes(paragraph: string): boolean[] {
   return inside;
 }
 
+/** Verbs of speaking, right after a name: "Pu Yu said", or 普宇说 / 普宇问. */
+const SPEECH_VERB = /\b(said|asked|replied|answered|whispered|murmured|shouted|called|cried|added|muttered|snapped|laughed|sighed|demanded|growled)\b|说|问|答|喊|叫|笑道|低声|沉声|冷声/;
+
 /**
- * True when the character is the one speaking: their name sits in the narration, close to a quotation mark
- * ("Pu Yu said, “…”" or "“…” Pu Yu said."). A name inside the speech itself ("“Pu Yu, come here.”") does not count,
- * and neither does a name only in narration far from any speech.
+ * True when the character is the one speaking: their name is in the narration, followed closely by a speech verb,
+ * with a quotation mark nearby ("Pu Yu said, “…”" or "“…” Pu Yu said."). A name inside the speech ("“Pu Yu, come here.”"),
+ * a name who is only listening ("a voice by Pu Yu's ear: “…”"), and a name only in narration do not count.
  */
 export function speaksAs(paragraph: string, name: string, reach = 30): boolean {
   if (!name) return false;
@@ -270,6 +273,7 @@ export function speaksAs(paragraph: string, name: string, reach = 30): boolean {
   for (let at = paragraph.indexOf(name); at >= 0; at = paragraph.indexOf(name, at + 1)) {
     if (inside[at]) continue;
     const end = at + name.length;
+    if (!SPEECH_VERB.test(paragraph.slice(end, end + 25))) continue;
     if (quotes.some((q) => q >= at - reach && q <= end + reach)) return true;
   }
   return false;

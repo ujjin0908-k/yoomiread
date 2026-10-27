@@ -213,6 +213,14 @@ describe('speaking', () => {
     expect(speaksAs('"Pu Yu, come here."', 'Pu Yu')).toBe(false);
   });
 
+  it('does not count someone who is only listening', () => {
+    expect(speaksAs('A low voice sounded by Pu Yu’s ear: “Don’t move.”', 'Pu Yu')).toBe(false);
+  });
+
+  it('counts the speaker when the speech verb follows their name', () => {
+    expect(speaksAs('“Ready?” Xiang Ningxuan said, leaning closer.', 'Xiang Ningxuan')).toBe(true);
+  });
+
   it('needs the name in the paragraph at all', () => {
     expect(speaksAs('“Hello.”', 'Pu Yu')).toBe(false);
   });
