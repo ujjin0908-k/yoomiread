@@ -4,6 +4,7 @@ import {
   bookProgress,
   clampRating,
   computeStats,
+  speaksAs,
   continueChapter,
   finishBook,
   formatDuration,
@@ -191,5 +192,23 @@ describe('stats', () => {
     expect(formatDuration(5 * 60_000)).toBe('5m');
     expect(formatDuration(11_000)).toBe('<1m');
     expect(formatDuration(0)).toBe('0m');
+  });
+});
+
+describe('speaking', () => {
+  it('counts a name next to a quotation mark as speaking', () => {
+    expect(speaksAs('Pu Yu said, “Wait.”', 'Pu Yu')).toBe(true);
+    expect(speaksAs('“Wait.” Pu Yu said.', 'Pu Yu')).toBe(true);
+    expect(speaksAs('普宇说：“等等。”', '普宇')).toBe(true);
+  });
+
+  it('does not count a name that only appears in narration', () => {
+    const narration = 'Pu Yu walked to the window and stared at the rain for a long time. ' + 'The room was quiet. '.repeat(4) + '“Hello.”';
+    expect(speaksAs(narration, 'Pu Yu')).toBe(false);
+    expect(speaksAs('Pu Yu walked away.', 'Pu Yu')).toBe(false);
+  });
+
+  it('needs the name in the paragraph at all', () => {
+    expect(speaksAs('“Hello.”', 'Pu Yu')).toBe(false);
   });
 });

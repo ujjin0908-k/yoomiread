@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
-import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, wordAt } from '../logic';
+import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speaksAs, wordAt } from '../logic';
 import { WordSheet } from './WordSheet';
 import { Mascot } from '../mascot/Mascot';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
@@ -101,7 +101,7 @@ export function ChapterPage({ id }: { id: string }) {
   const highlights = (notes ?? []).filter((n) => n.kind === 'highlight' && (n.on ?? 'original') === view);
   // Faces only for people who have a picture; nobody else gets a circle.
   const faces = (glossary ?? []).filter((g) => g.kind === 'person' && g.picture && g.status === 'ok');
-  const faceFor = (paragraph: string) => faces.find((g) => paragraph.includes(english ? g.english : g.original));
+  const faceFor = (paragraph: string) => faces.find((g) => speaksAs(paragraph, english ? g.english : g.original));
   const comments = (notes ?? []).filter((n) => n.kind === 'chapter');
   const list = siblings ?? [];
   const index = list.findIndex((c) => c.id === id);
@@ -564,20 +564,16 @@ function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs:
   );
 }
 
-/** Quotation marks around speech, in English or Chinese text. */
-const SPEECH = /[“”"「」『』]/;
-
 /**
- * Pairs paragraphs with a face, but only when the character is speaking (the paragraph has speech)
- * and the character changes from the speaker before, so a long conversation does not get a circle on every line.
+ * Pairs paragraphs with a face: faceFor finds who is speaking in a paragraph, and a face shows only
+ * when the speaker changes from the paragraph before, so a long conversation does not get a circle on every line.
  */
 function withFaces<P extends { text: string }>(list: P[], faceFor: (text: string) => GlossaryEntry | undefined) {
   let last: string | undefined;
   return list.map((p) => {
     const found = faceFor(p.text);
-    const speaking = SPEECH.test(p.text);
-    const face = found && speaking && found.id !== last ? found : undefined;
-    if (found && speaking) last = found.id;
+    const face = found && found.id !== last ? found : undefined;
+    if (found) last = found.id;
     return { p, face };
   });
 }
