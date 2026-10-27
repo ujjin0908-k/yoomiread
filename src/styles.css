@@ -2461,9 +2461,39 @@ html[data-reader='night'] { background: #161614; }
   text-transform: uppercase;
   font-size: 0.8rem;
 }
+/* What the app does, in three short rows, so the lower half of the screen is not empty. */
+.welcome-points {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  width: 100%;
+  max-width: 340px;
+  display: grid;
+  gap: 12px;
+  text-align: left;
+}
+.welcome-points li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #fbf6e4;
+  border: 1px solid #e3dccb;
+  color: #2d5997;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.welcome-points svg {
+  flex: none;
+  color: #c9a24a;
+}
 .welcome button {
   width: 100%;
   max-width: 340px;
+  margin-top: auto;
   border: 0;
   border-radius: 999px;
   padding: 16px;
