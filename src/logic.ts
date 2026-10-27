@@ -244,15 +244,31 @@ export function wordAt(text: string, offset: number, locale: string): string | u
 /** Quotation marks around speech, in English or Chinese text. */
 const QUOTE = /[“”"「」『』]/g;
 
+/** For each character: true when it sits inside a quotation (someone is speaking, not named by the narrator). */
+function insideQuotes(paragraph: string): boolean[] {
+  const inside: boolean[] = [];
+  let open = false;
+  for (const ch of paragraph) {
+    if ('“「『'.includes(ch)) open = true;
+    else if ('”」』'.includes(ch)) open = false;
+    else if (ch === '"') open = !open;
+    inside.push(open);
+  }
+  return inside;
+}
+
 /**
- * True when the character is the one speaking: their name sits close to a quotation mark
- * ("Pu Yu said, “…”" or "“…” Pu Yu said."). A name only in narration does not count.
+ * True when the character is the one speaking: their name sits in the narration, close to a quotation mark
+ * ("Pu Yu said, “…”" or "“…” Pu Yu said."). A name inside the speech itself ("“Pu Yu, come here.”") does not count,
+ * and neither does a name only in narration far from any speech.
  */
 export function speaksAs(paragraph: string, name: string, reach = 30): boolean {
   if (!name) return false;
   const quotes = [...paragraph.matchAll(QUOTE)].map((m) => m.index ?? 0);
   if (!quotes.length) return false;
+  const inside = insideQuotes(paragraph);
   for (let at = paragraph.indexOf(name); at >= 0; at = paragraph.indexOf(name, at + 1)) {
+    if (inside[at]) continue;
     const end = at + name.length;
     if (quotes.some((q) => q >= at - reach && q <= end + reach)) return true;
   }

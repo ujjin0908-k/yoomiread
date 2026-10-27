@@ -208,6 +208,11 @@ describe('speaking', () => {
     expect(speaksAs('Pu Yu walked away.', 'Pu Yu')).toBe(false);
   });
 
+  it('does not count a name inside the speech itself', () => {
+    expect(speaksAs('“Pu Yu, come here.”', 'Pu Yu')).toBe(false);
+    expect(speaksAs('"Pu Yu, come here."', 'Pu Yu')).toBe(false);
+  });
+
   it('needs the name in the paragraph at all', () => {
     expect(speaksAs('“Hello.”', 'Pu Yu')).toBe(false);
   });
