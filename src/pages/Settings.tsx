@@ -242,6 +242,18 @@ function TranslationSettings() {
       </div>
 
       <div className="look-row">
+        <span>Model thinking (on is slower, off is faster)</span>
+        <div className="seg">
+          <button type="button" className={!s.thinkingOff ? 'on' : ''} onClick={() => update({ thinkingOff: false })}>
+            On
+          </button>
+          <button type="button" className={s.thinkingOff ? 'on' : ''} onClick={() => update({ thinkingOff: true })}>
+            Off
+          </button>
+        </div>
+      </div>
+
+      <div className="look-row">
         <span>Translate ahead while reading</span>
         <div className="seg">
           {[0, 1, 2, 3].map((n) => (

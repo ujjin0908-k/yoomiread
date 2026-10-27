@@ -142,6 +142,11 @@ export async function translateChapter(
       `${option.label} would not translate "${chapter.title}". Try the other model in Compare, or check what your provider allows.`,
     );
   }
+  // A reply cut short by the output limit would save half a chapter: fail instead, but keep the spend.
+  if (result.truncated) {
+    await addSpend(chapter.bookId, spend.cost, spend.estimated);
+    throw new Error(`The reply for "${chapter.title}" was cut short. Try again, or turn thinking on in Settings.`);
+  }
   // Money is spent even when a Compare result is not kept.
   await addSpend(chapter.bookId, spend.cost, spend.estimated);
   const translation: Translation = {

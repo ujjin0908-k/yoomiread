@@ -159,4 +159,6 @@ export interface TranslateSettings {
   defaultModel: string;
   /** How many of the next chapters to translate in the background while reading (0 turns it off). */
   ahead?: number;
+  /** When true, models are asked not to think before answering: faster and cheaper, but untested per model. */
+  thinkingOff?: boolean;
 }

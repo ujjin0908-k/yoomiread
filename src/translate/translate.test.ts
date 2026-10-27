@@ -124,8 +124,13 @@ describe('streaming', () => {
       sse([delta('Mei '), delta('walked.'), JSON.stringify({ choices: [], usage: { prompt_tokens: 12, completion_tokens: 3 } }), '[DONE]']),
       (p) => got.push(p),
     );
-    expect(r).toEqual({ text: 'Mei walked.', inputTokens: 12, outputTokens: 3 });
+    expect(r).toEqual({ text: 'Mei walked.', inputTokens: 12, outputTokens: 3, truncated: false });
     expect(got.join('')).toBe('Mei walked.');
+  });
+
+  it('notices when the reply stops at the output limit', async () => {
+    const r = await readStream(sse([JSON.stringify({ choices: [{ delta: { content: 'Mei' }, finish_reason: 'length' }] }), '[DONE]']), () => {});
+    expect(r.truncated).toBe(true);
   });
 
   it('turns an error event into a TranslateError', async () => {

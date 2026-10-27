@@ -5,7 +5,12 @@ export interface ChatResult {
   text: string;
   inputTokens?: number;
   outputTokens?: number;
+  /** True when the provider stopped because it ran out of output space, so the text is cut short. */
+  truncated?: boolean;
 }
+
+/** Output cap used when thinking is off: a translation is about 2,000 tokens, so this only stops runaway replies. */
+const THINKING_OFF_MAX_TOKENS = 8000;
 
 export class TranslateError extends Error {
   constructor(
@@ -26,6 +31,7 @@ export async function readStream(body: ReadableStream<Uint8Array>, onText: (piec
   const decoder = new TextDecoder();
   let buffer = '';
   let text = '';
+  let truncated = false;
   let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined;
   for (;;) {
     const { value, done } = await reader.read();
@@ -39,7 +45,7 @@ export async function readStream(body: ReadableStream<Uint8Array>, onText: (piec
       if (data === '[DONE]') continue;
       try {
         const chunk = JSON.parse(data) as {
-          choices?: { delta?: { content?: string } }[];
+          choices?: { delta?: { content?: string }; finish_reason?: string | null }[];
           usage?: { prompt_tokens?: number; completion_tokens?: number };
           error?: { message?: string };
         };
@@ -49,6 +55,7 @@ export async function readStream(body: ReadableStream<Uint8Array>, onText: (piec
           text += piece;
           onText(piece);
         }
+        if (chunk.choices?.[0]?.finish_reason === 'length') truncated = true;
         if (chunk.usage) usage = chunk.usage;
       } catch (e) {
         if (e instanceof TranslateError) throw e;
@@ -57,7 +64,7 @@ export async function readStream(body: ReadableStream<Uint8Array>, onText: (piec
     }
     if (done) break;
   }
-  return { text, inputTokens: usage?.prompt_tokens, outputTokens: usage?.completion_tokens };
+  return { text, inputTokens: usage?.prompt_tokens, outputTokens: usage?.completion_tokens, truncated };
 }
 
 function endpoint(baseUrl: string): string {
@@ -78,7 +85,14 @@ async function once(
       method: 'POST',
       signal,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${settings.apiKey.trim()}` },
-      body: JSON.stringify({ model, messages, stream: true, temperature: 0.3, stream_options: { include_usage: true } }),
+      body: JSON.stringify({
+        model,
+        messages,
+        stream: true,
+        temperature: 0.3,
+        stream_options: { include_usage: true },
+        ...(settings.thinkingOff ? { reasoning_effort: 'none', max_tokens: THINKING_OFF_MAX_TOKENS } : {}),
+      }),
     });
   } catch (e) {
     if (signal?.aborted) throw e;
