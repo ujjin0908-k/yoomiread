@@ -12,6 +12,7 @@ export const DEFAULT_MODELS: ModelOption[] = [
   { id: 'minimax-m3', label: 'MiniMax M3', inputPrice: 0.225, outputPrice: 0.9 },
   { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna (budget, untested)', inputPrice: 0.08, outputPrice: 0.48 },
   { id: 'qwen3.6-plus-uncensored', label: 'Qwen 3.6 Plus Uncensored (untested)', inputPrice: 0.406, outputPrice: 2.44 },
+  { id: 'glm-4.7', label: 'GLM 4.7 (untested, price not set)' },
 ];
 
 export const EMPTY_SETTINGS: TranslateSettings = { baseUrl: '', apiKey: '', models: DEFAULT_MODELS, defaultModel: DEFAULT_MODELS[0].id, ahead: 1 };
