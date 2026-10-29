@@ -1,4 +1,4 @@
-import { AlertTriangle, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
+import { AlertTriangle, Bookmark, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
@@ -126,6 +126,17 @@ export function ChapterPage({ id }: { id: string }) {
             {needsTranslation(book, text) && (
               <button type="button" className="round-btn plain" aria-label="Translate" disabled={!text} onClick={() => setSheet('translate')}>
                 <Languages size={19} />
+              </button>
+            )}
+            {chapter && (
+              <button
+                type="button"
+                className={`round-btn plain${chapter.bookmarked ? ' on' : ''}`}
+                aria-label={chapter.bookmarked ? 'Remove bookmark' : 'Bookmark this chapter'}
+                aria-pressed={!!chapter.bookmarked}
+                onClick={() => void db.chapters.update(chapter.id, { bookmarked: !chapter.bookmarked })}
+              >
+                <Bookmark size={19} fill={chapter.bookmarked ? 'currentColor' : 'none'} />
               </button>
             )}
             <button type="button" className="round-btn plain" aria-label="Reading settings" onClick={() => setSheet('look')}>
@@ -302,6 +313,7 @@ export function ChapterPage({ id }: { id: string }) {
                 <a href={`#/chapter/${c.id}`} className={c.id === id ? 'on' : ''} onClick={() => setSheet(undefined)}>
                   <span className="muted">{c.number}</span>
                   <span lang={zh ? 'zh' : undefined}>{c.title}</span>
+                  {c.bookmarked && <Bookmark size={14} aria-label="Bookmarked" />}
                   {isRead(c) && <span className="muted small">✓</span>}
                 </a>
               </li>

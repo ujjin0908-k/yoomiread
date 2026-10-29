@@ -56,6 +56,8 @@ export interface Chapter {
   read: boolean;
   /** How far down the chapter I scrolled, 0 to 1. */
   position?: number;
+  /** Saved with a bookmark, so it can be found again from the chapter list. */
+  bookmarked?: boolean;
   createdAt: number;
 }
 

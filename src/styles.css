@@ -338,6 +338,9 @@ button {
   background: none;
   box-shadow: none;
 }
+.round-btn.plain.on {
+  color: var(--olive);
+}
 
 .section-head {
   display: flex;
