@@ -2521,3 +2521,14 @@ html[data-reader='night'] { background: #161614; }
     animation: none;
   }
 }
+
+/* Shown on Home while the phone has no connection. */
+.offline-note {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--olive-soft);
+  color: var(--olive);
+  font-size: 0.9rem;
+  text-align: center;
+}

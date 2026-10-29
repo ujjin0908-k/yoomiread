@@ -2,7 +2,7 @@ import { ChevronRight, Plus, Settings as Gear } from 'lucide-react';
 import { useState } from 'react';
 import { Cover, Empty, PageTitle, ProgressBar, TabBar } from '../components';
 import { db } from '../db';
-import { go, useLive } from '../hooks';
+import { go, useLive, useOnline } from '../hooks';
 import { bookProgress, continueChapter, estimateMinutes } from '../logic';
 import type { Book, Chapter } from '../types';
 import { AddBook } from './AddBook';
@@ -16,6 +16,7 @@ export function Home() {
     return { books, byBook };
   }, []);
   const [adding, setAdding] = useState(false);
+  const online = useOnline();
 
   const books = data?.books ?? [];
   const recent = [...books].sort((a, b) => (b.lastReadAt ?? b.updatedAt) - (a.lastReadAt ?? a.updatedAt));
@@ -35,6 +36,12 @@ export function Home() {
             </a>
           }
         />
+
+        {!online && (
+          <p className="offline-note" role="status">
+            Offline: your books are here. Translating needs internet.
+          </p>
+        )}
 
         {data && !books.length && (
           <div className="welcome">
