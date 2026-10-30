@@ -121,36 +121,41 @@ export function ChapterPage({ id }: { id: string }) {
     <div className={`reader-page font-${prefs.font} spacing-${prefs.spacing}`}>
       <TopBar
         back={`book/${chapter.bookId}`}
+        title={`Chapter ${chapter.number} · ${Math.round(bookPct * 100)}%`}
         right={
-          <>
-            {needsTranslation(book, text) && (
-              <button type="button" className="round-btn plain" aria-label="Translate" disabled={!text} onClick={() => setSheet('translate')}>
-                <Languages size={19} />
-              </button>
-            )}
-            {chapter && (
-              <button
-                type="button"
-                className={`round-btn plain${chapter.bookmarked ? ' on' : ''}`}
-                aria-label={chapter.bookmarked ? 'Remove bookmark' : 'Bookmark this chapter'}
-                aria-pressed={!!chapter.bookmarked}
-                onClick={() => void db.chapters.update(chapter.id, { bookmarked: !chapter.bookmarked })}
-              >
-                <Bookmark size={19} fill={chapter.bookmarked ? 'currentColor' : 'none'} />
-              </button>
-            )}
-            <button type="button" className="round-btn plain" aria-label="Reading settings" onClick={() => setSheet('look')}>
-              <Type size={19} />
-            </button>
-            <button type="button" className="round-btn plain" aria-label="Chapters" onClick={() => setSheet('chapters')}>
-              <List size={19} />
-            </button>
-            <button type="button" className="round-btn plain" aria-label="Edit chapter" onClick={() => setSheet('edit')}>
-              <PenLine size={18} />
-            </button>
-          </>
+          <button type="button" className="round-btn plain" aria-label="Reading settings" onClick={() => setSheet('look')}>
+            <Type size={19} />
+          </button>
         }
       />
+      <nav className="reader-dock" aria-label="Reader tools">
+        {chapter && (
+          <button
+            type="button"
+            className={`dock-btn${chapter.bookmarked ? ' on' : ''}`}
+            aria-label={chapter.bookmarked ? 'Remove bookmark' : 'Bookmark this chapter'}
+            aria-pressed={!!chapter.bookmarked}
+            onClick={() => void db.chapters.update(chapter.id, { bookmarked: !chapter.bookmarked })}
+          >
+            <Bookmark size={19} fill={chapter.bookmarked ? 'currentColor' : 'none'} />
+            <span>Mark</span>
+          </button>
+        )}
+        {needsTranslation(book, text) && (
+          <button type="button" className="dock-btn" aria-label="Translate" disabled={!text} onClick={() => setSheet('translate')}>
+            <Languages size={19} />
+            <span>Translate</span>
+          </button>
+        )}
+        <button type="button" className="dock-btn" aria-label="Chapters" onClick={() => setSheet('chapters')}>
+          <List size={19} />
+          <span>Chapters</span>
+        </button>
+        <button type="button" className="dock-btn" aria-label="Edit chapter" onClick={() => setSheet('edit')}>
+          <PenLine size={18} />
+          <span>Edit</span>
+        </button>
+      </nav>
       <main className="page reader-main" style={{ fontSize: FONT_SIZES[prefs.size] }}>
         <p className="eyebrow">Chapter {chapter.number}</p>
         {aheadStatus && <p className="small muted">{aheadStatus}</p>}
