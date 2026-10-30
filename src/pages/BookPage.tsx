@@ -39,6 +39,9 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const [editingReview, setEditingReview] = useState(false);
   const [editingDetails, setEditingDetails] = useState(false);
   const [translating, setTranslating] = useState(false);
+  // Chapters picked with the check boxes, to download (translate and keep on the phone).
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [onlyPicked, setOnlyPicked] = useState(false);
   const finishing = sub === 'finish';
   // Right after a PDF import: offer to fix the title.
   const justImported = sub === 'imported' || sub === 'scanned';
@@ -237,11 +240,19 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
               <li key={c.id}>
                 <button
                   type="button"
-                  className={isRead(c) ? 'check on' : 'check'}
-                  aria-label={isRead(c) ? `Mark ${c.title} unread` : `Mark ${c.title} read`}
-                  onClick={() => void db.chapters.update(c.id, { read: !isRead(c), position: isRead(c) ? 0 : 1 })}
+                  className={picked.has(c.id) ? 'check on' : 'check'}
+                  aria-pressed={picked.has(c.id)}
+                  aria-label={picked.has(c.id) ? `Unselect ${c.title}` : `Select ${c.title} to download`}
+                  onClick={() =>
+                    setPicked((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(c.id)) next.delete(c.id);
+                      else next.add(c.id);
+                      return next;
+                    })
+                  }
                 >
-                  {isRead(c) ? '✓' : (c.position ?? 0) > 0.02 ? `${Math.round((c.position ?? 0) * 100)}` : ''}
+                  {picked.has(c.id) ? '✓' : ''}
                 </button>
                 <a href={`#/chapter/${c.id}`} className="chapter-link">
                   <span className="chapter-name">
@@ -286,7 +297,36 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
           }}
         />
       )}
-      {translating && <TranslateSheet book={book} chapters={list} done={translated ?? new Set()} onClose={() => setTranslating(false)} />}
+      {picked.size > 0 && (
+        <div className="pick-bar" role="region" aria-label="Selected chapters">
+          <span>{picked.size} selected</span>
+          <button type="button" className="link" onClick={() => setPicked(new Set())}>
+            Clear
+          </button>
+          <button
+            type="button"
+            className="pill-btn small"
+            onClick={() => {
+              setOnlyPicked(true);
+              setTranslating(true);
+            }}
+          >
+            <span>Download {picked.size}</span>
+          </button>
+        </div>
+      )}
+      {translating && (
+        <TranslateSheet
+          book={book}
+          chapters={onlyPicked ? list.filter((c) => picked.has(c.id)) : list}
+          done={translated ?? new Set()}
+          onClose={() => {
+            setTranslating(false);
+            setOnlyPicked(false);
+            setPicked(new Set());
+          }}
+        />
+      )}
       {(finishing || editingReview) && (
         <FinishSheet
           book={book}
