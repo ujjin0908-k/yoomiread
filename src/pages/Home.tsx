@@ -25,7 +25,7 @@ export function Home() {
 
   return (
     <>
-      <main className="page tabs-page home-bold">
+      <main className="page tabs-page">
         <PageTitle
           icon
           title="My Library"
@@ -36,10 +36,6 @@ export function Home() {
             </a>
           }
         />
-
-        <div className="home-stage" aria-hidden="true">
-          <img src="/wizard/wizard_happy.png" alt="" />
-        </div>
 
         {!online && (
           <p className="offline-note" role="status">
