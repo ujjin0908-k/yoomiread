@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 export interface ReaderPrefs {
   /** 0 (small) to 4 (large). */
   size: number;
-  font: 'serif' | 'sans' | 'garamond' | 'old';
+  font: 'serif' | 'sans' | 'garamond' | 'old' | 'caslon' | 'antique';
   theme: 'paper' | 'sepia' | 'parchment' | 'mint' | 'rose' | 'night';
   spacing: 'snug' | 'normal' | 'airy';
   dropCap: boolean;

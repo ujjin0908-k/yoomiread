@@ -1128,6 +1128,16 @@ button {
   font-size: 1.05em;
 }
 
+.font-caslon .reader {
+  font-family: 'Libre Caslon Text', 'Noto Serif SC', 'Songti SC', Georgia, serif;
+  font-size: 1.04em;
+}
+
+.font-antique .reader {
+  font-family: 'Old Standard TT', 'Noto Serif SC', 'Songti SC', Georgia, serif;
+  font-size: 1.06em;
+}
+
 .spacing-snug .reader {
   line-height: 1.55;
 }

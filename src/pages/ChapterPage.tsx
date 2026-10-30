@@ -550,6 +550,12 @@ function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs:
             <button type="button" className={prefs.font === 'old' ? 'on serif' : 'serif'} onClick={() => setPrefs({ font: 'old' })}>
               Old print
             </button>
+            <button type="button" className={prefs.font === 'caslon' ? 'on serif' : 'serif'} onClick={() => setPrefs({ font: 'caslon' })}>
+              Caslon
+            </button>
+            <button type="button" className={prefs.font === 'antique' ? 'on serif' : 'serif'} onClick={() => setPrefs({ font: 'antique' })}>
+              Antique
+            </button>
           </div>
         </div>
         <div className="look-row">
