@@ -14,6 +14,7 @@ import {
   paragraphs,
   readingMinutes,
   segmentText,
+  sortBooks,
 } from './logic';
 import type { Book, Chapter, Note, Session } from './types';
 
@@ -223,5 +224,44 @@ describe('speaking', () => {
 
   it('needs the name in the paragraph at all', () => {
     expect(speaksAs('“Hello.”', 'Pu Yu')).toBe(false);
+  });
+});
+
+describe('library sorting', () => {
+  const mk = (id: string, title: string, extra: Partial<Book> = {}): Book => ({ ...book, id, title, ...extra });
+  const none = () => 0;
+
+  it('recent puts the last opened book first, falling back to last changed', () => {
+    const a = mk('a', 'A', { updatedAt: 100, lastReadAt: 500 });
+    const b = mk('b', 'B', { updatedAt: 900 });
+    const c = mk('c', 'C', { updatedAt: 300, lastReadAt: 200 });
+    expect(sortBooks([a, b, c], 'recent', none).map((x) => x.id)).toEqual(['b', 'a', 'c']);
+  });
+
+  it('title sorts naturally and ignores case', () => {
+    const books = [mk('1', 'book 10'), mk('2', 'Book 2'), mk('3', 'apple')];
+    expect(sortBooks(books, 'title', none).map((x) => x.title)).toEqual(['apple', 'Book 2', 'book 10']);
+  });
+
+  it('author puts books without an author last, then by title', () => {
+    const books = [
+      mk('1', 'Zed', { author: '' }),
+      mk('2', 'Second', { author: 'Lin' }),
+      mk('3', 'First', { author: 'Lin' }),
+      mk('4', 'Other', { author: 'Ai' }),
+    ];
+    expect(sortBooks(books, 'author', none).map((x) => x.id)).toEqual(['4', '3', '2', '1']);
+  });
+
+  it('progress puts the most read first, ties by title', () => {
+    const books = [mk('a', 'Beta'), mk('b', 'Alpha'), mk('c', 'Gamma')];
+    const progress: Record<string, number> = { a: 0.2, b: 0.2, c: 0.9 };
+    expect(sortBooks(books, 'progress', (x) => progress[x.id]).map((x) => x.id)).toEqual(['c', 'b', 'a']);
+  });
+
+  it('does not change the list it was given', () => {
+    const books = [mk('2', 'B'), mk('1', 'A')];
+    sortBooks(books, 'title', none);
+    expect(books.map((x) => x.id)).toEqual(['2', '1']);
   });
 });

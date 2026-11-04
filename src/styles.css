@@ -798,6 +798,57 @@ button {
   line-height: 1.15;
 }
 
+.arch-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 84%;
+  margin-top: 2px;
+}
+
+.lib-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: -8px 0 18px;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filter-label {
+  flex: none;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-right: 2px;
+}
+
+.filter-chip {
+  flex: none;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.filter-chip.on {
+  background: var(--pill);
+  border-color: var(--pill);
+  color: var(--pill-ink);
+  font-weight: 600;
+}
+
 .chip {
   display: inline-flex;
   align-items: center;

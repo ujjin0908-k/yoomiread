@@ -7,6 +7,38 @@ export const SHELVES: { id: Shelf; label: string }[] = [
   { id: 'dropped', label: 'Dropped' },
 ];
 
+export type LibrarySort = 'recent' | 'title' | 'author' | 'progress';
+
+export const LIBRARY_SORTS: { id: LibrarySort; label: string }[] = [
+  { id: 'recent', label: 'Recent' },
+  { id: 'title', label: 'Title' },
+  { id: 'author', label: 'Author' },
+  { id: 'progress', label: 'Progress' },
+];
+
+const byTitle = (a: Book, b: Book) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+
+/**
+ * Orders books for the library. Recent = last opened (or last changed); Progress = most read first.
+ * Books with no author go last under Author. Ties fall back to title.
+ */
+export function sortBooks(books: Book[], sort: LibrarySort, progressOf: (b: Book) => number): Book[] {
+  const sorted = [...books];
+  switch (sort) {
+    case 'recent':
+      return sorted.sort((a, b) => (b.lastReadAt ?? b.updatedAt) - (a.lastReadAt ?? a.updatedAt));
+    case 'title':
+      return sorted.sort(byTitle);
+    case 'author':
+      return sorted.sort((a, b) => {
+        if (!a.author !== !b.author) return a.author ? -1 : 1;
+        return a.author.localeCompare(b.author, undefined, { numeric: true, sensitivity: 'base' }) || byTitle(a, b);
+      });
+    case 'progress':
+      return sorted.sort((a, b) => progressOf(b) - progressOf(a) || byTitle(a, b));
+  }
+}
+
 export function newId(): string {
   return crypto.randomUUID();
 }
