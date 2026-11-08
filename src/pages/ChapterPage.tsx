@@ -518,7 +518,7 @@ function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs:
             ))}
           </div>
         </div>
-        <div className="look-row">
+        <div className="look-row look-row-wide">
           <span>Theme</span>
           <div className="themes">
             {(['paper', 'sepia', 'parchment', 'mint', 'rose', 'night'] as const).map((t) => (
@@ -535,7 +535,7 @@ function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs:
             ))}
           </div>
         </div>
-        <div className="look-row">
+        <div className="look-row look-row-wide">
           <span>Font</span>
           <div className="seg">
             <button type="button" className={prefs.font === 'serif' ? 'on serif' : 'serif'} onClick={() => setPrefs({ font: 'serif' })}>

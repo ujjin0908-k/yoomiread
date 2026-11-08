@@ -1395,6 +1395,30 @@ button {
   font-size: 0.92rem;
 }
 
+/* Font has six choices: label on top, options in a tidy three-by-two grid, one line each. */
+.look-row-wide {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.look-row-wide .seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  border-radius: 22px;
+}
+
+.look-row-wide .seg button {
+  min-width: 0;
+  height: 40px;
+  padding: 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1;
+}
+
 .seg {
   display: flex;
   background: var(--surface-2);
@@ -1426,6 +1450,10 @@ button {
 .themes {
   display: flex;
   gap: 10px;
+}
+
+.look-row-wide .themes {
+  justify-content: space-between;
 }
 
 .theme-dot {
@@ -2372,7 +2400,8 @@ blockquote {
   position: fixed;
   left: 12px;
   bottom: 96px;
-  z-index: 30;
+  /* Below the sheets (z-index 20), so an open settings sheet covers him instead of sitting on top of it. */
+  z-index: 19;
 }
 .mascot-btn {
   background: none;
