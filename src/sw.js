@@ -2,14 +2,16 @@
 // so reading and importing work with no internet from then on.
 // The build fills in BUILD_FILES and VERSION (see vite.config.ts).
 const FILES = self.BUILD_FILES;
+const WIZARD = ['happy', 'idle', 'sad', 'smoking', 'angry'].map((m) => `/wizard/wizard_${m}.png`);
 const CACHE = `yoomiread-${self.VERSION}`;
 const FONT_CSS =
-  'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Noto+Serif+SC:wght@400;600&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap';
+  'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=IM+Fell+English:ital@0;1&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Noto+Serif+SC:wght@400;600&display=swap';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE).then(async (c) => {
-      await c.addAll(['/', '/manifest.webmanifest', '/favicon-64.png', '/icon-180.png', '/icon-192.png', '/icon-512.png', ...FILES]);
+      // Files in public/ are not part of the build list, so they are named here.
+      await c.addAll(['/', '/manifest.webmanifest', '/favicon-64.png', '/icon-180.png', '/icon-192.png', '/icon-512.png', '/welcome.jpg', ...WIZARD, ...FILES]);
       // Fonts are a bonus: without them the phone's own serif fonts are used.
       await c.add(new Request(FONT_CSS, { mode: 'cors' })).catch(() => {});
     }),
@@ -45,11 +47,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Built files have a hash in their name and never change; fonts and dictionaries barely do. Saved copy first.
+  // Every file of the app (icons, pictures, dictionaries, fonts, built code) is answered from the saved copy first,
+  // so the first screen works with no connection. The API routes and the worker itself always go to the network.
+  const sameSite = url.origin === self.location.origin && !url.pathname.startsWith('/api/') && url.pathname !== '/sw.js';
   const fonts = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
-  if ((url.origin === self.location.origin && (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/dict/') || url.pathname.startsWith('/wizard/'))) || fonts) {
+  if (sameSite || fonts) {
     event.respondWith(
-      caches.match(req).then(
+      // ignoreVary: the saved copy was made without the page's Origin header, which would otherwise hide it offline.
+      caches.match(req, { ignoreVary: true }).then(
         (hit) =>
           hit ||
           fetch(req).then((res) => {
