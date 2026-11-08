@@ -62,6 +62,8 @@ export function ChapterPage({ id }: { id: string }) {
   useReadingSession(chapter, book);
   const aheadStatus = useTranslateAhead(chapter, book);
   useScrollMemory(chapter, text !== undefined && translation !== undefined, setScroll);
+  const [barsAway, setBarsAway] = useState(false);
+  useAutoHideBars(setBarsAway);
 
   // Reader theme colors the whole page while it is open, including the top of the screen (the status bar).
   useEffect(() => {
@@ -120,6 +122,7 @@ export function ChapterPage({ id }: { id: string }) {
   return (
     <div className={`reader-page font-${prefs.font} spacing-${prefs.spacing}`}>
       <TopBar
+        away={barsAway}
         back={`book/${chapter.bookId}`}
         right={
           <>
@@ -273,7 +276,7 @@ export function ChapterPage({ id }: { id: string }) {
           </button>
         </div>
       ) : (
-        <footer className="reader-foot">
+        <footer className={`reader-foot${barsAway ? ' away' : ''}`}>
           {(highlights.length > 0 || comments.length > 0) && (
             <button type="button" className="notes-pill" onClick={() => setSheet('notes')}>
               <Highlighter size={14} /> {highlights.length + comments.length} notes
@@ -425,6 +428,22 @@ function useReadingSession(chapter: Chapter | null | undefined, book: Book | und
     // Only when the chapter changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapterId]);
+}
+
+/** Reading: the top bar and the progress footer slide away as you scroll down, and come back when you scroll up or reach the top. */
+function useAutoHideBars(setAway: (away: boolean) => void) {
+  useEffect(() => {
+    let last = window.scrollY;
+    const handle = () => {
+      const y = window.scrollY;
+      if (y < 60) setAway(false);
+      else if (y > last + 6) setAway(true);
+      else if (y < last - 6) setAway(false);
+      last = y;
+    };
+    window.addEventListener('scroll', handle, { passive: true });
+    return () => window.removeEventListener('scroll', handle);
+  }, [setAway]);
 }
 
 /** Comes back to the same spot, and remembers how far down I got. */

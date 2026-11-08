@@ -1301,6 +1301,7 @@ button {
 }
 
 .reader-foot {
+  transition: transform 0.25s ease, opacity 0.25s ease;
   position: fixed;
   left: 0;
   right: 0;
@@ -1308,6 +1309,21 @@ button {
   z-index: 5;
   padding: 10px 20px calc(env(safe-area-inset-bottom) + 10px);
   background: linear-gradient(transparent, var(--bg) 30%);
+}
+
+/* Reading: bars slide out of the way; a tap brings them back (see ChapterPage). */
+.topbar {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+.topbar.away {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+.reader-foot.away {
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .reader-foot .bar,

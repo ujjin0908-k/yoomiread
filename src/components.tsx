@@ -51,9 +51,9 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
 }
 
 /** Top bar for inner pages: round back button, centered title, actions on the right. */
-export function TopBar({ back, title, right }: { back: string; title?: string; right?: ReactNode }) {
+export function TopBar({ back, title, right, away }: { back: string; title?: string; right?: ReactNode; away?: boolean }) {
   return (
-    <header className="topbar">
+    <header className={`topbar${away ? ' away' : ''}`}>
       <a className="round-btn" href={`#/${back}`} aria-label="Back">
         <ChevronLeft size={20} />
       </a>
