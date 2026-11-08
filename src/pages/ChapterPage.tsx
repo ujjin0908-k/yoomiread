@@ -64,6 +64,33 @@ export function ChapterPage({ id }: { id: string }) {
   useScrollMemory(chapter, text !== undefined && translation !== undefined, setScroll);
   const [barsAway, setBarsAway] = useState(false);
   useAutoHideBars(setBarsAway);
+  // Press and hold a word to look it up (a quick tap is for showing or hiding the bars).
+  const holdTimer = useRef<number>();
+  const holdFired = useRef(false);
+  const holdAt = useRef<{ x: number; y: number }>();
+  const zhNow = book?.language === 'zh';
+  function holdStart(x: number, y: number) {
+    holdAt.current = { x, y };
+    holdFired.current = false;
+    window.clearTimeout(holdTimer.current);
+    holdTimer.current = window.setTimeout(() => {
+      const range = document.caretRangeFromPoint?.(x, y);
+      if (!range || range.startContainer.nodeType !== Node.TEXT_NODE) return;
+      const isZh = zhNow && !english;
+      const word = wordAt((range.startContainer as Text).data, range.startOffset, isZh ? 'zh' : 'en');
+      if (!word) return;
+      holdFired.current = true;
+      window.getSelection()?.removeAllRanges();
+      setLookup({ word, lang: isZh ? 'zh' : 'en' });
+    }, 450);
+  }
+  function holdMove(x: number, y: number) {
+    const start = holdAt.current;
+    if (start && Math.hypot(x - start.x, y - start.y) > 10) window.clearTimeout(holdTimer.current);
+  }
+  function holdEnd() {
+    window.clearTimeout(holdTimer.current);
+  }
 
   // Reader theme colors the whole page while it is open, including the top of the screen (the status bar).
   useEffect(() => {
@@ -185,14 +212,20 @@ export function ChapterPage({ id }: { id: string }) {
             className={`reader ${prefs.dropCap ? 'drop' : ''}`}
             ref={textRef}
             lang={zh ? 'zh' : 'en'}
+            onPointerDown={(e) => holdStart(e.clientX, e.clientY)}
+            onPointerMove={(e) => holdMove(e.clientX, e.clientY)}
+            onPointerUp={holdEnd}
+            onPointerCancel={holdEnd}
             onClick={(e) => {
-              // A tap on a word looks it up; a highlight opens its note; a drag selects text instead.
+              // A press-and-hold already looked a word up; a highlight opens its note; a drag selects text instead.
+              if (holdFired.current) {
+                holdFired.current = false;
+                return;
+              }
               const sel = window.getSelection();
               if ((sel && !sel.isCollapsed) || (e.target as HTMLElement).closest('mark')) return;
-              const range = document.caretRangeFromPoint?.(e.clientX, e.clientY);
-              if (!range || range.startContainer.nodeType !== Node.TEXT_NODE) return;
-              const word = wordAt((range.startContainer as Text).data, range.startOffset, zh ? 'zh' : 'en');
-              if (word) setLookup({ word, lang: zh ? 'zh' : 'en' });
+              // Any other tap shows or hides the top bar and the footer.
+              setBarsAway((away) => !away);
             }}
           >
             {withFaces(paragraphs(shown), faceFor).map(({ p, face }) => (
