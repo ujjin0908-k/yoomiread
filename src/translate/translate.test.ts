@@ -5,7 +5,8 @@ import { chat, readStream, TranslateError } from './api';
 import { callCost, DEFAULT_MODELS, loadSettings, saveSettings } from './run';
 import { db } from '../db';
 import { isRefusal } from './prompt';
-import { chapterMessages, cleanTitle, costOf, estimateTokens, formatCost, NEW_TERMS, parseTerms, pronounWarnings, SUMMARY, splitReply, titleMessages } from './prompt';
+import { CENSORED, chapterMessages, cleanTitle, costOf, estimateTokens, formatCost, NEW_TERMS, parseTerms, pronounWarnings, SUMMARY, splitReply, titleMessages } from './prompt';
+import { translationWarnings } from './run';
 
 const entry = (over: Partial<GlossaryEntry>): GlossaryEntry => ({
   id: over.original ?? 'x',
@@ -269,5 +270,34 @@ describe('model list', () => {
 describe('English replies are not translations', () => {
   it('treats "already in English" as a refusal', () => {
     expect(isRefusal('The provided text is already in English. Please provide the Chinese source text.')).toBe(true);
+  });
+});
+
+describe('skipped passages', () => {
+  it('turns any spelling of the marker into its own paragraph', () => {
+    const reply = 'Mei walked on.\n[censored]\nThe rain stopped.\n[[ CENSORED ]]\nThe end.';
+    const { text } = splitReply(reply);
+    expect(text.split('\n\n')).toEqual(['Mei walked on.', CENSORED, 'The rain stopped.', CENSORED, 'The end.']);
+  });
+
+  it('tells the model to mark skipped passages instead of dropping them', () => {
+    const [system] = chapterMessages({ bookTitle: 'B', chapterTitle: 'C', text: '梅。', glossary: [] });
+    expect(system.content).toContain(`"${CENSORED}"`);
+    expect(system.content).toContain('never drop it silently');
+  });
+
+  it('warns about marked passages and about missing paragraphs', () => {
+    const original = ['一。', '二。', '三。', '四。', '五。', '六。'].join('\n\n');
+    const marked = translationWarnings(original, ['One.', CENSORED, 'Three.', 'Four.', 'Five.', 'Six.'].join('\n\n'), []);
+    expect(marked.join(' ')).toContain('1 passage marked in red');
+    expect(marked.join(' ')).not.toContain('may be missing');
+
+    const short = translationWarnings(original, ['One.', 'Two.'].join('\n\n'), []);
+    expect(short.join(' ')).toContain('may be missing');
+  });
+
+  it('stays quiet for a complete translation', () => {
+    const original = ['一。', '二。', '三。', '四。', '五。'].join('\n\n');
+    expect(translationWarnings(original, ['A.', 'B.', 'C.', 'D.', 'E.'].join('\n\n'), [])).toEqual([]);
   });
 });

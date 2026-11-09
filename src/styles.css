@@ -1197,6 +1197,13 @@ button {
   line-height: 2;
 }
 
+/* A passage the model could not translate: shown in red, so a gap is never mistaken for the author's text. */
+.reader p.censored {
+  color: var(--danger);
+  font-style: italic;
+  font-size: 0.85em;
+}
+
 .reader p {
   margin: 0 0 1em;
 }

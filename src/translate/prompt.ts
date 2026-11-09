@@ -9,6 +9,9 @@ export interface ChatMessage {
 export const NEW_TERMS = '===NEW TERMS===';
 /** Marks the short story-so-far summary, written after the translation and before the new names. */
 export const SUMMARY = '===SUMMARY===';
+/** Marks a passage the model could not translate. The reader shows it in red as "Censored and skipped". */
+export const CENSORED = '[[CENSORED]]';
+const CENSORED_ANY = /\[{1,2}\s*censored\s*\]{1,2}/gi;
 
 function glossaryLines(entries: GlossaryEntry[]): string {
   return entries
@@ -58,7 +61,9 @@ export function chapterMessages(input: {
   const system = [
     'You translate Chinese web novels into natural, readable English for a single reader.',
     'Rules:',
-    '- Translate everything. Do not summarize, skip, shorten or add anything.',
+    '- Translate everything. Do not summarize, shorten or add anything.',
+    `- If you cannot translate a passage, for any reason (including content you will not write), never drop it silently:`,
+    `  write the line "${CENSORED}" in its place, as its own paragraph, and carry on with the rest. Keep the same number of paragraphs.`,
     '- Keep the paragraph breaks: one paragraph of the original becomes one paragraph in English, separated by a blank line.',
     '- Use the glossary exactly for every name and term in it. Use each person\'s pronouns as given.',
     '- Keep the tone of the original. Dialogue should sound like real speech.',
@@ -162,6 +167,8 @@ export function splitReply(reply: string): { text: string; terms: ProposedTerm[]
   // Normalise paragraph breaks to the blank-line form the reader expects.
   const text = body
     .replace(/\r\n/g, '\n')
+    // Any spelling of the marker the model writes becomes its own paragraph.
+    .replace(CENSORED_ANY, `\n\n${CENSORED}\n\n`)
     .split(/\n\s*\n|\n/)
     .map((p) => p.trim())
     .filter(Boolean)

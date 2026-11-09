@@ -2,7 +2,8 @@ import { db } from '../db';
 import { newId } from '../logic';
 import type { Chapter, GlossaryEntry, ModelOption, TranslateSettings, Translation } from '../types';
 import { chat, type ChatResult } from './api';
-import { chapterMessages, cleanTitle, costOf, estimateTokens, glossaryScanMessages, isRefusal, parseTerms, pronounWarnings, splitReply, titleMessages, type ChatMessage, type ProposedTerm } from './prompt';
+import { CENSORED, chapterMessages, cleanTitle, costOf, estimateTokens, glossaryScanMessages, isRefusal, parseTerms, pronounWarnings, splitReply, titleMessages, type ChatMessage, type ProposedTerm } from './prompt';
+import { paragraphs } from '../logic';
 
 /** Prices and ids as the owner's provider lists them on 2026-10-24 (change them in Settings when they move). */
 export const DEFAULT_MODELS: ModelOption[] = [
@@ -160,7 +161,7 @@ export async function translateChapter(
     outputTokens: result.outputTokens,
     cost: spend.cost,
     costEstimated: spend.estimated,
-    warnings: pronounWarnings(english, glossary.filter((g) => g.status === 'ok')),
+    warnings: translationWarnings(text.text, english, glossary),
     summary,
     createdAt: Date.now(),
   };
@@ -170,6 +171,23 @@ export async function translateChapter(
     newTerms = await addProposals(chapter.bookId, terms);
   }
   return { translation, terms, newTerms };
+}
+
+/**
+ * Things to look at in a finished translation: passages the model marked as skipped, a reply with
+ * clearly fewer paragraphs than the original (text may have been dropped), and pronouns that do not match.
+ */
+export function translationWarnings(original: string, english: string, glossary: GlossaryEntry[]): string[] {
+  const warnings: string[] = [];
+  const marked = english.split('\n\n').filter((p) => p === CENSORED).length;
+  if (marked) warnings.push(`${marked} passage${marked > 1 ? 's' : ''} marked in red could not be translated and ${marked > 1 ? 'were' : 'was'} skipped.`);
+  const sourceCount = paragraphs(original).length;
+  // A marked passage still stands in for one original paragraph, so it counts.
+  const englishCount = english.split('\n\n').filter(Boolean).length;
+  if (sourceCount >= 5 && englishCount < sourceCount * 0.9) {
+    warnings.push(`The English has ${englishCount} paragraphs for ${sourceCount} in the original, so some text may be missing.`);
+  }
+  return [...warnings, ...pronounWarnings(english, glossary.filter((g) => g.status === 'ok'))];
 }
 
 /** Saves a translation made earlier without saving (the one picked in Compare). */

@@ -6,6 +6,7 @@ import { go, useLive } from '../hooks';
 import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speaksAs, wordAt } from '../logic';
 import { WordSheet } from './WordSheet';
 import { Mascot } from '../mascot/Mascot';
+import { CENSORED } from '../translate/prompt';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
 import { keepTranslation, loadSettings, modelFor, translateChapter, type ChapterRun } from '../translate/run';
@@ -228,7 +229,12 @@ export function ChapterPage({ id }: { id: string }) {
               setBarsAway((away) => !away);
             }}
           >
-            {withFaces(paragraphs(shown), faceFor).map(({ p, face }) => (
+            {withFaces(paragraphs(shown), faceFor).map(({ p, face }) =>
+              p.text === CENSORED ? (
+                <p key={`${view}-${p.start}`} data-start={p.start} className="censored">
+                  Censored and skipped
+                </p>
+              ) : (
               <p key={`${view}-${p.start}`} data-start={p.start} className={face ? 'has-face' : undefined}>
                 {face && <Avatar entry={face} size={48} onClick={() => setCard(face)} />}
                 {segmentText(p.text, shiftNotes(highlights, p.start, p.text.length)).map((s) =>
@@ -245,7 +251,8 @@ export function ChapterPage({ id }: { id: string }) {
                   ),
                 )}
               </p>
-            ))}
+              ),
+            )}
           </div>
         ) : (
           <div className="card">
