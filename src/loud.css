@@ -930,16 +930,8 @@ body[data-reader='night'] {
   --olive: #ff7a5c;
 }
 
-/* ---------- A chapter opens like a book cover ---------- */
+/* ---------- Leaving a chapter: the page closes like a cover (newer phones) ---------- */
 
-:root[data-nav='open-book']::view-transition-old(root) {
-  z-index: 2;
-  transform-origin: left center;
-  animation: 0.75s cubic-bezier(0.6, 0, 0.2, 1) both cover-open;
-}
-:root[data-nav='open-book']::view-transition-new(root) {
-  animation: 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both page-under;
-}
 :root[data-nav='close-book']::view-transition-new(root) {
   z-index: 2;
   transform-origin: left center;
@@ -948,22 +940,10 @@ body[data-reader='night'] {
 :root[data-nav='close-book']::view-transition-old(root) {
   animation: 0.65s ease-in both page-away;
 }
-@keyframes cover-open {
-  to {
-    transform: perspective(1400px) rotateY(-104deg);
-    filter: brightness(0.7);
-  }
-}
 @keyframes cover-close {
   from {
     transform: perspective(1400px) rotateY(-104deg);
     filter: brightness(0.7);
-  }
-}
-@keyframes page-under {
-  from {
-    scale: 0.94;
-    filter: brightness(0.6);
   }
 }
 @keyframes page-away {
@@ -1416,5 +1396,141 @@ body[data-reader='night'] {
   .hello-cat img {
     width: min(64vw, 256px);
     height: min(64vw, 256px);
+  }
+}
+
+/* ---------- Opening a chapter: a book opens over the screen (see openBook in motion.ts) ---------- */
+
+.book-open {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 35%, rgb(232 50 14 / 0.55) 0, transparent 34%),
+    radial-gradient(circle at 85% 62%, rgb(107 77 255 / 0.55) 0, transparent 36%), #14121f;
+  perspective: 1300px;
+  animation: bo-layer 1.9s linear forwards;
+}
+.bo-book {
+  position: relative;
+  width: 172px;
+  height: 252px;
+  transform-style: preserve-3d;
+  animation: bo-book 1.9s cubic-bezier(0.6, 0, 0.2, 1) forwards;
+}
+.bo-back {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px 10px 10px 4px;
+  background: #2a2540;
+  box-shadow: 0 30px 40px rgb(0 0 0 / 0.5);
+}
+.bo-page,
+.bo-leaf {
+  position: absolute;
+  inset: 4px 4px 4px 0;
+  border-radius: 0 6px 6px 0;
+  background: linear-gradient(90deg, #e9dfca, #fffaf0 14%);
+}
+/* Faint lines of text on the page that grows into the chapter. */
+.bo-page {
+  box-sizing: border-box;
+  padding: 26px 16px 0 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.bo-page i {
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(20 18 31 / 0.16);
+}
+.bo-page i:first-child {
+  width: 55%;
+  height: 9px;
+  margin-bottom: 6px;
+  background: rgb(232 50 14 / 0.7);
+}
+.bo-page i:last-child {
+  width: 70%;
+}
+.bo-leaf {
+  transform-origin: left center;
+  box-shadow: inset 0 0 0 1px #e2d6bd;
+}
+.bo-leaf1 { animation: bo-leaf 0.5s cubic-bezier(0.6, 0, 0.2, 1) 0.62s forwards; }
+.bo-leaf2 { animation: bo-leaf 0.5s cubic-bezier(0.6, 0, 0.2, 1) 0.74s forwards; }
+.bo-leaf3 { animation: bo-leaf 0.5s cubic-bezier(0.6, 0, 0.2, 1) 0.86s forwards; }
+.bo-cover {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  animation: bo-cover 0.7s cubic-bezier(0.6, 0, 0.2, 1) 0.3s forwards;
+}
+.bo-front,
+.bo-inside {
+  position: absolute;
+  inset: 0;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 4px 10px 10px 4px;
+  overflow: hidden;
+  background: #e8320e;
+}
+.bo-front .cover {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  aspect-ratio: auto;
+  border-radius: inherit;
+  box-shadow: none;
+  rotate: none;
+}
+.bo-inside {
+  transform: rotateY(180deg);
+  border-radius: 10px 4px 4px 10px;
+  background: #b79cff repeating-linear-gradient(45deg, rgb(255 255 255 / 0.35) 0 6px, transparent 6px 14px);
+}
+@keyframes bo-layer {
+  0% {
+    opacity: 0;
+  }
+  8%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* Arrives closed and tilted, slides right as it opens so the two pages sit in the middle, then the page fills the screen. */
+@keyframes bo-book {
+  0% {
+    transform: translateX(0) rotateX(16deg) rotateZ(-5deg) scale(0.7);
+  }
+  14% {
+    transform: translateX(0) rotateX(14deg) rotateZ(-4deg) scale(1);
+  }
+  42%,
+  62% {
+    transform: translateX(84px) rotateX(10deg) rotateZ(0deg) scale(1);
+  }
+  100% {
+    transform: translateX(-10px) rotateX(0deg) rotateZ(0deg) scale(7);
+  }
+}
+@keyframes bo-cover {
+  to {
+    transform: rotateY(-172deg);
+  }
+}
+@keyframes bo-leaf {
+  to {
+    transform: rotateY(-166deg);
   }
 }
