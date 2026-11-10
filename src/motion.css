@@ -1,0 +1,837 @@
+/*
+ * YoomiRead motion. The look stays as it was; this file only adds movement.
+ * New keyframes use `translate`, `scale` and `rotate` (not `transform`), so they never fight a position set elsewhere.
+ * Everything here stops when the phone asks for less motion or Animations is off in Settings (see the end).
+ */
+:root {
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring: cubic-bezier(0.3, 1.45, 0.5, 1);
+}
+
+/* ---------- Page changes ---------- */
+
+.tabbar {
+  view-transition-name: tabbar;
+}
+.fab {
+  view-transition-name: fab;
+}
+.topbar {
+  view-transition-name: topbar;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+  animation-timing-function: var(--ease-out);
+  animation-fill-mode: both;
+}
+
+/* Going deeper: the new page comes in from the right. Going back: from the left. */
+:root[data-nav='forward']::view-transition-old(root) {
+  animation-name: vt-out-left;
+}
+:root[data-nav='forward']::view-transition-new(root) {
+  animation-name: vt-in-right;
+}
+:root[data-nav='back']::view-transition-old(root) {
+  animation-name: vt-out-right;
+}
+:root[data-nav='back']::view-transition-new(root) {
+  animation-name: vt-in-left;
+}
+/* Between tabs: a short step in the direction of the tab. */
+:root[data-nav='tab-right']::view-transition-old(root) {
+  animation: 0.16s ease-in both vt-tab-out;
+  --shift: -14px;
+}
+:root[data-nav='tab-right']::view-transition-new(root) {
+  animation: 0.28s var(--ease-out) 0.06s both vt-tab-in;
+  --shift: 14px;
+}
+:root[data-nav='tab-left']::view-transition-old(root) {
+  animation: 0.16s ease-in both vt-tab-out;
+  --shift: 14px;
+}
+:root[data-nav='tab-left']::view-transition-new(root) {
+  animation: 0.28s var(--ease-out) 0.06s both vt-tab-in;
+  --shift: -14px;
+}
+/* Chapter to chapter: the next one rises into place. */
+:root[data-nav='fade']::view-transition-old(root) {
+  animation: 0.18s ease-in both vt-fade-out;
+}
+:root[data-nav='fade']::view-transition-new(root) {
+  animation: 0.34s var(--ease-out) 0.08s both vt-rise;
+}
+/* Leaving the welcome screen: it opens outwards and the library settles in. */
+:root[data-nav='open']::view-transition-old(root) {
+  animation: 0.5s ease-in both vt-open-out;
+}
+:root[data-nav='open']::view-transition-new(root) {
+  animation: 0.55s var(--ease-out) 0.15s both vt-open-in;
+}
+
+@keyframes vt-out-left {
+  to {
+    translate: -26% 0;
+    opacity: 0;
+  }
+}
+@keyframes vt-in-right {
+  from {
+    translate: 34% 0;
+    opacity: 0;
+  }
+}
+@keyframes vt-out-right {
+  to {
+    translate: 34% 0;
+    opacity: 0;
+  }
+}
+@keyframes vt-in-left {
+  from {
+    translate: -26% 0;
+    opacity: 0;
+  }
+}
+@keyframes vt-tab-out {
+  to {
+    translate: var(--shift) 0;
+    opacity: 0;
+  }
+}
+@keyframes vt-tab-in {
+  from {
+    translate: var(--shift) 0;
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-rise {
+  from {
+    translate: 0 22px;
+    opacity: 0;
+  }
+}
+@keyframes vt-open-out {
+  to {
+    scale: 1.12;
+    opacity: 0;
+  }
+}
+@keyframes vt-open-in {
+  from {
+    scale: 0.96;
+    opacity: 0;
+  }
+}
+
+/* The tab bar and the add button stay where they are while the page moves under them. */
+::view-transition-old(tabbar):not(:only-child),
+::view-transition-old(fab):not(:only-child) {
+  display: none;
+}
+::view-transition-new(tabbar):not(:only-child),
+::view-transition-new(fab):not(:only-child) {
+  animation: none;
+}
+::view-transition-old(tabbar):only-child {
+  animation: 0.24s ease-in both vt-sink;
+}
+::view-transition-new(tabbar):only-child {
+  animation: 0.36s var(--spring) 0.1s both vt-float;
+}
+::view-transition-old(fab):only-child {
+  animation: 0.18s ease-in both vt-shrink;
+}
+::view-transition-new(fab):only-child {
+  animation: 0.36s var(--spring) 0.16s both vt-grow;
+}
+@keyframes vt-sink {
+  to {
+    translate: 0 90px;
+    opacity: 0;
+  }
+}
+@keyframes vt-float {
+  from {
+    translate: 0 90px;
+    opacity: 0;
+  }
+}
+@keyframes vt-shrink {
+  to {
+    scale: 0.3;
+    opacity: 0;
+  }
+}
+@keyframes vt-grow {
+  from {
+    scale: 0.3;
+    opacity: 0;
+  }
+}
+
+/* A book's cover travels between the shelf and the book page. */
+::view-transition-group(book-cover) {
+  animation-duration: 0.42s;
+  animation-timing-function: cubic-bezier(0.3, 1.12, 0.4, 1);
+}
+::view-transition-old(book-cover),
+::view-transition-new(book-cover) {
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---------- Things arriving on a page ---------- */
+
+@keyframes rise-in {
+  from {
+    translate: 0 14px;
+    opacity: 0;
+  }
+}
+@keyframes slide-in {
+  from {
+    translate: 28px 0;
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  from {
+    scale: 0.6;
+    opacity: 0;
+  }
+}
+@keyframes drop-in {
+  from {
+    translate: 0 -10px;
+    opacity: 0;
+  }
+}
+
+.page > * {
+  animation: rise-in 0.5s var(--ease-out) backwards;
+  animation-delay: calc(var(--n, 6) * 45ms);
+}
+.page > :nth-child(1) { --n: 0; }
+.page > :nth-child(2) { --n: 1; }
+.page > :nth-child(3) { --n: 2; }
+.page > :nth-child(4) { --n: 3; }
+.page > :nth-child(5) { --n: 4; }
+.page > :nth-child(6) { --n: 5; }
+
+/* Lists: the first dozen rows arrive one after another. Longer lists show the rest at once, so big novels stay fast. */
+:is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > :nth-child(-n + 12) {
+  animation: rise-in 0.5s var(--ease-out) backwards;
+  animation-delay: calc(var(--n) * 45ms + 90ms);
+}
+.shelf-row > :nth-child(-n + 12) {
+  animation-name: slide-in;
+}
+:is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > :nth-child(1) { --n: 0; }
+:is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > :nth-child(2) { --n: 1; }
+:is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > :nth-child(3) { --n: 2; }
+:is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > :nth-child(4) { --n: 3; }
+:is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > :nth-child(5) { --n: 4; }
+:is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > :nth-child(6) { --n: 5; }
+:is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > :nth-child(7) { --n: 6; }
+:is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > :nth-child(8) { --n: 7; }
+:is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > :nth-child(9) { --n: 8; }
+:is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > :nth-child(10) { --n: 9; }
+:is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > :nth-child(11) { --n: 10; }
+:is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > :nth-child(12) { --n: 11; }
+
+/* Coming back to a page you have just seen: it is simply there, nothing is replayed. */
+:root[data-arrive='back'] .page > *,
+:root[data-arrive='back'] :is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > * {
+  animation: none;
+}
+
+/* ---------- Touch: things give a little when pressed ---------- */
+
+.pill-btn,
+.btn,
+.round-btn,
+.fab,
+.filter-chip,
+.folder-chips button,
+.seg button,
+.notes-pill,
+.swatch,
+.star-btn,
+.tabbar a {
+  transition:
+    scale 0.18s var(--spring),
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s,
+    opacity 0.2s;
+}
+.pill-btn:active:not(:disabled),
+.btn:active:not(:disabled),
+.filter-chip:active,
+.folder-chips button:active,
+.notes-pill:active {
+  scale: 0.96;
+}
+.round-btn:active,
+.fab:active,
+.swatch:active,
+.tabbar a:active {
+  scale: 0.9;
+}
+.star-btn:active {
+  scale: 1.25;
+}
+.fab svg {
+  transition: rotate 0.3s var(--spring);
+}
+.fab:active svg {
+  rotate: 90deg;
+}
+.shelf-row a .cover,
+.continue .cover {
+  transition: scale 0.2s var(--ease-out);
+}
+.shelf-row a:active .cover {
+  scale: 0.96;
+}
+.chapter-list li,
+.toc a,
+.quote-list a,
+.glossary-list button {
+  transition: background-color 0.2s;
+}
+
+/* ---------- Tab bar: the marker slides to the tab you open ---------- */
+
+.tabbar a {
+  position: relative;
+  z-index: 1;
+  width: 70px;
+}
+.tabbar a.on {
+  background: none;
+}
+.tab-pill {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  bottom: 6px;
+  width: 70px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  transition: transform 0.45s cubic-bezier(0.3, 1.3, 0.45, 1);
+}
+.tabbar a.on svg {
+  animation: tab-hop 0.45s var(--spring) 0.08s backwards;
+}
+@keyframes tab-hop {
+  from {
+    translate: 0 5px;
+    scale: 0.8;
+  }
+}
+
+/* ---------- Home ---------- */
+
+.app-icon {
+  animation: icon-settle 0.7s var(--spring) backwards;
+}
+@keyframes icon-settle {
+  from {
+    rotate: -16deg;
+    scale: 0.6;
+    opacity: 0;
+  }
+}
+
+/* A line of light crosses the cover of the book you are reading, once. */
+.continue .cover {
+  position: relative;
+}
+.continue .cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 36%, rgb(255 255 255 / 0.3) 50%, transparent 64%);
+  translate: -130% 0;
+  animation: sheen 1.2s ease-out 0.6s 1;
+  pointer-events: none;
+}
+@keyframes sheen {
+  to {
+    translate: 130% 0;
+  }
+}
+
+/* The arrow on Continue Reading leans forward now and then. */
+.continue .pill-btn svg {
+  animation: nudge 3.2s ease-in-out 1.4s infinite;
+}
+@keyframes nudge {
+  0%,
+  78%,
+  100% {
+    translate: 0 0;
+  }
+  86% {
+    translate: 5px 0;
+  }
+  93% {
+    translate: -1px 0;
+  }
+}
+
+/* Progress bars fill from empty when they first show. The reader's own bar follows your scrolling instead. */
+.bar > span {
+  animation: bar-grow 0.9s var(--ease-out) 0.25s backwards;
+}
+.reader-foot .bar > span {
+  animation: none;
+}
+@keyframes bar-grow {
+  from {
+    width: 0;
+  }
+}
+
+.cover img {
+  animation: fade 0.35s ease-out;
+}
+
+.offline-note {
+  animation: drop-in 0.35s var(--ease-out) backwards;
+}
+
+.empty-orn,
+.end-orn {
+  display: inline-block;
+  animation: leaf 5s ease-in-out infinite;
+}
+@keyframes leaf {
+  0%,
+  100% {
+    rotate: -5deg;
+    translate: 0 0;
+  }
+  50% {
+    rotate: 5deg;
+    translate: 0 -3px;
+  }
+}
+
+/* ---------- Stars ---------- */
+
+.star {
+  display: inline-block;
+}
+.stars-md .star-full,
+.stars-md .star-half {
+  animation: star-pop 0.4s var(--spring) backwards;
+}
+.stars-md > :nth-child(2) .star { animation-delay: 50ms; }
+.stars-md > :nth-child(3) .star { animation-delay: 100ms; }
+.stars-md > :nth-child(4) .star { animation-delay: 150ms; }
+.stars-md > :nth-child(5) .star { animation-delay: 200ms; }
+/* While rating, the star you tap pops at once. */
+.stars-md > .star-btn .star {
+  animation-delay: 0s;
+}
+@keyframes star-pop {
+  from {
+    scale: 0.3;
+    rotate: -30deg;
+    opacity: 0;
+  }
+}
+
+/* ---------- Stats ---------- */
+
+.bar-mark {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: bar-rise 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.15) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms + 0.25s);
+}
+@keyframes bar-rise {
+  from {
+    transform: scaleY(0);
+  }
+}
+.chart-tip {
+  animation: tip-in 0.16s var(--ease-out);
+}
+@keyframes tip-in {
+  from {
+    opacity: 0;
+    scale: 0.85;
+  }
+}
+.wizard-card p {
+  animation: rise-in 0.5s var(--ease-out) 0.3s backwards;
+}
+
+/* ---------- Sheets: rise, slide away, or drag down by the top edge ---------- */
+
+.sheet {
+  animation: sheet-up 0.36s cubic-bezier(0.2, 0.9, 0.25, 1);
+  transition: transform 0.28s var(--ease-out);
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(70%);
+    opacity: 0.5;
+  }
+}
+.sheet-backdrop.closing {
+  animation: fade-out 0.2s ease-in forwards;
+  pointer-events: none;
+}
+.sheet-backdrop.closing .sheet {
+  animation: sheet-down 0.2s ease-in forwards;
+}
+@keyframes sheet-down {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+.sheet-handle {
+  margin: -8px -20px 0;
+  padding: 8px 20px 0;
+  touch-action: none;
+  cursor: grab;
+}
+.sheet-grip {
+  transition:
+    width 0.2s var(--ease-out),
+    background-color 0.2s;
+}
+.sheet-handle:active .sheet-grip {
+  width: 56px;
+  background: var(--muted);
+}
+
+/* ---------- Reader ---------- */
+
+.selection-bar,
+.pick-bar {
+  animation: bar-up 0.32s var(--spring) backwards;
+}
+@keyframes bar-up {
+  from {
+    translate: 0 30px;
+    opacity: 0;
+  }
+}
+.notes-pill {
+  animation: pop-in 0.3s var(--spring) backwards;
+}
+
+/* A new highlight is drawn across the line, like a marker pen. */
+.reader mark.hl {
+  background-repeat: no-repeat;
+  animation: hl-draw 0.5s ease-out backwards;
+}
+@keyframes hl-draw {
+  from {
+    background-size: 0% 100%;
+  }
+  to {
+    background-size: 100% 100%;
+  }
+}
+
+/* ---------- The cat ---------- */
+
+.wizard-wrap {
+  position: relative;
+  display: inline-block;
+  flex: none;
+}
+
+/* In the reader he steps aside with the bars, and hops when tapped. */
+.mascot {
+  transition:
+    translate 0.35s var(--ease-out),
+    opacity 0.3s;
+}
+.mascot.away {
+  translate: -130% 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.mascot-btn {
+  position: relative;
+  transform-origin: 50% 100%;
+}
+.mascot-btn.poked {
+  animation: wz-poke 0.5s steps(5);
+}
+@keyframes wz-poke {
+  0%,
+  100% {
+    translate: 0 0;
+    scale: 1;
+  }
+  20% {
+    scale: 1.08 0.9;
+  }
+  45% {
+    translate: 0 -16%;
+    scale: 0.95 1.06;
+  }
+  75% {
+    translate: 0 0;
+    scale: 1.05 0.95;
+  }
+}
+/* His bubble sits above his hat, with a small tail pointing down at him. */
+.mascot-bubble {
+  bottom: calc(100% + 10px);
+  transform-origin: 12% 100%;
+  animation: bubble-in 0.3s var(--spring) backwards;
+}
+.mascot-bubble::after {
+  content: '';
+  position: absolute;
+  left: 38px;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  rotate: 45deg;
+}
+@keyframes bubble-in {
+  from {
+    scale: 0.7;
+    translate: 0 10px;
+    opacity: 0;
+  }
+}
+
+/* ---------- Welcome ---------- */
+
+.welcome-stage {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  animation:
+    scene-in 0.9s var(--ease-out) backwards,
+    scene-float 7s ease-in-out 0.9s infinite;
+}
+.welcome-stage .welcome-scene {
+  display: block;
+  max-width: none;
+}
+@keyframes scene-in {
+  from {
+    opacity: 0;
+    scale: 0.92;
+  }
+}
+@keyframes scene-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -6px;
+  }
+}
+/* Pixel stars over the picture, to match the wizard's own. */
+.welcome-sparks i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  color: #ffe9a8;
+  background: currentColor;
+  box-shadow:
+    0 -3px currentColor,
+    3px 0 currentColor,
+    0 3px currentColor,
+    -3px 0 currentColor;
+  opacity: 0;
+  animation: px-twinkle 2.4s steps(1) infinite;
+}
+.welcome-sparks i:nth-child(1) { left: 14%; top: 30%; animation-delay: 0.9s; }
+.welcome-sparks i:nth-child(2) { left: 82%; top: 26%; animation-delay: 1.5s; }
+.welcome-sparks i:nth-child(3) { left: 68%; top: 62%; animation-delay: 2.1s; }
+.welcome-sparks i:nth-child(4) { left: 26%; top: 68%; animation-delay: 2.7s; }
+
+.welcome h1 span {
+  display: inline-block;
+  animation: letter-up 0.6s var(--spring) backwards;
+  animation-delay: calc(0.3s + var(--i) * 45ms);
+}
+@keyframes letter-up {
+  from {
+    translate: 0 0.5em;
+    opacity: 0;
+  }
+}
+.welcome h1 + p {
+  animation: tagline-in 0.9s var(--ease-out) 0.85s backwards;
+}
+@keyframes tagline-in {
+  from {
+    opacity: 0;
+    letter-spacing: 0.5em;
+  }
+}
+
+/* The heart arrives last, then beats quietly until it is tapped. */
+.heart-start {
+  animation: heart-in 0.7s var(--spring) 1.05s backwards;
+}
+@keyframes heart-in {
+  from {
+    scale: 0.4;
+    opacity: 0;
+  }
+}
+.heart-start svg {
+  animation: heart-beat 2.2s ease-in-out 2s infinite;
+}
+.heart-start.tapped svg {
+  animation: none;
+}
+@keyframes heart-beat {
+  0%,
+  30%,
+  100% {
+    scale: 1;
+  }
+  10% {
+    scale: 1.06;
+  }
+  20% {
+    scale: 1.02;
+  }
+  25% {
+    scale: 1.05;
+  }
+}
+.heart-start:not(.tapped) span {
+  animation: tap-hint 2.2s ease-in-out 2s infinite;
+}
+@keyframes tap-hint {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.55;
+  }
+}
+.heart-start:active:not(.tapped) {
+  scale: 0.95;
+}
+.heart-ring {
+  position: absolute;
+  inset: 16% 21% 24%;
+  border-radius: 50%;
+  border: 2px solid rgb(95 148 240 / 0.6);
+  opacity: 0;
+  pointer-events: none;
+}
+.heart-start.tapped .heart-ring {
+  animation: heart-ring 0.9s ease-out infinite;
+}
+.heart-start.tapped .heart-ring.late {
+  animation-delay: 0.3s;
+}
+@keyframes heart-ring {
+  from {
+    scale: 0.6;
+    opacity: 0.9;
+  }
+  to {
+    scale: 2.3;
+    opacity: 0;
+  }
+}
+
+/* ---------- Finishing a book ---------- */
+
+.confetti {
+  position: fixed;
+  left: 50%;
+  top: 46%;
+  z-index: 40;
+  pointer-events: none;
+}
+.confetti i {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  opacity: 0;
+  animation: confetti 1.6s cubic-bezier(0.15, 0.7, 0.4, 1) var(--d) forwards;
+}
+.confetti .star-bit {
+  width: 13px;
+  height: 13px;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+}
+@keyframes confetti {
+  0% {
+    translate: 0 0;
+    scale: 0.3;
+    opacity: 1;
+  }
+  35% {
+    translate: calc(var(--x) * 0.85) var(--y);
+    scale: 1;
+    opacity: 1;
+  }
+  100% {
+    translate: var(--x) calc(var(--y) + 300px);
+    rotate: var(--r);
+    opacity: 0;
+  }
+}
+
+/* ---------- Less motion: the phone's own setting, or Animations off in Settings ---------- */
+
+:root[data-motion='off'] *,
+:root[data-motion='off'] *::before,
+:root[data-motion='off'] *::after {
+  animation-duration: 0.001s !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001s !important;
+}
+:root[data-motion='off'] .wizard-fx,
+:root[data-motion='off'] .welcome-sparks,
+:root[data-motion='off'] .continue .cover::after {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
+  .wizard-fx,
+  .welcome-sparks,
+  .continue .cover::after {
+    display: none;
+  }
+}

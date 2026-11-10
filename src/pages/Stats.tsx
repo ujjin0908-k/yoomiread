@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { PageTitle, TabBar } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
+import { useCountUp } from '../motion';
 import { computeStats, formatDuration, type Stats as StatsData } from '../logic';
 import { formatCost } from '../translate/prompt';
 import { lineFor } from '../mascot/lines';
@@ -33,17 +34,24 @@ export function Stats() {
             <section className="hero-stats">
               <div>
                 <span className="hero-label">Reading time</span>
-                <span className="hero-num">{formatDuration(stats.totalMs)}</span>
+                <span className="hero-num">
+                  <Count value={stats.totalMs} show={(v) => formatDuration(Math.round(v / 60000) * 60000)} />
+                </span>
               </div>
               <div>
                 <span className="hero-label">Total sessions</span>
-                <span className="hero-num">{stats.sessions}</span>
+                <span className="hero-num">
+                  <Count value={stats.sessions} />
+                </span>
               </div>
             </section>
             <section className="tiles">
-              <Tile label="Day streak" value={String(stats.streak)} />
-              <Tile label={`Read in ${new Date().getFullYear()}`} value={String(stats.finishedThisYear)} />
-              <Tile label="Average rating" value={stats.averageRating ? `${stats.averageRating.toFixed(1)} ★` : '–'} />
+              <Tile label="Day streak" value={<Count value={stats.streak} />} />
+              <Tile label={`Read in ${new Date().getFullYear()}`} value={<Count value={stats.finishedThisYear} />} />
+              <Tile
+                label="Average rating"
+                value={stats.averageRating ? <Count value={stats.averageRating} show={(v) => `${v.toFixed(1)} ★`} /> : '–'}
+              />
             </section>
             {spent && spent.total > 0 && (
               <section className="tiles one">
@@ -59,7 +67,18 @@ export function Stats() {
   );
 }
 
-function Tile({ label, value }: { label: string; value: string }) {
+/** A number that counts up when it first shows. */
+function Count({ value, show = (v) => String(Math.round(v)) }: { value: number; show?: (v: number) => string }) {
+  const now = useCountUp(value);
+  return (
+    <>
+      <span aria-hidden="true">{show(now)}</span>
+      <span className="sr-only">{show(value)}</span>
+    </>
+  );
+}
+
+function Tile({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="tile">
       <span className="tile-num">{value}</span>
@@ -122,6 +141,7 @@ function DailyChart({ stats }: { stats: StatsData }) {
                 {h > 0 && (
                   <path
                     className={`bar-mark ${hover === i ? 'on' : ''}`}
+                    style={{ '--i': i } as CSSProperties}
                     d={`M${x},${y(0)} V${y(0) - h + r} Q${x},${y(0) - h} ${x + r},${y(0) - h} H${x + barW - r} Q${x + barW},${y(0) - h} ${x + barW},${y(0) - h + r} V${y(0)} Z`}
                   />
                 )}

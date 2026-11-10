@@ -1,7 +1,12 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { initMotion } from './motion';
 import './styles.css';
+import './motion.css';
+import './loud.css';
+
+initMotion();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

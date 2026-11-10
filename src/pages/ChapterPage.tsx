@@ -346,7 +346,7 @@ export function ChapterPage({ id }: { id: string }) {
         />
       )}
       {lookup && <WordSheet word={lookup.word} lang={lookup.lang} bookId={chapter.bookId} onClose={() => setLookup(undefined)} />}
-      {book && <Mascot book={book} chapter={chapter} chapters={siblings ?? []} />}
+      {book && <Mascot book={book} chapter={chapter} chapters={siblings ?? []} away={barsAway} />}
       {sheet === 'look' && <LookSheet prefs={prefs} setPrefs={setPrefs} onClose={() => setSheet(undefined)} />}
       {sheet === 'chapters' && (
         <Sheet title="Chapters" onClose={() => setSheet(undefined)}>
@@ -964,7 +964,7 @@ function TranslateChapterSheet({
   const preview = mode === 'translate' ? live.a : tab === 'a' ? runs.a?.translation.text ?? live.a : runs.b?.translation.text ?? live.b;
 
   return (
-    <Sheet title={mode === 'compare' ? 'Compare two models' : 'Translate this chapter'} onClose={() => (running ? undefined : onClose())}>
+    <Sheet title={mode === 'compare' ? 'Compare two models' : 'Translate this chapter'} locked={running} onClose={onClose}>
       <div className="form">
         <div className="seg mode-toggle" role="group">
           <button type="button" className={mode === 'translate' ? 'on' : ''} disabled={running} onClick={() => setMode('translate')}>

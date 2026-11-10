@@ -26,10 +26,11 @@ function readExcerpts(chapters: Chapter[], texts: Map<string, string>, upTo: num
     .join('\n\n');
 }
 
-export function Mascot({ book, chapter, chapters }: { book: Book; chapter: Chapter; chapters: Chapter[] }) {
+export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter: Chapter; chapters: Chapter[]; away?: boolean }) {
   const sessions = useLive(() => db.sessions.toArray(), []);
   const mood = moodFrom(sessions ?? [], Date.now());
   const [open, setOpen] = useState(false);
+  const [poked, setPoked] = useState(false);
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState<{ text: string; note: string }>();
   const [busy, setBusy] = useState(false);
@@ -70,7 +71,7 @@ export function Mascot({ book, chapter, chapters }: { book: Book; chapter: Chapt
         {
           role: 'system',
           content:
-            'You are a friendly wizard reading this novel alongside the reader. Use only the excerpts given. ' +
+            'You are a friendly cat in a wizard hat, reading this novel alongside the reader. Use only the excerpts given. ' +
             'Never reveal or guess what comes after the excerpts. Answer in under 80 words.',
         },
         {
@@ -92,12 +93,23 @@ export function Mascot({ book, chapter, chapters }: { book: Book; chapter: Chapt
   }
 
   return (
-    <div className="mascot">
-      <button type="button" className="mascot-btn" aria-label="Talk to the wizard" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Wizard mood={mood} size={96} />
+    // He steps aside with the bars while reading, unless his bubble is open.
+    <div className={`mascot${away && !open ? ' away' : ''}`}>
+      <button
+        type="button"
+        className={`mascot-btn${poked ? ' poked' : ''}`}
+        aria-label="Talk to the cat"
+        aria-expanded={open}
+        onClick={() => {
+          setOpen(!open);
+          setPoked(true);
+        }}
+        onAnimationEnd={(e) => e.target === e.currentTarget && setPoked(false)}
+      >
+        <Wizard mood={mood} size={112} />
       </button>
       {open && (
-        <div className="mascot-bubble" role="dialog" aria-label="Wizard">
+        <div className="mascot-bubble" role="dialog" aria-label="The cat">
           <p>{lineFor(mood, chapter.id)}</p>
           {answer && (
             <>

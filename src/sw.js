@@ -2,16 +2,17 @@
 // so reading and importing work with no internet from then on.
 // The build fills in BUILD_FILES and VERSION (see vite.config.ts).
 const FILES = self.BUILD_FILES;
-const WIZARD = ['happy', 'idle', 'sad', 'smoking', 'angry'].map((m) => `/wizard/wizard_${m}.png`);
+// The cat's poses: the animated picture and the still one for each mood, plus the pictures on the first screens.
+const MASCOT = ['happy', 'idle', 'sad', 'high'].flatMap((m) => [`/mascot/cat-${m}.gif`, `/mascot/cat-${m}.png`]).concat('/mascot/cat-portrait.png', '/mascot/cat-closeup.gif');
 const CACHE = `yoomiread-${self.VERSION}`;
 const FONT_CSS =
-  'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=IM+Fell+English:ital@0;1&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Noto+Serif+SC:wght@400;600&display=swap';
+  'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Serif:ital@0;1&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=IM+Fell+English:ital@0;1&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Noto+Serif+SC:wght@400;600&display=swap';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE).then(async (c) => {
       // Files in public/ are not part of the build list, so they are named here.
-      await c.addAll(['/', '/manifest.webmanifest', '/favicon-64.png', '/icon-180.png', '/icon-192.png', '/icon-512.png', '/welcome.jpg', ...WIZARD, ...FILES]);
+      await c.addAll(['/', '/manifest.webmanifest', '/favicon-64.png', '/icon-180.png', '/icon-192.png', '/icon-512.png', ...MASCOT, ...FILES]);
       // Fonts are a bonus: without them the phone's own serif fonts are used.
       await c.add(new Request(FONT_CSS, { mode: 'cors' })).catch(() => {});
     }),

@@ -1,6 +1,7 @@
 import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, PenLine, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Cover, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
+import { Book3D, Cover, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
+import { celebrate } from '../motion';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
 import { shrinkImage } from '../images';
@@ -122,7 +123,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
       />
       <main className="page">
         <section className="book-hero">
-          <Cover book={book} shape="arch" size="lg" />
+          <Book3D book={book} size="lg" />
           <h1 lang={book.language === 'zh' ? 'zh' : undefined}>{book.title}</h1>
           {book.shelf === 'finished' && book.rating ? <Stars value={book.rating} /> : null}
           {book.shelf !== 'finished' && list.length > 0 && (
@@ -352,6 +353,7 @@ function FinishSheet({ book, onClose }: { book: Book; onClose: () => void }) {
       ? { ...finishBook(book, rating, review), finishedAt: book.finishedAt }
       : finishBook(book, rating, review);
     await db.books.put(next);
+    if (!already) celebrate();
     onClose();
   }
 
@@ -686,7 +688,7 @@ function TranslateSheet({ book, chapters, done, onClose }: { book: Book; chapter
   }
 
   return (
-    <Sheet title="Translate chapters" onClose={() => (running ? undefined : onClose())}>
+    <Sheet title="Translate chapters" locked={running} onClose={onClose}>
       <div className="form">
         {!ready && (
           <p className="warn small">

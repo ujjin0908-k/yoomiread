@@ -39,10 +39,19 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 - English books are never translated, even when the book's language setting is wrong.
 - Tap a word in the reader to see its meaning from the offline dictionaries (English: ECDICT; Chinese: CC-CEDICT),
   with a Wikipedia summary and a way to add the word to the glossary.
-- Wizard companion (`src/mascot/`): his mood follows your reading (happy, idle, sad, high). Tap him for a line,
+- Cat companion, a cat in a wizard hat (`src/mascot/`): his mood follows your reading (happy, idle, sad, high). Tap him for a line,
   or ask him about the chapters you have read. Answers are remembered on the phone so repeats cost nothing.
-  Poses are the owner's pictures in `public/wizard/`.
+  Poses are the owner's animated pictures in `public/mascot/` (changed from the pixel wizard on 2026-11-10); each has a
+  still copy shown when animations are off. `cat-angry` is there but no mood uses it yet.
 - Stats, quotes page, backups (export and restore), a welcome page on every app open.
+- Look, "Loud Glass" (`src/loud.css`, chosen 2026-11-10): loud type (Bricolage Grotesque, Instrument Serif italics),
+  ink black and one hot red on pale violet, coloured light behind frosted glass. Dark mode follows the phone.
+  Home has a 3D book and a strip of small facts; Library shelves are glass pockets with covers tucked in (tap one to
+  open it); the reader keeps its paper themes for the text.
+- Motion (`src/motion.ts`, `src/motion.css`): pages slide the way you go, a chapter opens like a book cover, the tab
+  marker slides, sheets close with a slide or a drag down, stats count up, the cat's poses are animated pictures, and
+  finishing a book drops "Finished.", a READ stamp and confetti. Settings → Look and feel → Animations turns it all
+  off; the phone's "Reduce Motion" setting does the same.
 
 ## Things that do not work or were decided against
 
@@ -70,14 +79,14 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 84 unit tests
+npm test          # 108 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```
 
 - Dictionaries: `public/dict/` (license notes in `NOTICE.txt`). The English list is a shortened copy of ECDICT (MIT);
   the Chinese list is a shortened copy of CC-CEDICT (CC BY-SA 4.0).
-- Offline files: `src/sw.js` keeps the app, dictionaries and wizard images for offline use. Bump nothing by hand;
+- Offline files: `src/sw.js` keeps the app, dictionaries and the cat's pictures for offline use (named by hand in the file). Bump nothing by hand;
   the build fills in the file list.
 - Secrets: none are in the repo. The API key lives in the phone's Settings. `relay/.env` is ignored by git.
 - Pages Functions run only on Cloudflare Pages. The same logic also runs on Netlify through

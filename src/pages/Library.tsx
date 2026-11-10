@@ -1,6 +1,6 @@
 import { Plus, Search, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Cover, Empty, PageTitle, ProgressBar, Stars, TabBar } from '../components';
+import { Cover, Empty, PageTitle, Pocket, ProgressBar, Stars, TabBar, type PocketTint } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
 import { LIBRARY_SORTS, SHELVES, bookProgress, sortBooks, type LibrarySort } from '../logic';
@@ -23,6 +23,8 @@ interface LibraryPrefs {
 }
 
 const PREFS_KEY = 'yoomiread.library';
+const POCKET_TINT: Record<Shelf, PocketTint> = { reading: 'lilac', want: 'peach', finished: 'lime', dropped: 'sky' };
+
 const DEFAULT_PREFS: LibraryPrefs = { shelf: 'reading', sort: 'recent', lang: 'all' };
 
 function loadPrefs(): LibraryPrefs {
@@ -104,19 +106,25 @@ export function Library() {
           />
         )}
         {!q && (
-          <nav className="shelf-tabs" aria-label="Shelves">
-            {SHELVES.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className={s.id === shelf ? 'on' : ''}
-                aria-pressed={s.id === shelf}
-                onClick={() => change({ shelf: s.id })}
-              >
-                {s.label}
-                <sup>{all.filter((b) => b.shelf === s.id && inLang(b)).length}</sup>
-              </button>
-            ))}
+          <nav className="pockets" aria-label="Shelves">
+            {SHELVES.map((s) => {
+              const inside = sortBooks(
+                all.filter((b) => b.shelf === s.id && inLang(b)),
+                'recent',
+                progressOf,
+              );
+              return (
+                <Pocket
+                  key={s.id}
+                  label={s.label}
+                  count={inside.length}
+                  books={inside}
+                  tint={POCKET_TINT[s.id]}
+                  open={s.id === shelf}
+                  onClick={() => change({ shelf: s.id })}
+                />
+              );
+            })}
           </nav>
         )}
 
@@ -163,7 +171,7 @@ export function Library() {
           </Empty>
         )}
 
-        <ul className="arch-grid">
+        <ul className="arch-grid" key={shelf}>
           {shown.map((b) => {
             const p = progressOf(b);
             const hasChapters = (chaptersByBook.get(b.id)?.length ?? 0) > 0;
