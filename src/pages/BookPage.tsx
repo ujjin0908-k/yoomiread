@@ -1,6 +1,6 @@
 import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, PenLine, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Cover, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
+import { Book3D, Cover, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
 import { celebrate } from '../motion';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
@@ -123,7 +123,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
       />
       <main className="page">
         <section className="book-hero">
-          <Cover book={book} shape="arch" size="lg" />
+          <Book3D book={book} size="lg" />
           <h1 lang={book.language === 'zh' ? 'zh' : undefined}>{book.title}</h1>
           {book.shelf === 'finished' && book.rating ? <Stars value={book.rating} /> : null}
           {book.shelf !== 'finished' && list.length > 0 && (

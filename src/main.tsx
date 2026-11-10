@@ -4,6 +4,7 @@ import { App } from './App';
 import { initMotion } from './motion';
 import './styles.css';
 import './motion.css';
+import './loud.css';
 
 initMotion();
 

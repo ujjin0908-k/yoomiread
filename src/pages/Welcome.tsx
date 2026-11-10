@@ -31,9 +31,13 @@ export function Welcome({ onStart }: { onStart: () => void }) {
         </span>
       </div>
       <h1 aria-label="YoomiRead">
-        {[...'YoomiRead'].map((letter, i) => (
-          <span key={i} aria-hidden="true" style={{ '--i': i } as React.CSSProperties}>
-            {letter}
+        {['Yoomi', 'Read'].map((word, w) => (
+          <span key={word} className="welcome-word" aria-hidden="true">
+            {[...word].map((letter, i) => (
+              <span key={i} style={{ '--i': w * 5 + i } as React.CSSProperties}>
+                {letter}
+              </span>
+            ))}
           </span>
         ))}
       </h1>

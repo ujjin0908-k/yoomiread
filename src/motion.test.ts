@@ -8,9 +8,13 @@ describe('navKind', () => {
   });
   it('goes forward into a book and a chapter, and back out again', () => {
     expect(navKind(['library'], ['book', 'b1'])).toBe('forward');
-    expect(navKind(['book', 'b1'], ['chapter', 'c1'])).toBe('forward');
-    expect(navKind(['chapter', 'c1'], ['book', 'b1'])).toBe('back');
+    expect(navKind(['glossary', 'b1'], ['book', 'b1'])).toBe('back');
     expect(navKind(['settings'], [])).toBe('back');
+  });
+  it('opens a chapter like a book cover, and closes it on the way out', () => {
+    expect(navKind(['book', 'b1'], ['chapter', 'c1'])).toBe('open-book');
+    expect(navKind([], ['chapter', 'c1'])).toBe('open-book');
+    expect(navKind(['chapter', 'c1'], ['book', 'b1'])).toBe('close-book');
   });
   it('fades between two chapters', () => {
     expect(navKind(['chapter', 'c1'], ['chapter', 'c2'])).toBe('fade');

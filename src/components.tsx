@@ -115,7 +115,12 @@ export function PageTitle({ title, sub, right, icon }: { title: string; sub?: st
     <header className="page-title">
       {icon && <img className="app-icon" src="/icon-192.png" alt="" width={52} height={52} />}
       <div className="page-title-text">
-        <h1>{title}</h1>
+        <h1>
+          {title}
+          <i className="dot" aria-hidden="true">
+            .
+          </i>
+        </h1>
         {sub && <p>{sub}</p>}
       </div>
       {right}
@@ -250,5 +255,80 @@ export function Working({ label, peek }: { label: string; peek?: string }) {
         </p>
       ) : null}
     </div>
+  );
+}
+
+/** A book with thickness: front cover, spine and page edges. It sways and floats a little. */
+export function Book3D({ book, size = 'md' }: { book: Book; size?: 'md' | 'lg' }) {
+  return (
+    <div className={`book3d book3d-${size}`}>
+      <div className="book3d-float">
+        <div className="book3d-body">
+          <span className="book3d-back" />
+          <span className="book3d-spine" />
+          <span className="book3d-pages" />
+          <div className="book3d-front">
+            <Cover book={book} size="lg" />
+            <span className="book3d-shine" />
+          </div>
+        </div>
+      </div>
+      <span className="book3d-shadow" />
+    </div>
+  );
+}
+
+export type PocketTint = 'lilac' | 'peach' | 'lime' | 'sky';
+
+/**
+ * A frosted pocket with a few covers tucked in. Open, the covers fan up and out.
+ * With `href` it is a link; with `onClick` a button that reports whether it is open.
+ */
+export function Pocket({
+  label,
+  count,
+  books,
+  tint,
+  open,
+  href,
+  onClick,
+  children,
+}: {
+  label: string;
+  count: number;
+  books: Book[];
+  tint: PocketTint;
+  open?: boolean;
+  href?: string;
+  onClick?: () => void;
+  children?: ReactNode;
+}) {
+  const shown = books.slice(0, 4);
+  const inside = (
+    <>
+      {shown.map((b, i) => (
+        <span key={b.id} className="pocket-cv" style={{ ['--k' as string]: i - (shown.length - 1) / 2 }}>
+          <Cover book={b} size="sm" />
+        </span>
+      ))}
+      <span className="pocket-front" />
+      {children}
+      <span className="pocket-label">
+        <b>{label}</b>
+        <span>
+          {count} {count === 1 ? 'book' : 'books'}
+        </span>
+      </span>
+    </>
+  );
+  const className = `pocket tint-${tint}${open ? ' open' : ''}`;
+  return href ? (
+    <a className={className} href={href}>
+      {inside}
+    </a>
+  ) : (
+    <button type="button" className={className} aria-pressed={open} onClick={onClick}>
+      {inside}
+    </button>
   );
 }

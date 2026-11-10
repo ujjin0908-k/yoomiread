@@ -63,6 +63,9 @@ export function navKind(from: string[], to: string[]): string {
   const a = depth(from);
   const b = depth(to);
   if (a === 0 && b === 0) return TABS.indexOf(to[0] ?? '') >= TABS.indexOf(from[0] ?? '') ? 'tab-right' : 'tab-left';
+  // Into a chapter the old page swings open like a cover; out of it, the cover closes again.
+  if (to[0] === 'chapter' && from[0] !== 'chapter') return 'open-book';
+  if (from[0] === 'chapter' && to[0] !== 'chapter') return 'close-book';
   if (b > a) return 'forward';
   if (b < a) return 'back';
   return 'fade';
@@ -155,17 +158,24 @@ export function useCountUp(target: number, ms = 900): number {
   return value;
 }
 
-/** A short shower of paper squares and stars, for finishing a book. */
+/** For finishing a book: "Finished." drops in, a READ stamp lands, and paper squares and stars fly. */
 export function celebrate(): void {
   if (!motionOk()) return;
   const layer = document.createElement('div');
   layer.className = 'confetti';
   layer.setAttribute('aria-hidden', 'true');
-  const colors = ['#c9a24a', '#5c5f2a', '#7d9be8', '#d98b6a', '#8fa04e', '#f4e3a0'];
-  for (let i = 0; i < 36; i++) {
+  const word = document.createElement('b');
+  word.className = 'finish-word';
+  word.textContent = 'Finished.';
+  const stamp = document.createElement('b');
+  stamp.className = 'finish-stamp';
+  stamp.textContent = 'READ';
+  layer.append(word, stamp);
+  const colors = ['#ffd23f', '#e8320e', '#2f48e8', '#ff9ecb', '#c8f560', '#b79cff'];
+  for (let i = 0; i < 48; i++) {
     const bit = document.createElement('i');
-    const angle = (i / 36) * Math.PI * 2 + Math.random() * 0.4;
-    const reach = 90 + Math.random() * 170;
+    const angle = (i / 48) * Math.PI * 2 + Math.random() * 0.4;
+    const reach = 110 + Math.random() * 200;
     bit.style.setProperty('--x', `${Math.cos(angle) * reach}px`);
     bit.style.setProperty('--y', `${Math.sin(angle) * reach - 80}px`);
     bit.style.setProperty('--r', `${Math.random() * 540 - 270}deg`);
@@ -175,5 +185,5 @@ export function celebrate(): void {
     layer.appendChild(bit);
   }
   document.body.appendChild(layer);
-  window.setTimeout(() => layer.remove(), 1900);
+  window.setTimeout(() => layer.remove(), 2600);
 }
