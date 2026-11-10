@@ -6,6 +6,7 @@ import {
   computeStats,
   speaksAs,
   continueChapter,
+  dropBook,
   finishBook,
   formatDuration,
   guessLanguage,
@@ -263,5 +264,20 @@ describe('library sorting', () => {
     const books = [mk('2', 'B'), mk('1', 'A')];
     sortBooks(books, 'title', none);
     expect(books.map((x) => x.id)).toEqual(['2', '1']);
+  });
+});
+
+describe('dropBook', () => {
+  const base = { id: 'b', title: 'T', author: '', language: 'zh', shelf: 'reading', createdAt: 1, updatedAt: 1, finishedAt: 5 } as const;
+  it('moves the book to Dropped with the rating and the reason', () => {
+    const dropped = dropBook({ ...base }, 2.5, '  Too slow.  ', 100);
+    expect(dropped).toMatchObject({ shelf: 'dropped', rating: 2.5, review: 'Too slow.', updatedAt: 100 });
+    expect(dropped.finishedAt).toBeUndefined();
+  });
+  it('can be saved with no rating and no reason', () => {
+    const dropped = dropBook({ ...base }, 0, '   ', 100);
+    expect(dropped.shelf).toBe('dropped');
+    expect(dropped.rating).toBeUndefined();
+    expect(dropped.review).toBeUndefined();
   });
 });

@@ -199,7 +199,7 @@ export function Library() {
                 <a href={`#/book/${b.id}`}>
                   <Cover book={b} shape="arch" />
                   <strong>{b.title}</strong>
-                  {b.shelf === 'finished' && b.rating ? (
+                  {(b.shelf === 'finished' || b.shelf === 'dropped') && b.rating ? (
                     <Stars value={b.rating} size="sm" />
                   ) : (
                     <span className="muted small">{b.author || ' '}</span>

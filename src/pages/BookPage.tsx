@@ -10,6 +10,7 @@ import {
   SHELVES,
   bookProgress,
   continueChapter,
+  dropBook,
   finishBook,
   formatDate,
   isRead,
@@ -45,6 +46,8 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [onlyPicked, setOnlyPicked] = useState(false);
   const finishing = sub === 'finish';
+  // Moving a book to Dropped asks for a rating and the reason first, the same way finishing asks for a review.
+  const dropping = sub === 'drop';
   // Right after a PDF import: offer to fix the title.
   const justImported = sub === 'imported' || sub === 'scanned';
   const job = useImportJob(id);
@@ -68,6 +71,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
 
   async function setShelf(shelf: Shelf) {
     if (shelf === 'finished') return go(`book/${id}/finish`);
+    if (shelf === 'dropped') return go(`book/${id}/drop`);
     await db.books.put(moveToShelf(book!, shelf));
   }
 
@@ -127,7 +131,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
         <section className="book-hero">
           <Book3D book={book} size="lg" />
           <h1 lang={book.language === 'zh' ? 'zh' : undefined}>{book.title}</h1>
-          {book.shelf === 'finished' && book.rating ? <Stars value={book.rating} /> : null}
+          {(book.shelf === 'finished' || book.shelf === 'dropped') && book.rating ? <Stars value={book.rating} /> : null}
           {book.shelf !== 'finished' && list.length > 0 && (
             <div className="hero-progress">
               <ProgressBar value={pct} label="Book progress" />
@@ -226,15 +230,19 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
           )}
         </div>
 
-        {book.shelf === 'finished' ? (
+        {book.shelf === 'finished' || book.shelf === 'dropped' ? (
           <section className="card review-card">
             <div className="section-head">
-              <h2>My review</h2>
+              <h2>{book.shelf === 'dropped' ? 'Why I dropped it' : 'My review'}</h2>
               <button type="button" className="link" onClick={() => setEditingReview(true)}>
                 Edit
               </button>
             </div>
-            {book.review ? <p className="review">{book.review}</p> : <p className="muted">No review written.</p>}
+            {book.review ? (
+              <p className="review">{book.review}</p>
+            ) : (
+              <p className="muted">{book.shelf === 'dropped' ? 'No reason written.' : 'No review written.'}</p>
+            )}
           </section>
         ) : (
           <button type="button" className="btn ghost wide" onClick={() => go(`book/${id}/finish`)}>
@@ -344,13 +352,14 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
           }}
         />
       )}
-      {(finishing || editingReview) && (
+      {(finishing || dropping || editingReview) && (
         <FinishSheet
           book={book}
+          drop={dropping || (editingReview && book.shelf === 'dropped')}
           onClose={() => {
             setEditingReview(false);
-            // Replace the finish step in history so Back does not open it again.
-            if (finishing) window.location.replace(`#/book/${id}`);
+            // Replace the finish or drop step in history so Back does not open it again.
+            if (finishing || dropping) window.location.replace(`#/book/${id}`);
           }}
         />
       )}
@@ -358,13 +367,18 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   );
 }
 
-function FinishSheet({ book, onClose }: { book: Book; onClose: () => void }) {
+/** Rating and a few words when a book leaves the reading pile: a review when finished, the reason when dropped. */
+function FinishSheet({ book, drop, onClose }: { book: Book; drop?: boolean; onClose: () => void }) {
   const [rating, setRating] = useState(book.rating ?? 0);
   const [review, setReview] = useState(book.review ?? '');
   // A book saved straight to the Read shelf has no rating yet: that is still "finishing".
-  const already = book.shelf === 'finished' && book.rating !== undefined;
+  const already = drop ? book.shelf === 'dropped' : book.shelf === 'finished' && book.rating !== undefined;
 
   async function save() {
+    if (drop) {
+      await db.books.put(dropBook(book, rating, review));
+      return onClose();
+    }
     const next = already
       ? { ...finishBook(book, rating, review), finishedAt: book.finishedAt }
       : finishBook(book, rating, review);
@@ -373,32 +387,40 @@ function FinishSheet({ book, onClose }: { book: Book; onClose: () => void }) {
     onClose();
   }
 
+  // A finished book needs a rating. A dropped one can be saved with only a reason, or with nothing at all.
+  const ready = drop || rating > 0;
   return (
-    <Sheet title={already ? 'Edit review' : 'Finished!'} onClose={onClose}>
+    <Sheet title={drop ? (already ? 'Why I dropped it' : 'Dropping this one?') : already ? 'Edit review' : 'Finished!'} onClose={onClose}>
       <form
         className="form"
         onSubmit={(e) => {
           e.preventDefault();
-          if (rating) void save();
+          if (ready) void save();
         }}
       >
         <div className="rating-pick">
           <Cover book={book} size="sm" />
-          <span className="serif">How was it?</span>
+          <span className="serif">{drop ? 'How was it, as far as you got?' : 'How was it?'}</span>
           <Stars value={rating} onChange={setRating} />
-          <span className="muted small">{rating ? `${rating} / 5 · tap a star again for half` : 'Tap to rate'}</span>
+          <span className="muted small">
+            {rating ? `${rating} / 5 · tap a star again for half` : drop ? 'Tap to rate, or leave it empty' : 'Tap to rate'}
+          </span>
         </div>
         <label>
-          Review
+          {drop ? 'Why did you drop it?' : 'Review'}
           <textarea
-            rows={7}
-            placeholder="What stayed with you? Favorite characters, the ending, would you reread it?"
+            rows={drop ? 5 : 7}
+            placeholder={
+              drop
+                ? 'Too slow, the translation, the main character, just not in the mood? Would you try it again later?'
+                : 'What stayed with you? Favorite characters, the ending, would you reread it?'
+            }
             value={review}
             onChange={(e) => setReview(e.target.value)}
           />
         </label>
-        <button className="pill-btn" type="submit" disabled={!rating}>
-          <span>Save to my read list</span>
+        <button className="pill-btn" type="submit" disabled={!ready}>
+          <span>{drop ? (already ? 'Save' : 'Move to Dropped') : 'Save to my read list'}</span>
         </button>
       </form>
     </Sheet>
