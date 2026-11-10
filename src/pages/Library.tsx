@@ -1,10 +1,11 @@
-import { Plus, Search, X } from 'lucide-react';
+import { Plus, Search, Sticker, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Cover, Empty, PageTitle, Pocket, ProgressBar, Stars, TabBar, type PocketTint } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
 import { LIBRARY_SORTS, SHELVES, bookProgress, sortBooks, type LibrarySort } from '../logic';
 import type { Book, BookLanguage, Chapter, Shelf } from '../types';
+import { StickerLayer, StickerTray, useStickers } from '../stickers';
 import { AddBook } from './AddBook';
 
 type LangFilter = 'all' | BookLanguage;
@@ -47,6 +48,9 @@ export function Library() {
   const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState('');
   const [adding, setAdding] = useState(false);
+  // Placing stickers on the shelf pockets.
+  const [stickering, setStickering] = useState(false);
+  const stickers = useStickers();
   const { shelf, sort, lang } = prefs;
 
   useEffect(() => {
@@ -82,6 +86,18 @@ export function Library() {
         <PageTitle
           title="Library"
           right={
+            <div className="row">
+              {!q && all.length > 0 && (
+                <button
+                  type="button"
+                  className={`round-btn${stickering ? ' on' : ''}`}
+                  aria-label="Stickers"
+                  aria-pressed={stickering}
+                  onClick={() => setStickering(!stickering)}
+                >
+                  <Sticker size={18} />
+                </button>
+              )}
             <button
               type="button"
               className="round-btn"
@@ -93,6 +109,7 @@ export function Library() {
             >
               {searching ? <X size={18} /> : <Search size={18} />}
             </button>
+            </div>
           }
         />
         {searching && (
@@ -114,15 +131,17 @@ export function Library() {
                 progressOf,
               );
               return (
-                <Pocket
-                  key={s.id}
-                  label={s.label}
-                  count={inside.length}
-                  books={inside}
-                  tint={POCKET_TINT[s.id]}
-                  open={s.id === shelf}
-                  onClick={() => change({ shelf: s.id })}
-                />
+                <div key={s.id} className="pocket-slot">
+                  <Pocket
+                    label={s.label}
+                    count={inside.length}
+                    books={inside}
+                    tint={POCKET_TINT[s.id]}
+                    open={s.id === shelf}
+                    onClick={() => change({ shelf: s.id })}
+                  />
+                  <StickerLayer shelf={s.id} stickers={stickers} editing={stickering} />
+                </div>
               );
             })}
           </nav>
@@ -198,9 +217,18 @@ export function Library() {
           })}
         </ul>
       </main>
-      <button type="button" className="fab" aria-label="Add book" onClick={() => setAdding(true)}>
-        <Plus size={22} />
-      </button>
+      {stickering && !q ? (
+        <StickerTray
+          shelf={shelf}
+          shelfLabel={SHELVES.find((s) => s.id === shelf)?.label ?? ''}
+          count={stickers.filter((s) => s.shelf === shelf).length}
+          onDone={() => setStickering(false)}
+        />
+      ) : (
+        <button type="button" className="fab" aria-label="Add book" onClick={() => setAdding(true)}>
+          <Plus size={22} />
+        </button>
+      )}
       <TabBar active="library" />
       {adding && <AddBook shelf={shelf} onClose={() => setAdding(false)} />}
     </>

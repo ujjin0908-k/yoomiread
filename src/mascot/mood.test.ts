@@ -27,3 +27,12 @@ describe('his mood', () => {
     expect(moodFrom([s('c1', 1, 50), s('c2', 0.5, 50)], now)).toBe('high');
   });
 });
+
+describe('angry', () => {
+  it('is cross for an hour after a translation goes wrong, then lets it go', () => {
+    const sessions = [s('c1', 1), s('c2', 2)];
+    expect(moodFrom(sessions, now, { at: now - 10 * 60 * 1000, kind: 'failed', chapter: 'Chapter 4' })).toBe('angry');
+    expect(moodFrom(sessions, now, { at: now - 2 * H, kind: 'skipped', chapter: 'Chapter 4' })).toBe('happy');
+    expect(moodFrom(sessions, now)).toBe('happy');
+  });
+});

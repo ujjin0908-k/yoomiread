@@ -1,10 +1,11 @@
 import { ChevronRight, Plus, Settings as Gear } from 'lucide-react';
 import { useState } from 'react';
 import { Book3D, Empty, Pocket, TabBar } from '../components';
+import { backupDue, loadBackupState, saveBackupFile, snoozeBackup } from '../backupNow';
 import { db } from '../db';
 import { go, useLive, useOnline } from '../hooks';
 import { bookProgress, computeStats, continueChapter, estimateMinutes, formatDuration } from '../logic';
-import { moodFrom } from '../mascot/mood';
+import { useMood } from '../mascot/useMood';
 import { Wizard } from '../mascot/Wizard';
 import type { Book, Chapter } from '../types';
 import { AddBook } from './AddBook';
@@ -17,10 +18,11 @@ export function Home() {
     const lines = await db.notes.where('kind').equals('highlight').count();
     const byBook = new Map<string, Chapter[]>();
     for (const c of chapters) byBook.set(c.bookId, [...(byBook.get(c.bookId) ?? []), c]);
-    return { books, byBook, sessions, lines };
+    return { books, byBook, sessions, lines, backup: await loadBackupState() };
   }, []);
   const [adding, setAdding] = useState(false);
   const online = useOnline();
+  const { mood } = useMood();
 
   const books = data?.books ?? [];
   const recent = [...books].sort((a, b) => (b.lastReadAt ?? b.updatedAt) - (a.lastReadAt ?? a.updatedAt));
@@ -35,6 +37,10 @@ export function Home() {
   if (data && data.lines > 0) facts.push(`${data.lines} ${data.lines === 1 ? 'line' : 'lines'} kept`);
   if (stats && stats.finishedThisYear > 0) facts.push(`${stats.finishedThisYear} finished in ${new Date().getFullYear()}`);
   if (!facts.length) facts.push('Read any world');
+
+  // A weekly nudge to save a backup file: everything lives on this phone only.
+  const firstBookAt = books.length ? Math.min(...books.map((b) => b.createdAt)) : undefined;
+  const backupDays = data ? backupDue(data.backup, firstBookAt, Date.now()) : undefined;
 
   return (
     <>
@@ -74,6 +80,22 @@ export function Home() {
           </p>
         )}
 
+        {backupDays !== undefined && (
+          <div className="backup-note glass" role="status">
+            <p>
+              <b>{data!.backup.lastAt ? `Last backup: ${backupDays} days ago.` : 'No backup yet.'}</b> Your books live on this phone only.
+            </p>
+            <div className="row">
+              <button type="button" className="pill-btn small" onClick={() => void saveBackupFile()}>
+                Save a backup
+              </button>
+              <button type="button" className="link" onClick={() => void snoozeBackup()}>
+                Later
+              </button>
+            </div>
+          </div>
+        )}
+
         {data && !books.length && (
           <div className="home-empty">
             <img src="/mascot/cat-closeup.gif" alt="" width={180} height={180} />
@@ -98,7 +120,7 @@ export function Home() {
         {others.length > 0 && (
           <Pocket label="The shelf" count={books.length} books={others} tint="lilac" href="#/library">
             <span className="sticker pocket-sticker">
-              <Wizard mood={moodFrom(data!.sessions, Date.now())} size={64} />
+              <Wizard mood={mood ?? 'idle'} size={64} />
             </span>
           </Pocket>
         )}

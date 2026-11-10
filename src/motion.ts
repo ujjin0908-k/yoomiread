@@ -94,6 +94,12 @@ export function animatePage(kind: string, update: () => void, from: string[] = [
   const recent = performance.now() - lastIntent < 900;
   // Stays until the next page change, so a page you return to is not replayed (see motion.css).
   document.documentElement.dataset.arrive = kind;
+  // Into a chapter: a real book opens over the page. It does not need the browser's page transitions,
+  // so it also plays on older iPhones.
+  if (kind === 'open-book' && motionOk() && recent) {
+    openBook(update);
+    return;
+  }
   if (!doc.startViewTransition || !motionOk() || !recent) {
     update();
     return;
@@ -186,4 +192,38 @@ export function celebrate(): void {
   }
   document.body.appendChild(layer);
   window.setTimeout(() => layer.remove(), 2600);
+}
+
+/**
+ * A book opens over the whole screen: the cover swings open, three pages turn, and the page grows until
+ * it is the chapter. The cover is the one on the page you came from. `update` shows the chapter underneath
+ * while the cover is opening. A tap anywhere skips to the chapter.
+ */
+function openBook(update: () => void): void {
+  const layer = document.createElement('div');
+  layer.className = 'book-open';
+  layer.setAttribute('aria-hidden', 'true');
+  layer.innerHTML =
+    '<div class="bo-book"><div class="bo-back"></div><div class="bo-page"><i></i><i></i><i></i><i></i><i></i></div>' +
+    '<div class="bo-leaf bo-leaf3"></div><div class="bo-leaf bo-leaf2"></div><div class="bo-leaf bo-leaf1"></div>' +
+    '<div class="bo-cover"><div class="bo-front"></div><div class="bo-inside"></div></div></div>';
+  // The real cover of the book being opened, copied from the page.
+  const cover = document.querySelector('.book3d .cover, .book-hero .cover, .now .cover');
+  if (cover) layer.querySelector('.bo-front')!.appendChild(cover.cloneNode(true));
+  document.body.appendChild(layer);
+
+  let shown = false;
+  const show = () => {
+    if (shown) return;
+    shown = true;
+    update();
+  };
+  const end = () => {
+    show();
+    layer.remove();
+  };
+  layer.addEventListener('click', end);
+  // The chapter is put in place once the overlay fully covers the page; the overlay leaves when the page has grown.
+  window.setTimeout(show, 450);
+  window.setTimeout(end, 1900);
 }

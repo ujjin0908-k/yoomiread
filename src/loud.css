@@ -930,102 +930,8 @@ body[data-reader='night'] {
   --olive: #ff7a5c;
 }
 
-/* ---------- Welcome: red, with the name as loud as it gets ---------- */
+/* ---------- Leaving a chapter: the page closes like a cover (newer phones) ---------- */
 
-.welcome {
-  position: relative;
-  overflow: hidden;
-  background: #e8320e;
-  color: #14121f;
-  justify-content: flex-start;
-  align-items: stretch;
-  text-align: left;
-  padding-top: calc(env(safe-area-inset-top) + 56px);
-}
-.welcome h1 {
-  order: -1;
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: clamp(5rem, 29vw, 7.4rem);
-  line-height: 0.82;
-  letter-spacing: -0.06em;
-  color: #14121f;
-}
-.welcome-word {
-  display: block;
-  overflow: hidden;
-  padding-bottom: 0.12em;
-}
-.welcome-word:last-child {
-  font-family: var(--italic);
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.04em;
-  color: #fff;
-}
-.welcome h1 span span {
-  animation: word-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
-  animation-delay: calc(0.1s + var(--i) * 40ms);
-}
-@keyframes word-up {
-  from {
-    translate: 0 110%;
-  }
-}
-.welcome h1 + p {
-  order: -1;
-  margin: 10px 0 0;
-  color: #14121f;
-  font-weight: 700;
-}
-.welcome-stage {
-  align-self: flex-start;
-  width: 62%;
-  max-width: 250px;
-  margin-top: 26px;
-  rotate: -5deg;
-  border: 5px solid #fff;
-  border-radius: 22px;
-  overflow: hidden;
-  background: #f1edfb;
-  box-shadow: 0 20px 30px rgb(90 20 0 / 0.35);
-}
-/* The pixel stars belonged to the old picture. */
-.welcome-sparks {
-  display: none;
-}
-.welcome-stage .welcome-scene {
-  -webkit-mask-image: none;
-  mask-image: none;
-  border-radius: 0;
-  width: 100%;
-}
-.heart-start {
-  position: absolute;
-  right: 14px;
-  bottom: calc(env(safe-area-inset-bottom) + 44px);
-  width: 170px;
-  height: 153px;
-  margin: 0;
-}
-.heart-start svg {
-  filter: drop-shadow(0 12px 18px rgb(60 10 0 / 0.4));
-}
-.heart-ring {
-  border-color: #fff;
-}
-
-/* ---------- A chapter opens like a book cover ---------- */
-
-:root[data-nav='open-book']::view-transition-old(root) {
-  z-index: 2;
-  transform-origin: left center;
-  animation: 0.75s cubic-bezier(0.6, 0, 0.2, 1) both cover-open;
-}
-:root[data-nav='open-book']::view-transition-new(root) {
-  animation: 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both page-under;
-}
 :root[data-nav='close-book']::view-transition-new(root) {
   z-index: 2;
   transform-origin: left center;
@@ -1034,22 +940,10 @@ body[data-reader='night'] {
 :root[data-nav='close-book']::view-transition-old(root) {
   animation: 0.65s ease-in both page-away;
 }
-@keyframes cover-open {
-  to {
-    transform: perspective(1400px) rotateY(-104deg);
-    filter: brightness(0.7);
-  }
-}
 @keyframes cover-close {
   from {
     transform: perspective(1400px) rotateY(-104deg);
     filter: brightness(0.7);
-  }
-}
-@keyframes page-under {
-  from {
-    scale: 0.94;
-    filter: brightness(0.6);
   }
 }
 @keyframes page-away {
@@ -1143,4 +1037,507 @@ body[data-reader='night'] {
 .confetti i {
   left: 50vw;
   top: 46vh;
+}
+
+/* ---------- Stickers on the shelf pockets ---------- */
+
+.pocket-slot {
+  position: relative;
+}
+.stk-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.stk {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff)
+    drop-shadow(0 4px 6px rgb(40 20 90 / 0.25));
+  transition: scale 0.25s cubic-bezier(0.3, 1.55, 0.45, 1), opacity 0.2s;
+}
+.stk img,
+.stk-pick img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.stk .stk-photo,
+.stk-pick .stk-photo {
+  object-fit: cover;
+  border-radius: 9px;
+}
+.stk-stamp {
+  padding: 2px 5px;
+  border: 2px solid #14121f;
+  border-radius: 5px;
+  background: #ffd23f;
+  color: #14121f;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.stk-stamp-red {
+  background: #fff;
+  border-color: #e8320e;
+  color: #e8320e;
+}
+/* Placing stickers: they wiggle, can be dragged, and fade when held off the pocket (letting go removes them). */
+.stk-layer.editing .stk {
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+  animation: sticker-wob 1.6s ease-in-out infinite;
+}
+.stk-layer.editing .stk.held {
+  scale: 1.3;
+  z-index: 2;
+  animation: none;
+  cursor: grabbing;
+}
+.stk.off {
+  opacity: 0.35;
+}
+.pockets:has(.stk-layer.editing) .pocket-front {
+  outline: 2px dashed var(--ink);
+  outline-offset: 3px;
+}
+.round-btn.on {
+  background: var(--pill);
+  color: var(--pill-ink);
+}
+
+.stk-tray {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(env(safe-area-inset-bottom) + 86px);
+  z-index: 7;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 12px 14px;
+  border-radius: 24px;
+  animation: bar-up 0.32s var(--spring) backwards;
+}
+.stk-tray-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+.stk-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -14px;
+  padding: 2px 14px;
+}
+.stk-pick {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  padding: 7px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 16px;
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: scale 0.18s var(--spring);
+}
+.stk-pick:active {
+  scale: 0.88;
+}
+.stk-pick:disabled,
+.stk-pick.disabled {
+  opacity: 0.4;
+}
+.stk-add {
+  border: 2px dashed var(--ink);
+  background: none;
+}
+
+/* ---------- Backup reminder on Home ---------- */
+
+.backup-note {
+  margin: 4px 0 14px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+.backup-note p {
+  margin: 0 0 8px;
+}
+.backup-note .row {
+  gap: 14px;
+}
+
+/* ---------- The first screen: the name, the cat opening his eyes, one round button ---------- */
+
+.hello {
+  position: relative;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 34px) 24px calc(env(safe-area-inset-bottom) + 28px);
+  color: var(--ink);
+}
+.hello h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(4.6rem, 27vw, 6.8rem);
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+}
+.hello-word {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.12em;
+}
+.hello-word:last-child {
+  font-family: var(--italic);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  color: var(--accent);
+}
+.hello-word span {
+  display: inline-block;
+  animation: word-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(0.1s + var(--i) * 40ms);
+}
+@keyframes word-up {
+  from {
+    translate: 0 110%;
+  }
+}
+.hello-tag {
+  margin: 8px 0 0 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  animation: rise-in 0.7s var(--ease-out) 0.7s backwards;
+}
+
+/* The cat sits on a pale moon, so he reads well on the light ground and on the dark one. */
+.hello-cat {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  margin: 0 -24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: pop-in 0.9s var(--spring) 0.45s backwards;
+}
+.hello-moon {
+  position: absolute;
+  width: min(70vw, 280px);
+  height: min(70vw, 280px);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 14px rgb(255 255 255 / 0.4), 0 0 0 34px rgb(255 255 255 / 0.18), 0 30px 60px rgb(40 20 90 / 0.25);
+  animation: moon-breathe 5s ease-in-out infinite;
+}
+@keyframes moon-breathe {
+  50% {
+    scale: 1.05;
+  }
+}
+.hello-cat img {
+  position: relative;
+  width: min(76vw, 310px);
+  height: min(76vw, 310px);
+  object-fit: contain;
+  animation: b3-float 5s ease-in-out infinite;
+}
+.hello-cat:active img {
+  scale: 0.96;
+}
+
+/* The start button: words turn round it, rings pulse out of it. Tapped, its red floods the whole screen. */
+.hello-start {
+  position: relative;
+  align-self: center;
+  width: 132px;
+  height: 132px;
+  margin-top: -6px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: pop-in 0.7s var(--spring) 1s backwards;
+}
+.hello-ring {
+  position: absolute;
+  inset: 0;
+  animation: turn 9s linear infinite;
+}
+.hello-ring text {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 2.6px;
+  fill: var(--ink);
+}
+@keyframes turn {
+  to {
+    rotate: 360deg;
+  }
+}
+.hello-core {
+  position: relative;
+  z-index: 1;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #e8320e;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 12px 24px rgb(232 50 14 / 0.4);
+  animation: core-beat 1.8s ease-in-out infinite;
+}
+@keyframes core-beat {
+  0%,
+  100% {
+    scale: 1;
+  }
+  12% {
+    scale: 1.12;
+  }
+  24% {
+    scale: 1;
+  }
+  36% {
+    scale: 1.07;
+  }
+}
+.hello-halo {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 2px solid #e8320e;
+  animation: halo 1.8s ease-out infinite;
+}
+.hello-halo.late {
+  animation-delay: 0.6s;
+}
+@keyframes halo {
+  from {
+    scale: 1;
+    opacity: 0.8;
+  }
+  to {
+    scale: 2.1;
+    opacity: 0;
+  }
+}
+.hello-start:active .hello-core {
+  scale: 0.9;
+  animation: none;
+}
+
+.hello.go .hello-core {
+  z-index: 5;
+  color: transparent;
+  animation: flood 0.65s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+}
+.hello.go .hello-halo,
+.hello.go .hello-ring {
+  animation: none;
+  opacity: 0;
+}
+.hello.go .hello-cat img {
+  animation: cat-hop 0.5s var(--spring);
+}
+@keyframes flood {
+  to {
+    scale: 30;
+  }
+}
+@keyframes cat-hop {
+  40% {
+    translate: 0 -26px;
+    scale: 1.06;
+  }
+}
+/* Shorter screens: everything a size down, so the button is never cut off. */
+@media (max-height: 720px) {
+  .hello h1 {
+    font-size: clamp(4rem, 22vw, 5.4rem);
+  }
+  .hello-moon {
+    width: min(58vw, 230px);
+    height: min(58vw, 230px);
+  }
+  .hello-cat img {
+    width: min(64vw, 256px);
+    height: min(64vw, 256px);
+  }
+}
+
+/* ---------- Opening a chapter: a book opens over the screen (see openBook in motion.ts) ---------- */
+
+.book-open {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 35%, rgb(232 50 14 / 0.55) 0, transparent 34%),
+    radial-gradient(circle at 85% 62%, rgb(107 77 255 / 0.55) 0, transparent 36%), #14121f;
+  perspective: 1300px;
+  animation: bo-layer 1.9s linear forwards;
+}
+.bo-book {
+  position: relative;
+  width: 172px;
+  height: 252px;
+  transform-style: preserve-3d;
+  animation: bo-book 1.9s cubic-bezier(0.6, 0, 0.2, 1) forwards;
+}
+.bo-back {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px 10px 10px 4px;
+  background: #2a2540;
+  box-shadow: 0 30px 40px rgb(0 0 0 / 0.5);
+}
+.bo-page,
+.bo-leaf {
+  position: absolute;
+  inset: 4px 4px 4px 0;
+  border-radius: 0 6px 6px 0;
+  background: linear-gradient(90deg, #e9dfca, #fffaf0 14%);
+}
+/* Faint lines of text on the page that grows into the chapter. */
+.bo-page {
+  box-sizing: border-box;
+  padding: 26px 16px 0 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.bo-page i {
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(20 18 31 / 0.16);
+}
+.bo-page i:first-child {
+  width: 55%;
+  height: 9px;
+  margin-bottom: 6px;
+  background: rgb(232 50 14 / 0.7);
+}
+.bo-page i:last-child {
+  width: 70%;
+}
+.bo-leaf {
+  transform-origin: left center;
+  box-shadow: inset 0 0 0 1px #e2d6bd;
+}
+.bo-leaf1 { animation: bo-leaf 0.5s cubic-bezier(0.6, 0, 0.2, 1) 0.62s forwards; }
+.bo-leaf2 { animation: bo-leaf 0.5s cubic-bezier(0.6, 0, 0.2, 1) 0.74s forwards; }
+.bo-leaf3 { animation: bo-leaf 0.5s cubic-bezier(0.6, 0, 0.2, 1) 0.86s forwards; }
+.bo-cover {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  animation: bo-cover 0.7s cubic-bezier(0.6, 0, 0.2, 1) 0.3s forwards;
+}
+.bo-front,
+.bo-inside {
+  position: absolute;
+  inset: 0;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 4px 10px 10px 4px;
+  overflow: hidden;
+  background: #e8320e;
+}
+.bo-front .cover {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  aspect-ratio: auto;
+  border-radius: inherit;
+  box-shadow: none;
+  rotate: none;
+}
+.bo-inside {
+  transform: rotateY(180deg);
+  border-radius: 10px 4px 4px 10px;
+  background: #b79cff repeating-linear-gradient(45deg, rgb(255 255 255 / 0.35) 0 6px, transparent 6px 14px);
+}
+@keyframes bo-layer {
+  0% {
+    opacity: 0;
+  }
+  8%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* Arrives closed and tilted, slides right as it opens so the two pages sit in the middle, then the page fills the screen. */
+@keyframes bo-book {
+  0% {
+    transform: translateX(0) rotateX(16deg) rotateZ(-5deg) scale(0.7);
+  }
+  14% {
+    transform: translateX(0) rotateX(14deg) rotateZ(-4deg) scale(1);
+  }
+  42%,
+  62% {
+    transform: translateX(84px) rotateX(10deg) rotateZ(0deg) scale(1);
+  }
+  100% {
+    transform: translateX(-10px) rotateX(0deg) rotateZ(0deg) scale(7);
+  }
+}
+@keyframes bo-cover {
+  to {
+    transform: rotateY(-172deg);
+  }
+}
+@keyframes bo-leaf {
+  to {
+    transform: rotateY(-166deg);
+  }
+}
+
+/* Book page: the four shelves as buttons, so moving a book is one visible tap. */
+.shelf-pick {
+  margin: 14px 0 4px;
+  flex-wrap: wrap;
+  overflow: visible;
 }

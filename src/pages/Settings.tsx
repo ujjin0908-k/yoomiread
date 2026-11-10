@@ -4,7 +4,9 @@ import { TopBar } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
 import { motionSetting, setMotionSetting } from '../motion';
-import { makeBackup, parseBackup } from '../backup';
+import { parseBackup } from '../backup';
+import { DEFAULT_BACKUP, loadBackupState, saveBackupFile, saveBackupState } from '../backupNow';
+import { formatDate } from '../logic';
 import { chat } from '../translate/api';
 import { EMPTY_SETTINGS, fetchModels, loadSettings, saveSettings } from '../translate/run';
 import type { ModelOption, TranslateSettings } from '../types';
@@ -14,6 +16,7 @@ export function Settings() {
     async () => ({ books: await db.books.count(), chapters: await db.chapters.count(), notes: await db.notes.count() }),
     [],
   );
+  const backup = useLive(loadBackupState, []) ?? DEFAULT_BACKUP;
   const [persisted, setPersisted] = useState<boolean>();
   const [message, setMessage] = useState('');
   const [motion, setMotion] = useState(motionSetting);
@@ -23,13 +26,9 @@ export function Settings() {
   }, []);
 
   async function exportBackup() {
-    const blob = new Blob([JSON.stringify(await makeBackup(await db.exportAll()))], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `yoomiread-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    setMessage('Backup saved. Keep it somewhere safe (Files, iCloud Drive).');
+    const how = await saveBackupFile();
+    if (how === 'shared') setMessage('Backup handed over. "Save to Files" keeps it safe outside the app.');
+    if (how === 'downloaded') setMessage('Backup saved. Keep it somewhere safe (Files, iCloud Drive).');
   }
 
   async function importBackup(file: File) {
@@ -86,6 +85,21 @@ export function Settings() {
             )}
           </div>
           {message && <p className="small">{message}</p>}
+          <p className="muted small">{backup.lastAt ? `Last backup: ${formatDate(backup.lastAt)}.` : 'No backup saved from this phone yet.'}</p>
+          <div className="look-row">
+            <span>Remind me to back up</span>
+            <div className="seg">
+              {[
+                { days: 7, label: 'Weekly' },
+                { days: 30, label: 'Monthly' },
+                { days: 0, label: 'Off' },
+              ].map((o) => (
+                <button key={o.days} type="button" className={backup.every === o.days ? 'on' : ''} onClick={() => void saveBackupState({ every: o.days })}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </section>
         <TranslationSettings />
         <section className="card">
@@ -280,6 +294,17 @@ function TranslationSettings() {
           {[0, 1, 2, 3].map((n) => (
             <button key={n} type="button" className={(s.ahead ?? 1) === n ? 'on' : ''} onClick={() => update({ ahead: n })}>
               {n === 0 ? 'Off' : `Next ${n}`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="look-row">
+        <span>Translate when a book is added</span>
+        <div className="seg">
+          {[0, 1, 3, 5].map((n) => (
+            <button key={n} type="button" className={(s.onImport ?? 3) === n ? 'on' : ''} onClick={() => update({ onImport: n })}>
+              {n === 0 ? 'Off' : `First ${n}`}
             </button>
           ))}
         </div>

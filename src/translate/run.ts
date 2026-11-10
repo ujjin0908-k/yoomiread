@@ -2,6 +2,7 @@ import { db } from '../db';
 import { newId } from '../logic';
 import type { Chapter, GlossaryEntry, ModelOption, TranslateSettings, Translation } from '../types';
 import { chat, type ChatResult } from './api';
+import { clearTrouble, noteTrouble } from '../mascot/trouble';
 import { CENSORED, chapterMessages, cleanTitle, costOf, estimateTokens, glossaryScanMessages, isRefusal, parseTerms, pronounWarnings, splitReply, titleMessages, type ChatMessage, type ProposedTerm } from './prompt';
 import { paragraphs } from '../logic';
 
@@ -16,7 +17,7 @@ export const DEFAULT_MODELS: ModelOption[] = [
   { id: 'glm-4.7', label: 'GLM 4.7 (untested, price not set)' },
 ];
 
-export const EMPTY_SETTINGS: TranslateSettings = { baseUrl: '', apiKey: '', models: DEFAULT_MODELS, defaultModel: DEFAULT_MODELS[0].id, ahead: 1 };
+export const EMPTY_SETTINGS: TranslateSettings = { baseUrl: '', apiKey: '', models: DEFAULT_MODELS, defaultModel: DEFAULT_MODELS[0].id, ahead: 1, onImport: 3 };
 
 /** Names saved by earlier versions, replaced by the provider's ids. */
 const RETIRED_MODEL_IDS = ['MiniMax-M2', 'MiniMax-M3'];
@@ -114,11 +115,26 @@ async function summaryBefore(chapter: Chapter): Promise<string | undefined> {
   return earlier.length ? summaryOf.get(earlier[0].id) : undefined;
 }
 
-/** Translates one chapter, saves the English next to the original, and queues new names for review. */
-export async function translateChapter(
-  chapter: Chapter,
-  options: { settings: TranslateSettings; model: string; onText?: (piece: string) => void; signal?: AbortSignal; save?: boolean },
-): Promise<ChapterRun> {
+type ChapterOptions = { settings: TranslateSettings; model: string; onText?: (piece: string) => void; signal?: AbortSignal; save?: boolean };
+
+/**
+ * Translates one chapter, saves the English next to the original, and queues new names for review.
+ * It also tells the cat how it went: a failure or skipped passages make him cross, a clean run calms him.
+ */
+export async function translateChapter(chapter: Chapter, options: ChapterOptions): Promise<ChapterRun> {
+  try {
+    const run = await runChapter(chapter, options);
+    const skipped = run.translation.text.split('\n\n').includes(CENSORED);
+    await (skipped ? noteTrouble('skipped', chapter.title) : clearTrouble()).catch(() => {});
+    return run;
+  } catch (e) {
+    // Stopping on purpose is not a failure.
+    if (!options.signal?.aborted) await noteTrouble('failed', chapter.title).catch(() => {});
+    throw e;
+  }
+}
+
+async function runChapter(chapter: Chapter, options: ChapterOptions): Promise<ChapterRun> {
   const [book, text, glossary, previousSummary] = await Promise.all([
     db.books.get(chapter.bookId),
     db.texts.get(chapter.id),
