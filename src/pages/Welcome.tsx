@@ -1,38 +1,34 @@
-import { useState } from 'react';
+import { BookOpen } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { motionOk } from '../motion';
 
-/** The heart, drawn from the centre outwards: each layer is a smaller heart inside the one before. */
-const HEART = 'M50 88 C 12 62, 0 42, 0 26 C 0 11, 11 2, 26 2 C 37 2, 46 8, 50 17 C 54 8, 63 2, 74 2 C 89 2, 100 11, 100 26 C 100 42, 88 62, 50 88 Z';
-const LAYERS = [
-  { fill: 'url(#layer-outer)', scale: 1 },
-  { fill: 'url(#layer-mid)', scale: 0.8 },
-  { fill: 'url(#layer-inner)', scale: 0.6 },
-  { fill: 'url(#layer-core)', scale: 0.38 },
-];
-
-/** The first screen: shown once, on the first visit, then the app opens as usual. */
+/**
+ * The first screen each time the app is opened: the name, the cat opening his eyes, and one round
+ * button. Tapping it (or the cat) floods the screen with red, then the library appears.
+ */
 export function Welcome({ onStart }: { onStart: () => void }) {
-  const [tapped, setTapped] = useState(false);
+  const [going, setGoing] = useState(false);
+
+  // The strip behind the phone's clock takes the page colour, so the screen is one colour to the very top.
+  useEffect(() => {
+    const metas = [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')];
+    const before = metas.map((m) => m.content);
+    const ground = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    if (ground) for (const m of metas) m.content = going ? '#e8320e' : ground;
+    return () => metas.forEach((m, i) => (m.content = before[i]));
+  }, [going]);
 
   function start() {
-    if (tapped) return;
-    setTapped(true);
-    window.setTimeout(onStart, 1200);
+    if (going) return;
+    setGoing(true);
+    window.setTimeout(onStart, motionOk() ? 650 : 0);
   }
 
   return (
-    <main className="welcome">
-      <div className="welcome-stage">
-        <img className="welcome-scene" src="/mascot/cat-portrait.png" alt="" />
-        <span className="welcome-sparks" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-          <i />
-        </span>
-      </div>
+    <main className={`hello${going ? ' go' : ''}`}>
       <h1 aria-label="YoomiRead">
         {['Yoomi', 'Read'].map((word, w) => (
-          <span key={word} className="welcome-word" aria-hidden="true">
+          <span key={word} className="hello-word" aria-hidden="true">
             {[...word].map((letter, i) => (
               <span key={i} style={{ '--i': w * 5 + i } as React.CSSProperties}>
                 {letter}
@@ -41,36 +37,27 @@ export function Welcome({ onStart }: { onStart: () => void }) {
           </span>
         ))}
       </h1>
-      <p>Read any world</p>
-      <button type="button" className={`heart-start${tapped ? ' tapped' : ''}`} onClick={start} aria-label="Tap to start reading">
-        <i className="heart-ring" aria-hidden="true" />
-        <i className="heart-ring late" aria-hidden="true" />
-        <svg viewBox="0 0 100 90" aria-hidden="true">
+      <p className="hello-tag">Read any world</p>
+
+      <button type="button" className="hello-cat" onClick={start} aria-label="Start reading">
+        <span className="hello-moon" aria-hidden="true" />
+        <img src={`/mascot/cat-closeup.${motionOk() ? 'gif' : 'png'}`} alt="" draggable={false} />
+      </button>
+
+      <button type="button" className="hello-start" onClick={start} aria-label="Tap to start reading">
+        <i className="hello-halo" aria-hidden="true" />
+        <i className="hello-halo late" aria-hidden="true" />
+        <svg className="hello-ring" viewBox="0 0 100 100" aria-hidden="true">
           <defs>
-            <linearGradient id="layer-outer" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#7d9be8" />
-              <stop offset="1" stopColor="#4466c8" />
-            </linearGradient>
-            <linearGradient id="layer-mid" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#5f94f0" />
-              <stop offset="1" stopColor="#2f5fd0" />
-            </linearGradient>
-            <linearGradient id="layer-inner" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#8fb6f5" />
-              <stop offset="1" stopColor="#4a7fe0" />
-            </linearGradient>
-            <linearGradient id="layer-core" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#c3b3f2" />
-              <stop offset="1" stopColor="#8f7fd8" />
-            </linearGradient>
+            <path id="hello-circle" d="M50 50 m-41 0 a41 41 0 1 1 82 0 a41 41 0 1 1 -82 0" />
           </defs>
-          {LAYERS.map((layer, i) => (
-            <g key={i} transform={`translate(${50 * (1 - layer.scale)} ${40 * (1 - layer.scale)}) scale(${layer.scale})`}>
-              <path className="heart-layer" style={{ '--i': i, fill: layer.fill } as React.CSSProperties} d={HEART} />
-            </g>
-          ))}
+          <text>
+            <textPath href="#hello-circle">TAP TO READ · TAP TO READ · </textPath>
+          </text>
         </svg>
-        <span>Tap</span>
+        <span className="hello-core">
+          <BookOpen size={30} strokeWidth={2.2} />
+        </span>
       </button>
     </main>
   );

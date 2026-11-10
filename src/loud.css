@@ -930,92 +930,6 @@ body[data-reader='night'] {
   --olive: #ff7a5c;
 }
 
-/* ---------- Welcome: red, with the name as loud as it gets ---------- */
-
-.welcome {
-  position: relative;
-  overflow: hidden;
-  background: #e8320e;
-  color: #14121f;
-  justify-content: flex-start;
-  align-items: stretch;
-  text-align: left;
-  padding-top: calc(env(safe-area-inset-top) + 56px);
-}
-.welcome h1 {
-  order: -1;
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: clamp(5rem, 29vw, 7.4rem);
-  line-height: 0.82;
-  letter-spacing: -0.06em;
-  color: #14121f;
-}
-.welcome-word {
-  display: block;
-  overflow: hidden;
-  padding-bottom: 0.12em;
-}
-.welcome-word:last-child {
-  font-family: var(--italic);
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.04em;
-  color: #fff;
-}
-.welcome h1 span span {
-  animation: word-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
-  animation-delay: calc(0.1s + var(--i) * 40ms);
-}
-@keyframes word-up {
-  from {
-    translate: 0 110%;
-  }
-}
-.welcome h1 + p {
-  order: -1;
-  margin: 10px 0 0;
-  color: #14121f;
-  font-weight: 700;
-}
-.welcome-stage {
-  align-self: flex-start;
-  width: 62%;
-  max-width: 250px;
-  margin-top: 26px;
-  rotate: -5deg;
-  border: 5px solid #fff;
-  border-radius: 22px;
-  overflow: hidden;
-  background: #f1edfb;
-  box-shadow: 0 20px 30px rgb(90 20 0 / 0.35);
-}
-/* The pixel stars belonged to the old picture. */
-.welcome-sparks {
-  display: none;
-}
-.welcome-stage .welcome-scene {
-  -webkit-mask-image: none;
-  mask-image: none;
-  border-radius: 0;
-  width: 100%;
-}
-.heart-start {
-  position: absolute;
-  right: 14px;
-  bottom: calc(env(safe-area-inset-bottom) + 44px);
-  width: 170px;
-  height: 153px;
-  margin: 0;
-}
-.heart-start svg {
-  filter: drop-shadow(0 12px 18px rgb(60 10 0 / 0.4));
-}
-.heart-ring {
-  border-color: #fff;
-}
-
 /* ---------- A chapter opens like a book cover ---------- */
 
 :root[data-nav='open-book']::view-transition-old(root) {
@@ -1285,4 +1199,222 @@ body[data-reader='night'] {
 }
 .backup-note .row {
   gap: 14px;
+}
+
+/* ---------- The first screen: the name, the cat opening his eyes, one round button ---------- */
+
+.hello {
+  position: relative;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 34px) 24px calc(env(safe-area-inset-bottom) + 28px);
+  color: var(--ink);
+}
+.hello h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(4.6rem, 27vw, 6.8rem);
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+}
+.hello-word {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.12em;
+}
+.hello-word:last-child {
+  font-family: var(--italic);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  color: var(--accent);
+}
+.hello-word span {
+  display: inline-block;
+  animation: word-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(0.1s + var(--i) * 40ms);
+}
+@keyframes word-up {
+  from {
+    translate: 0 110%;
+  }
+}
+.hello-tag {
+  margin: 8px 0 0 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  animation: rise-in 0.7s var(--ease-out) 0.7s backwards;
+}
+
+/* The cat sits on a pale moon, so he reads well on the light ground and on the dark one. */
+.hello-cat {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  margin: 0 -24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: pop-in 0.9s var(--spring) 0.45s backwards;
+}
+.hello-moon {
+  position: absolute;
+  width: min(70vw, 280px);
+  height: min(70vw, 280px);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 14px rgb(255 255 255 / 0.4), 0 0 0 34px rgb(255 255 255 / 0.18), 0 30px 60px rgb(40 20 90 / 0.25);
+  animation: moon-breathe 5s ease-in-out infinite;
+}
+@keyframes moon-breathe {
+  50% {
+    scale: 1.05;
+  }
+}
+.hello-cat img {
+  position: relative;
+  width: min(76vw, 310px);
+  height: min(76vw, 310px);
+  object-fit: contain;
+  animation: b3-float 5s ease-in-out infinite;
+}
+.hello-cat:active img {
+  scale: 0.96;
+}
+
+/* The start button: words turn round it, rings pulse out of it. Tapped, its red floods the whole screen. */
+.hello-start {
+  position: relative;
+  align-self: center;
+  width: 132px;
+  height: 132px;
+  margin-top: -6px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: pop-in 0.7s var(--spring) 1s backwards;
+}
+.hello-ring {
+  position: absolute;
+  inset: 0;
+  animation: turn 9s linear infinite;
+}
+.hello-ring text {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 2.6px;
+  fill: var(--ink);
+}
+@keyframes turn {
+  to {
+    rotate: 360deg;
+  }
+}
+.hello-core {
+  position: relative;
+  z-index: 1;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #e8320e;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 12px 24px rgb(232 50 14 / 0.4);
+  animation: core-beat 1.8s ease-in-out infinite;
+}
+@keyframes core-beat {
+  0%,
+  100% {
+    scale: 1;
+  }
+  12% {
+    scale: 1.12;
+  }
+  24% {
+    scale: 1;
+  }
+  36% {
+    scale: 1.07;
+  }
+}
+.hello-halo {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 2px solid #e8320e;
+  animation: halo 1.8s ease-out infinite;
+}
+.hello-halo.late {
+  animation-delay: 0.6s;
+}
+@keyframes halo {
+  from {
+    scale: 1;
+    opacity: 0.8;
+  }
+  to {
+    scale: 2.1;
+    opacity: 0;
+  }
+}
+.hello-start:active .hello-core {
+  scale: 0.9;
+  animation: none;
+}
+
+.hello.go .hello-core {
+  z-index: 5;
+  color: transparent;
+  animation: flood 0.65s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+}
+.hello.go .hello-halo,
+.hello.go .hello-ring {
+  animation: none;
+  opacity: 0;
+}
+.hello.go .hello-cat img {
+  animation: cat-hop 0.5s var(--spring);
+}
+@keyframes flood {
+  to {
+    scale: 30;
+  }
+}
+@keyframes cat-hop {
+  40% {
+    translate: 0 -26px;
+    scale: 1.06;
+  }
+}
+/* Shorter screens: everything a size down, so the button is never cut off. */
+@media (max-height: 720px) {
+  .hello h1 {
+    font-size: clamp(4rem, 22vw, 5.4rem);
+  }
+  .hello-moon {
+    width: min(58vw, 230px);
+    height: min(58vw, 230px);
+  }
+  .hello-cat img {
+    width: min(64vw, 256px);
+    height: min(64vw, 256px);
+  }
 }
