@@ -6,7 +6,7 @@ import { useCountUp } from '../motion';
 import { computeStats, formatDuration, type Stats as StatsData } from '../logic';
 import { formatCost } from '../translate/prompt';
 import { lineFor } from '../mascot/lines';
-import { moodFrom } from '../mascot/mood';
+import { useMood } from '../mascot/useMood';
 import { Wizard } from '../mascot/Wizard';
 
 export function Stats() {
@@ -16,8 +16,7 @@ export function Stats() {
     return { total: books.reduce((sum, b) => sum + (b.spent ?? 0), 0), estimated: books.some((b) => b.spentEstimated) };
   }, []);
 
-  const sessions = useLive(() => db.sessions.toArray(), []);
-  const mood = sessions ? moodFrom(sessions, Date.now()) : undefined;
+  const { mood, trouble } = useMood();
 
   return (
     <>
@@ -26,7 +25,7 @@ export function Stats() {
         {mood && (
           <section className="wizard-card">
             <Wizard mood={mood} size={120} />
-            <p>{lineFor(mood, new Date().toDateString())}</p>
+            <p>{lineFor(mood, new Date().toDateString(), trouble)}</p>
           </section>
         )}
         {stats && (

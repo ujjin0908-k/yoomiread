@@ -7,6 +7,7 @@ const POSE: Record<Mood, string> = {
   idle: 'cat-idle',
   sad: 'cat-sad',
   high: 'cat-high',
+  angry: 'cat-angry',
 };
 
 /**

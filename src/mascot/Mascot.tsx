@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { db } from '../db';
-import { useLive } from '../hooks';
 import { isRead, needsTranslation } from '../logic';
 import { addSpend, callCost, loadSettings, modelFor } from '../translate/run';
 import { chat } from '../translate/api';
 import { formatCost, type ChatMessage } from '../translate/prompt';
 import type { Book, Chapter, GlossaryEntry } from '../types';
-import { moodFrom } from './mood';
+import { useMood } from './useMood';
 import { lineFor } from './lines';
 import { Wizard } from './Wizard';
 
@@ -27,8 +26,7 @@ function readExcerpts(chapters: Chapter[], texts: Map<string, string>, upTo: num
 }
 
 export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter: Chapter; chapters: Chapter[]; away?: boolean }) {
-  const sessions = useLive(() => db.sessions.toArray(), []);
-  const mood = moodFrom(sessions ?? [], Date.now());
+  const { mood = 'idle', trouble } = useMood();
   const [open, setOpen] = useState(false);
   const [poked, setPoked] = useState(false);
   const [question, setQuestion] = useState('');
@@ -93,8 +91,8 @@ export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter:
   }
 
   return (
-    // He steps aside with the bars while reading, unless his bubble is open.
-    <div className={`mascot${away && !open ? ' away' : ''}`}>
+    // He steps aside with the bars while reading, unless his bubble is open or he is cross about something.
+    <div className={`mascot${away && !open && mood !== 'angry' ? ' away' : ''}`}>
       <button
         type="button"
         className={`mascot-btn${poked ? ' poked' : ''}`}
@@ -110,7 +108,7 @@ export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter:
       </button>
       {open && (
         <div className="mascot-bubble" role="dialog" aria-label="The cat">
-          <p>{lineFor(mood, chapter.id)}</p>
+          <p>{lineFor(mood, chapter.id, trouble)}</p>
           {answer && (
             <>
               <p>{answer.text}</p>

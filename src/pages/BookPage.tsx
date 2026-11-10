@@ -2,6 +2,7 @@ import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, PenLine,
 import { useEffect, useRef, useState } from 'react';
 import { Book3D, Cover, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
 import { celebrate } from '../motion';
+import { useImportJob } from '../translate/onImport';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
 import { shrinkImage } from '../images';
@@ -46,6 +47,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const finishing = sub === 'finish';
   // Right after a PDF import: offer to fix the title.
   const justImported = sub === 'imported' || sub === 'scanned';
+  const job = useImportJob(id);
 
   if (book === undefined) return <TopBar back="library" />;
   if (!book) {
@@ -133,6 +135,14 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
             </div>
           )}
         </section>
+
+        {job && (!job.finished || job.failed) && (
+          <div className={`card small${job.failed ? ' warn-card' : ''}`} role="status">
+            {job.failed
+              ? `Translated ${job.done} of the first ${job.total} chapters, then stopped: ${job.failed}`
+              : `Translating the first ${job.total === 1 ? 'chapter' : `${job.total} chapters`} in the background: ${job.done} done.`}
+          </div>
+        )}
 
         {sub === 'scanned' && (
           <div className="card warn-card">

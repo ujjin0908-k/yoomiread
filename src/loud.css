@@ -1144,3 +1144,145 @@ body[data-reader='night'] {
   left: 50vw;
   top: 46vh;
 }
+
+/* ---------- Stickers on the shelf pockets ---------- */
+
+.pocket-slot {
+  position: relative;
+}
+.stk-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.stk {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff)
+    drop-shadow(0 4px 6px rgb(40 20 90 / 0.25));
+  transition: scale 0.25s cubic-bezier(0.3, 1.55, 0.45, 1), opacity 0.2s;
+}
+.stk img,
+.stk-pick img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.stk .stk-photo,
+.stk-pick .stk-photo {
+  object-fit: cover;
+  border-radius: 9px;
+}
+.stk-stamp {
+  padding: 2px 5px;
+  border: 2px solid #14121f;
+  border-radius: 5px;
+  background: #ffd23f;
+  color: #14121f;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.stk-stamp-red {
+  background: #fff;
+  border-color: #e8320e;
+  color: #e8320e;
+}
+/* Placing stickers: they wiggle, can be dragged, and fade when held off the pocket (letting go removes them). */
+.stk-layer.editing .stk {
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+  animation: sticker-wob 1.6s ease-in-out infinite;
+}
+.stk-layer.editing .stk.held {
+  scale: 1.3;
+  z-index: 2;
+  animation: none;
+  cursor: grabbing;
+}
+.stk.off {
+  opacity: 0.35;
+}
+.pockets:has(.stk-layer.editing) .pocket-front {
+  outline: 2px dashed var(--ink);
+  outline-offset: 3px;
+}
+.round-btn.on {
+  background: var(--pill);
+  color: var(--pill-ink);
+}
+
+.stk-tray {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(env(safe-area-inset-bottom) + 86px);
+  z-index: 7;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 12px 14px;
+  border-radius: 24px;
+  animation: bar-up 0.32s var(--spring) backwards;
+}
+.stk-tray-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+.stk-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -14px;
+  padding: 2px 14px;
+}
+.stk-pick {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  padding: 7px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 16px;
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: scale 0.18s var(--spring);
+}
+.stk-pick:active {
+  scale: 0.88;
+}
+.stk-pick:disabled,
+.stk-pick.disabled {
+  opacity: 0.4;
+}
+.stk-add {
+  border: 2px dashed var(--ink);
+  background: none;
+}
+
+/* ---------- Backup reminder on Home ---------- */
+
+.backup-note {
+  margin: 4px 0 14px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+.backup-note p {
+  margin: 0 0 8px;
+}
+.backup-note .row {
+  gap: 14px;
+}

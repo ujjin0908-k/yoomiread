@@ -174,6 +174,8 @@ export interface TranslateSettings {
   defaultModel: string;
   /** How many of the next chapters to translate in the background while reading (0 turns it off). */
   ahead?: number;
+  /** How many of the first chapters to translate as soon as a book is added (0 turns it off). */
+  onImport?: number;
   /** When true, models are asked not to think before answering: faster and cheaper, but untested per model. */
   thinkingOff?: boolean;
 }

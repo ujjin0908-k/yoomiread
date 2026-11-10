@@ -1,3 +1,4 @@
+import { translateFirstChapters } from '../translate/onImport';
 import { BookOpen, ClipboardPaste, FileText, Globe, PenLine } from 'lucide-react';
 import { useState } from 'react';
 import { Sheet } from '../components';
@@ -49,6 +50,8 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
         })),
       );
     });
+    // Not awaited: the first chapters are translated in the background while the book page opens.
+    void translateFirstChapters(book.id);
     onClose();
     go(`book/${book.id}/${result.scanned ? 'scanned' : 'imported'}`);
   }
