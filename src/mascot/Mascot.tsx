@@ -71,7 +71,7 @@ export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter:
         {
           role: 'system',
           content:
-            'You are a friendly wizard reading this novel alongside the reader. Use only the excerpts given. ' +
+            'You are a friendly cat in a wizard hat, reading this novel alongside the reader. Use only the excerpts given. ' +
             'Never reveal or guess what comes after the excerpts. Answer in under 80 words.',
         },
         {
@@ -98,7 +98,7 @@ export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter:
       <button
         type="button"
         className={`mascot-btn${poked ? ' poked' : ''}`}
-        aria-label="Talk to the wizard"
+        aria-label="Talk to the cat"
         aria-expanded={open}
         onClick={() => {
           setOpen(!open);
@@ -106,10 +106,10 @@ export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter:
         }}
         onAnimationEnd={(e) => e.target === e.currentTarget && setPoked(false)}
       >
-        <Wizard mood={mood} size={96} />
+        <Wizard mood={mood} size={112} />
       </button>
       {open && (
-        <div className="mascot-bubble" role="dialog" aria-label="Wizard">
+        <div className="mascot-bubble" role="dialog" aria-label="The cat">
           <p>{lineFor(mood, chapter.id)}</p>
           {answer && (
             <>

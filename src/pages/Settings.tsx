@@ -94,7 +94,7 @@ export function Settings() {
             <span>
               Animations
               <br />
-              <span className="muted small">Page slides, the wizard's movement and other small touches.</span>
+              <span className="muted small">Page slides, the cat's movement and other small touches.</span>
             </span>
             <input
               type="checkbox"

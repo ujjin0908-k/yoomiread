@@ -76,7 +76,7 @@ export function Home() {
 
         {data && !books.length && (
           <div className="home-empty">
-            <img src="/icon-512.png" alt="" width={160} height={160} />
+            <img src="/mascot/cat-closeup.gif" alt="" width={180} height={180} />
             <Empty title="Your shelves are empty">Import a PDF or write down a book you have read.</Empty>
           </div>
         )}

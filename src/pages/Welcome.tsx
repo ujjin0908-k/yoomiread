@@ -22,7 +22,7 @@ export function Welcome({ onStart }: { onStart: () => void }) {
   return (
     <main className="welcome">
       <div className="welcome-stage">
-        <img className="welcome-scene" src="/welcome.jpg" alt="" />
+        <img className="welcome-scene" src="/mascot/cat-portrait.png" alt="" />
         <span className="welcome-sparks" aria-hidden="true">
           <i />
           <i />

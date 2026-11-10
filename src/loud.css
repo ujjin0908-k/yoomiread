@@ -503,10 +503,6 @@ h3 {
     rotate: 8deg;
   }
 }
-.sticker .wizard-shadow,
-.sticker .wizard-fx {
-  display: none;
-}
 
 /* ---------- Home ---------- */
 
@@ -578,9 +574,8 @@ h3 {
   padding-top: 12px;
 }
 .home-empty img {
-  border-radius: 40px;
-  box-shadow: var(--shadow);
-  rotate: -4deg;
+  border-radius: 0;
+  box-shadow: none;
 }
 .home-empty .empty {
   padding-top: 16px;
@@ -993,7 +988,12 @@ body[data-reader='night'] {
   border: 5px solid #fff;
   border-radius: 22px;
   overflow: hidden;
+  background: #f1edfb;
   box-shadow: 0 20px 30px rgb(90 20 0 / 0.35);
+}
+/* The pixel stars belonged to the old picture. */
+.welcome-sparks {
+  display: none;
 }
 .welcome-stage .welcome-scene {
   -webkit-mask-image: none;
