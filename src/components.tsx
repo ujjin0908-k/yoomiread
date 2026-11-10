@@ -1,6 +1,7 @@
 import { BarChart3, ChevronLeft, Home, LibraryBig, Quote, X } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { useObjectUrl } from './images';
+import { motionOk } from './motion';
 import type { Book } from './types';
 
 export function Stars({ value, onChange, size = 'md' }: { value?: number; onChange?: (v: number) => void; size?: 'sm' | 'md' }) {
@@ -28,21 +29,66 @@ export function Stars({ value, onChange, size = 'md' }: { value?: number; onChan
   );
 }
 
-export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+/**
+ * A sheet that rises from the bottom. It slides away when closed, and can be dragged down by its top edge.
+ * `locked` keeps it open (while a translation is running, for example).
+ */
+export function Sheet({ title, onClose, locked, children }: { title: string; onClose: () => void; locked?: boolean; children: ReactNode }) {
+  const [closing, setClosing] = useState(false);
+  const sheet = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ y: number; moved: number }>();
+  const latest = useRef({ onClose, locked });
+  latest.current = { onClose, locked };
+
+  const close = useCallback(() => {
+    if (latest.current.locked) return;
+    if (motionOk()) setClosing(true);
+    else latest.current.onClose();
+  }, []);
+
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    if (!closing) return;
+    const t = window.setTimeout(() => latest.current.onClose(), 200);
+    return () => window.clearTimeout(t);
+  }, [closing]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [close]);
+
+  function dragStart(e: PointerEvent<HTMLDivElement>) {
+    if (locked || (e.target as HTMLElement).closest('button, a, input')) return;
+    drag.current = { y: e.clientY, moved: 0 };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+  function dragMove(e: PointerEvent<HTMLDivElement>) {
+    if (!drag.current || !sheet.current) return;
+    drag.current.moved = Math.max(0, e.clientY - drag.current.y);
+    sheet.current.style.transition = 'none';
+    sheet.current.style.transform = `translateY(${drag.current.moved}px)`;
+  }
+  function dragEnd() {
+    if (!drag.current || !sheet.current) return;
+    const far = drag.current.moved > 90;
+    drag.current = undefined;
+    sheet.current.style.transition = '';
+    if (far) close();
+    else sheet.current.style.transform = '';
+  }
+
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-grip" aria-hidden="true" />
-        <div className="sheet-head">
-          <h2>{title}</h2>
-          <button type="button" className="round-btn" aria-label="Close" onClick={onClose}>
-            <X size={18} />
-          </button>
+    <div className={`sheet-backdrop${closing ? ' closing' : ''}`} onClick={close}>
+      <div ref={sheet} className="sheet" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-handle" onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}>
+          <div className="sheet-grip" aria-hidden="true" />
+          <div className="sheet-head">
+            <h2>{title}</h2>
+            <button type="button" className="round-btn" aria-label="Close" onClick={close}>
+              <X size={18} />
+            </button>
+          </div>
         </div>
         {children}
       </div>
@@ -84,9 +130,20 @@ const TABS = [
   { href: 'stats', label: 'Stats', icon: BarChart3 },
 ];
 
+// Remembered between pages, so the marker slides from the tab you left to the one you opened.
+let lastTab = 0;
+
 export function TabBar({ active }: { active: string }) {
+  const index = Math.max(0, TABS.findIndex((t) => t.href === active));
+  const [at, setAt] = useState(lastTab);
+  useLayoutEffect(() => {
+    lastTab = index;
+    const frame = requestAnimationFrame(() => setAt(index));
+    return () => cancelAnimationFrame(frame);
+  }, [index]);
   return (
     <nav className="tabbar" aria-label="Main">
+      <span className="tab-pill" aria-hidden="true" style={{ transform: `translateX(calc(${at} * (100% + 2px)))` }} />
       {TABS.map(({ href, label, icon: Icon }) => (
         <a key={label} href={`#/${href}`} className={active === href ? 'on' : ''} aria-current={active === href ? 'page' : undefined}>
           <Icon size={21} strokeWidth={1.7} />

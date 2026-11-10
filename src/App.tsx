@@ -9,6 +9,7 @@ import { Settings } from './pages/Settings';
 import { Stats } from './pages/Stats';
 import { Welcome } from './pages/Welcome';
 import { useState } from 'react';
+import { animatePage, markIntent } from './motion';
 
 
 export function App() {
@@ -26,7 +27,10 @@ export function App() {
   if (!welcomed) {
     return (
       <Welcome
-        onStart={() => setWelcomed(true)}
+        onStart={() => {
+          markIntent();
+          animatePage('open', () => setWelcomed(true));
+        }}
       />
     );
   }

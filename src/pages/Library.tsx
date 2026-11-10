@@ -163,7 +163,7 @@ export function Library() {
           </Empty>
         )}
 
-        <ul className="arch-grid">
+        <ul className="arch-grid" key={shelf}>
           {shown.map((b) => {
             const p = progressOf(b);
             const hasChapters = (chaptersByBook.get(b.id)?.length ?? 0) > 0;

@@ -43,6 +43,10 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   or ask him about the chapters you have read. Answers are remembered on the phone so repeats cost nothing.
   Poses are the owner's pictures in `public/wizard/`.
 - Stats, quotes page, backups (export and restore), a welcome page on every app open.
+- Motion (`src/motion.ts`, `src/motion.css`): pages slide in the direction you go, a book's cover travels between the
+  shelf and its page, the tab marker slides, sheets close with a slide or a drag down, stats count up, the wizard moves
+  in steps like a game sprite, and finishing a book throws confetti. Settings → Look and feel → Animations turns it
+  all off; the phone's "Reduce Motion" setting does the same.
 
 ## Things that do not work or were decided against
 
@@ -70,7 +74,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 84 unit tests
+npm test          # 107 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```

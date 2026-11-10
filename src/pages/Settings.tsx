@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { TopBar } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
+import { motionSetting, setMotionSetting } from '../motion';
 import { makeBackup, parseBackup } from '../backup';
 import { chat } from '../translate/api';
 import { EMPTY_SETTINGS, fetchModels, loadSettings, saveSettings } from '../translate/run';
@@ -15,6 +16,7 @@ export function Settings() {
   );
   const [persisted, setPersisted] = useState<boolean>();
   const [message, setMessage] = useState('');
+  const [motion, setMotion] = useState(motionSetting);
 
   useEffect(() => {
     void navigator.storage?.persisted?.().then(setPersisted);
@@ -86,6 +88,25 @@ export function Settings() {
           {message && <p className="small">{message}</p>}
         </section>
         <TranslationSettings />
+        <section className="card">
+          <h3>Look and feel</h3>
+          <label className="row between">
+            <span>
+              Animations
+              <br />
+              <span className="muted small">Page slides, the wizard's movement and other small touches.</span>
+            </span>
+            <input
+              type="checkbox"
+              className="switch"
+              checked={motion}
+              onChange={(e) => {
+                setMotion(e.target.checked);
+                setMotionSetting(e.target.checked);
+              }}
+            />
+          </label>
+        </section>
         <section className="card">
           <h3>On iPhone</h3>
           <p className="muted">

@@ -16,15 +16,31 @@ export function Welcome({ onStart }: { onStart: () => void }) {
   function start() {
     if (tapped) return;
     setTapped(true);
-    window.setTimeout(onStart, 1400);
+    window.setTimeout(onStart, 1200);
   }
 
   return (
     <main className="welcome">
-      <img className="welcome-scene" src="/welcome.jpg" alt="" />
-      <h1>YoomiRead</h1>
+      <div className="welcome-stage">
+        <img className="welcome-scene" src="/welcome.jpg" alt="" />
+        <span className="welcome-sparks" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+          <i />
+        </span>
+      </div>
+      <h1 aria-label="YoomiRead">
+        {[...'YoomiRead'].map((letter, i) => (
+          <span key={i} aria-hidden="true" style={{ '--i': i } as React.CSSProperties}>
+            {letter}
+          </span>
+        ))}
+      </h1>
       <p>Read any world</p>
       <button type="button" className={`heart-start${tapped ? ' tapped' : ''}`} onClick={start} aria-label="Tap to start reading">
+        <i className="heart-ring" aria-hidden="true" />
+        <i className="heart-ring late" aria-hidden="true" />
         <svg viewBox="0 0 100 90" aria-hidden="true">
           <defs>
             <linearGradient id="layer-outer" x1="0" y1="0" x2="0" y2="1">
