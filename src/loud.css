@@ -1534,3 +1534,10 @@ body[data-reader='night'] {
     transform: rotateY(-166deg);
   }
 }
+
+/* Book page: the four shelves as buttons, so moving a book is one visible tap. */
+.shelf-pick {
+  margin: 14px 0 4px;
+  flex-wrap: wrap;
+  overflow: visible;
+}

@@ -184,16 +184,22 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
               <ChevronRight size={18} />
             </button>
           )}
-          <label className="select-pill">
-            <span className="sr-only">Shelf</span>
-            <select value={book.shelf} onChange={(e) => void setShelf(e.target.value as Shelf)}>
-              {SHELVES.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
+        </div>
+
+        {/* Which shelf the book sits on: one tap moves it. */}
+        <div className="filter-row shelf-pick" role="group" aria-label="Shelf">
+          <span className="filter-label">Shelf</span>
+          {SHELVES.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={`filter-chip${s.id === book.shelf ? ' on' : ''}`}
+              aria-pressed={s.id === book.shelf}
+              onClick={() => s.id !== book.shelf && void setShelf(s.id)}
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
 
         <div className="tool-row">
