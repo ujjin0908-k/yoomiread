@@ -40,22 +40,21 @@
 :root[data-nav='back']::view-transition-new(root) {
   animation-name: vt-in-left;
 }
-/* Between tabs: a short step in the direction of the tab. */
-:root[data-nav='tab-right']::view-transition-old(root) {
-  animation: 0.16s ease-in both vt-tab-out;
-  --shift: -14px;
+/*
+ * Between tabs: the old page is gone in a blink, then the new one glides in from the side of its tab.
+ * The two barely overlap, so one page is never seen through the other.
+ */
+:root[data-nav='tab-right']::view-transition-old(root),
+:root[data-nav='tab-left']::view-transition-old(root) {
+  animation: 0.09s ease-in both vt-fade-out;
 }
 :root[data-nav='tab-right']::view-transition-new(root) {
-  animation: 0.28s var(--ease-out) 0.06s both vt-tab-in;
-  --shift: 14px;
-}
-:root[data-nav='tab-left']::view-transition-old(root) {
-  animation: 0.16s ease-in both vt-tab-out;
-  --shift: 14px;
+  animation: 0.3s var(--ease-out) 0.07s both vt-tab-in;
+  --shift: 22px;
 }
 :root[data-nav='tab-left']::view-transition-new(root) {
-  animation: 0.28s var(--ease-out) 0.06s both vt-tab-in;
-  --shift: -14px;
+  animation: 0.3s var(--ease-out) 0.07s both vt-tab-in;
+  --shift: -22px;
 }
 /* Chapter to chapter: the next one rises into place. */
 :root[data-nav='fade']::view-transition-old(root) {
@@ -93,12 +92,6 @@
 @keyframes vt-in-left {
   from {
     translate: -26% 0;
-    opacity: 0;
-  }
-}
-@keyframes vt-tab-out {
-  to {
-    translate: var(--shift) 0;
     opacity: 0;
   }
 }
@@ -690,4 +683,22 @@
   .continue .cover::after {
     display: none;
   }
+}
+
+/*
+ * A page brought in by the browser's page change arrives whole: rows, covers and lines do not rise or fade in
+ * again after it, which read as a second, late wave of movement. Phones without page changes still get them.
+ */
+:root[data-vt] .page > *,
+:root[data-vt] :is(.shelf-row, .arch-grid, .tiles, .chapter-list, .glossary-list, .quote-list) > *,
+:root[data-vt] .cover img,
+:root[data-vt] .wizard-card p,
+:root[data-vt] .stars-md .star {
+  animation: none;
+}
+/* Progress filling up and the reading chart growing are part of the content: they play the first time a page is seen. */
+:root[data-vt]:not([data-first]) .bar > span,
+:root[data-vt]:not([data-first]) .ring-fill,
+:root[data-vt]:not([data-first]) .bar-mark {
+  animation: none;
 }

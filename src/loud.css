@@ -82,6 +82,11 @@ body::before {
 body[data-reader]::before {
   display: none;
 }
+/* The drifting light behind the frosted glass is redrawn under every glass panel on every frame. It holds still
+   while a page change runs, so the phone spends that time on the change itself. */
+:root[data-nav] body::before {
+  animation-play-state: paused;
+}
 
 .glass,
 .card,

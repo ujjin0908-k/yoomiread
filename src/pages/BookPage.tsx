@@ -28,10 +28,10 @@ import type { Book, BookLanguage, BookStyle, Chapter, Shelf, TranslateSettings }
 import { parseSources, sourcesText, webLink } from '../sources';
 
 export function BookPage({ id, sub }: { id: string; sub?: string }) {
-  const book = useLive(async () => (await db.books.get(id)) ?? null, [id]);
-  const chapters = useLive(() => db.chapters.where('bookId').equals(id).sortBy('number'), [id]);
-  const notes = useLive(() => db.notes.where('bookId').equals(id).toArray(), [id]);
-  const translated = useLive(async () => new Set(await db.translations.where('bookId').equals(id).primaryKeys()), [id]);
+  const book = useLive(async () => (await db.books.get(id)) ?? null, [id], 'book');
+  const chapters = useLive(() => db.chapters.where('bookId').equals(id).sortBy('number'), [id], 'book-chapters');
+  const notes = useLive(() => db.notes.where('bookId').equals(id).toArray(), [id], 'book-notes');
+  const translated = useLive(async () => new Set(await db.translations.where('bookId').equals(id).primaryKeys()), [id], 'book-translated');
   const chapterCosts = useLive(
     async () => (await db.translations.where('bookId').equals(id).toArray()).map((t) => t.cost).filter((c): c is number => c !== undefined),
     [id],

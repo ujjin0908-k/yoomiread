@@ -40,6 +40,28 @@ type Doc = Document & { startViewTransition?: (update: () => void | Promise<void
 // A page change is animated only when it follows a tap. A swipe back on iPhone already shows its own
 // animation, so that one is left alone.
 let lastIntent = -Infinity;
+
+/** The page change in progress, if any: work that can wait is done after it. */
+let changing: Promise<void> | undefined;
+export function afterPageChange(fn: () => void): void {
+  if (changing) void changing.then(fn);
+  else fn();
+}
+
+/**
+ * Pages already shown in this visit. Entrance effects (lists rising in, bars filling, numbers counting up) play the
+ * first time only; after that the page simply arrives with the page change, instead of a second wave of movement.
+ */
+const seen = new Set<string>();
+export function firstVisit(): boolean {
+  return document.documentElement.dataset.first === '1';
+}
+function markVisit(to: string[]): void {
+  const page = to[0] ?? '';
+  if (seen.has(page)) delete document.documentElement.dataset.first;
+  else document.documentElement.dataset.first = '1';
+  seen.add(page);
+}
 export function markIntent(): void {
   lastIntent = performance.now();
 }
@@ -94,6 +116,7 @@ export function animatePage(kind: string, update: () => void, from: string[] = [
   const recent = performance.now() - lastIntent < 900;
   // Stays until the next page change, so a page you return to is not replayed (see motion.css).
   document.documentElement.dataset.arrive = kind;
+  markVisit(to);
   // Into a chapter: a real book opens over the page. It does not need the browser's page transitions,
   // so it also plays on older iPhones.
   if (kind === 'open-book' && motionOk() && recent) {
@@ -101,9 +124,12 @@ export function animatePage(kind: string, update: () => void, from: string[] = [
     return;
   }
   if (!doc.startViewTransition || !motionOk() || !recent) {
+    // No browser page change: the page's own entrance effects are the movement.
+    delete document.documentElement.dataset.vt;
     update();
     return;
   }
+  document.documentElement.dataset.vt = '1';
 
   const named: HTMLElement[] = [];
   const name = (el: Element | null | undefined) => {
@@ -136,7 +162,11 @@ export function animatePage(kind: string, update: () => void, from: string[] = [
       else if (before && closing) name(await waitFor(linkTo(closing), 160));
       else await waitFor('.page > :nth-child(2), .welcome', 80);
     });
-    t.finished.then(done, done);
+    const ended = t.finished.then(done, done);
+    changing = ended;
+    void ended.then(() => {
+      if (changing === ended) changing = undefined;
+    });
   } catch {
     done();
     update();
@@ -145,9 +175,10 @@ export function animatePage(kind: string, update: () => void, from: string[] = [
 
 /** Counts from 0 up to `target` when a number first shows, then follows it. */
 export function useCountUp(target: number, ms = 900): number {
-  const [value, setValue] = useState(() => (motionOk() ? 0 : target));
+  // Counts up the first time a page is shown; when coming back, the number is simply there.
+  const [value, setValue] = useState(() => (motionOk() && firstVisit() ? 0 : target));
   useEffect(() => {
-    if (!motionOk()) {
+    if (!motionOk() || !firstVisit()) {
       setValue(target);
       return;
     }

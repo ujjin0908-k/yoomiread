@@ -41,16 +41,35 @@ async function decode(file: Blob): Promise<ImageBitmap | HTMLImageElement> {
   }
 }
 
-export function useObjectUrl(blob?: Blob): string | undefined {
+/** Picture addresses kept per book, so the same cover is not decoded again each time a page is shown. */
+const lasting = new Map<string, { blob: Blob; url: string }>();
+
+function lastingUrl(key: string, blob: Blob): string {
+  const hit = lasting.get(key);
+  // A fresh read of the same picture is a new Blob with the same size and type: keep the address.
+  if (hit && (hit.blob === blob || (hit.blob.size === blob.size && hit.blob.type === blob.type))) return hit.url;
+  // A new picture: the old address is let go a little later, once nothing on screen still shows it.
+  if (hit) window.setTimeout(() => URL.revokeObjectURL(hit.url), 10_000);
+  const url = URL.createObjectURL(blob);
+  lasting.set(key, { blob, url });
+  return url;
+}
+
+/**
+ * A picture address for a Blob. With a `key` (a book's id) the address lasts across pages and is ready on the
+ * first draw, so a cover never flashes in after its page appears.
+ */
+export function useObjectUrl(blob?: Blob, key?: string): string | undefined {
+  const kept = key && blob ? lastingUrl(key, blob) : undefined;
   const [url, setUrl] = useState<string>();
   useEffect(() => {
-    if (!blob) return setUrl(undefined);
+    if (kept || !blob) return setUrl(undefined);
     setUrl(URL.createObjectURL(blob));
-  }, [blob]);
+  }, [blob, kept]);
   // Revoke an old URL only after its replacement is on screen. Revoking it as soon as the blob changes
   // leaves the image pointing at a dead URL for one render, which shows as a broken picture.
   useEffect(() => {
     if (url) return () => URL.revokeObjectURL(url);
   }, [url]);
-  return url;
+  return kept ?? url;
 }

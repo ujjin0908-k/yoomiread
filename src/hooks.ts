@@ -1,13 +1,48 @@
 import { liveQuery } from 'dexie';
 import { useEffect, useRef, useState } from 'react';
-import { animatePage, markIntent, navKind } from './motion';
+import { afterPageChange, animatePage, markIntent, navKind } from './motion';
 
-/** Re-runs the query whenever the data it reads changes. */
-export function useLive<T>(query: () => Promise<T>, deps: unknown[]): T | undefined {
-  const [value, setValue] = useState<T>();
+/** The last result of each named query, so a page opened again shows its data at once. */
+const remembered = new Map<string, unknown>();
+const idFor = (key: string, deps: unknown[]) => `${key}|${deps.map(String).join('|')}`;
+
+/** Runs a named query once and keeps its result, so the page that uses it opens complete the first time too. */
+export async function rememberAhead<T>(key: string, query: () => Promise<T>, deps: unknown[] = []): Promise<void> {
+  const id = idFor(key, deps);
+  if (remembered.has(id)) return;
+  try {
+    remembered.set(id, await query());
+  } catch {
+    // Only a head start: the page reads it again anyway.
+  }
+}
+
+/**
+ * Re-runs the query whenever the data it reads changes.
+ *
+ * With a `key`, the last result is remembered: a page opened again draws with it straight away instead of empty,
+ * so a page change shows the finished page, and the fresh result is applied once the page change is over (it is
+ * almost always the same data, and redrawing a big page mid-animation is what made screen changes stutter).
+ */
+export function useLive<T>(query: () => Promise<T>, deps: unknown[], key?: string): T | undefined {
+  const id = key === undefined ? undefined : idFor(key, deps);
+  const [value, setValue] = useState<T | undefined>(() => (id ? (remembered.get(id) as T | undefined) : undefined));
   useEffect(() => {
-    const sub = liveQuery(query).subscribe({ next: setValue, error: (e) => console.error(e) });
-    return () => sub.unsubscribe();
+    let live = true;
+    const sub = liveQuery(query).subscribe({
+      next: (fresh) => {
+        const hadOne = id !== undefined && remembered.has(id);
+        if (id) remembered.set(id, fresh);
+        const apply = () => live && setValue(fresh);
+        if (hadOne) afterPageChange(apply);
+        else apply();
+      },
+      error: (e) => console.error(e),
+    });
+    return () => {
+      live = false;
+      sub.unsubscribe();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   return value;

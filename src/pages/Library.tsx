@@ -1,11 +1,11 @@
 import { Plus, Search, Sticker, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Cover, Empty, PageTitle, Pocket, ProgressBar, Stars, TabBar, type PocketTint } from '../components';
-import { db } from '../db';
 import { useLive } from '../hooks';
 import { LIBRARY_SORTS, SHELVES, bookProgress, sortBooks, type LibrarySort } from '../logic';
 import type { Book, BookLanguage, Chapter, Shelf } from '../types';
 import { StickerLayer, StickerTray, useStickers } from '../stickers';
+import { allBooks, allChapters } from '../queries';
 import { AddBook } from './AddBook';
 
 type LangFilter = 'all' | BookLanguage;
@@ -42,8 +42,8 @@ function loadPrefs(): LibraryPrefs {
 }
 
 export function Library() {
-  const books = useLive(() => db.books.toArray(), []);
-  const chapters = useLive(() => db.chapters.toArray(), []);
+  const books = useLive(allBooks, [], 'books');
+  const chapters = useLive(allChapters, [], 'chapters');
   const [prefs, setPrefs] = useState(loadPrefs);
   const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState('');
@@ -64,8 +64,15 @@ export function Library() {
   const change = (next: Partial<LibraryPrefs>) => setPrefs((p) => ({ ...p, ...next }));
 
   const all = books ?? [];
-  const chaptersByBook = new Map<string, Chapter[]>();
-  for (const c of chapters ?? []) chaptersByBook.set(c.bookId, [...(chaptersByBook.get(c.bookId) ?? []), c]);
+  const chaptersByBook = useMemo(() => {
+    const byBook = new Map<string, Chapter[]>();
+    for (const c of chapters ?? []) {
+      const list = byBook.get(c.bookId);
+      if (list) list.push(c);
+      else byBook.set(c.bookId, [c]);
+    }
+    return byBook;
+  }, [chapters]);
   const progressOf = (b: Book) => bookProgress(b, chaptersByBook.get(b.id) ?? []);
 
   const q = search.trim().toLowerCase();

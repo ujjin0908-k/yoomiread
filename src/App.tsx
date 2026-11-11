@@ -8,7 +8,9 @@ import { QuoteCard, Quotes } from './pages/Quotes';
 import { Settings } from './pages/Settings';
 import { Stats } from './pages/Stats';
 import { Welcome } from './pages/Welcome';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { rememberAhead } from './hooks';
+import { aiSpent, allBooks, allChapters, allQuotes, readingStats } from './queries';
 import { animatePage, markIntent } from './motion';
 
 
@@ -16,6 +18,21 @@ export function App() {
   const [page, id, sub] = useRoute();
   // The first page shows every time the app is opened, then the app opens as usual.
   const [welcomed, setWelcomed] = useState(false);
+  // A head start for the tabs: their data is read once while nothing else is happening, so each opens complete.
+  useEffect(() => {
+    const idle = typeof window.requestIdleCallback === 'function';
+    const later = (fn: () => void): number => (idle ? window.requestIdleCallback(fn, { timeout: 3000 }) : window.setTimeout(fn, 1500));
+    const id = later(() => {
+      void (async () => {
+        await rememberAhead('books', allBooks);
+        await rememberAhead('chapters', allChapters);
+        await rememberAhead('stats', readingStats);
+        await rememberAhead('spent', aiSpent);
+        await rememberAhead('quotes', allQuotes);
+      })();
+    });
+    return () => (idle ? window.cancelIdleCallback(id) : window.clearTimeout(id));
+  }, []);
   if (page === 'book' && id) return <BookPage key={id} id={id} sub={sub} />;
   if (page === 'chapter' && id) return <ChapterPage key={id} id={id} />;
   if (page === 'quote' && id) return <QuoteCard id={id} />;

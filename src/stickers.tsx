@@ -83,7 +83,7 @@ export const STICKERS: { kind: string; label: string; art: ReactNode }[] = [
 ];
 
 export function useStickers(): PlacedSticker[] {
-  return useLive(async () => ((await db.settings.get(KEY))?.value as PlacedSticker[] | undefined) ?? [], []) ?? [];
+  return useLive(async () => ((await db.settings.get(KEY))?.value as PlacedSticker[] | undefined) ?? [], [], 'stickers') ?? [];
 }
 
 async function change(update: (all: PlacedSticker[]) => PlacedSticker[]): Promise<void> {

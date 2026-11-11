@@ -63,6 +63,12 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   which chapter. A clean translation calms him.
 - Stickers (`src/stickers.tsx`): the sticker button in the Library lets you put stickers, or a photo, on the shelf
   pockets; drag to place, drag off the pocket to remove. Saved on the phone only and not part of a backup.
+- Screen changes (2026-11-12): measured at phone speed, they froze for about 120 ms while the new page loaded its data
+  and grouped every chapter (a slow, quadratic grouping), then showed both pages through each other, then faded rows
+  in late. Now: `useLive(query, deps, key)` remembers each page's last data, so a page draws complete at once, and
+  fresh data is applied after the change (`afterPageChange` in `src/motion.ts`); the tabs' data is read ahead in idle
+  time (`src/queries.ts`, `App.tsx`); covers keep one picture address per book; tabs use a quick fade-through; pages
+  brought in by a page change arrive whole (no late rows); the background light holds still during a change.
 
 ## Things that do not work or were decided against
 

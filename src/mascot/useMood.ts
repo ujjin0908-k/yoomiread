@@ -11,6 +11,7 @@ export function useMood(): { mood?: Mood; trouble?: Trouble } {
       trouble: (await db.settings.get(TROUBLE_KEY))?.value as Trouble | undefined,
     }),
     [],
+    'mood',
   );
   if (!data) return {};
   const mood = moodFrom(data.sessions, Date.now(), data.trouble);
