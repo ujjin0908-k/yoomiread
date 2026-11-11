@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Sheet } from '../components';
 import { db } from '../db';
 import { guessLanguage, newId, nextChapterNumber } from '../logic';
+import { fetchCover } from '../import/cover';
 import { chapterNumber, extractChapter, extractChapterLinks, fetchPage, findContentsChapter, findContentsLink, type ChapterLink } from '../import/web';
 import { webLink } from '../sources';
 import type { Book, Chapter } from '../types';
@@ -68,6 +69,8 @@ export function ChapterLinks({
   const [summary, setSummary] = useState('');
   const stop = useRef<AbortController>();
   const started = useRef(false);
+  // The contents page as read, kept so its cover picture can be taken when chapters are added.
+  const contents = useRef<{ html: string; url: string }>();
 
   // What is in the book already, by address and by title (a chapter pasted earlier has no address).
   const have = (l: ChapterLink) => chapters.some((c) => c.url === l.url || same(c.title, l.title));
@@ -90,6 +93,7 @@ export function ChapterLinks({
         }
       }
       if (!links.length) throw new Error("No chapter links were found on that page. Paste the novel's contents page, the one that lists all its chapters.");
+      contents.current = { html: page.html, url: page.url };
       setLink(page.url);
       setFound(links);
       setPicked(new Set(links.filter((l) => !have(l)).slice(0, DEFAULT_BATCH).map((l) => l.url)));
@@ -169,6 +173,11 @@ export function ChapterLinks({
       const change: Partial<Book> = { updatedAt: Date.now() };
       if (link && !sources.some((s) => s.url === link)) change.sources = [...sources, { name: new URL(link).hostname.replace(/^www\./, ''), url: link }];
       if (book.language === 'other' && lastText) change.language = guessLanguage(lastText);
+      // A book without a cover takes the novel's own, once, and never replaces one chosen by hand.
+      if (!book.cover && contents.current) {
+        const cover = await fetchCover(contents.current.html, contents.current.url).catch(() => undefined);
+        if (cover) change.cover = cover;
+      }
       await db.books.update(book.id, change);
     } finally {
       await awake?.release().catch(() => {});

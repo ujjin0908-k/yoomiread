@@ -77,6 +77,10 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   skipped. The pause and the one-at-a-time rule are there so the site is not hammered.
   Pasting a single chapter's link works too: the chapter page's script lists the novel's contents page, which
   `findContentsLink` reads (written for futiledevices.blog's page script; other sites need a contents page link).
+  Covers (`src/import/cover.ts`): a book made from a link takes the novel's cover, the contents page's share picture
+  (`og:image`), fetched by the browser straight from the site's picture host (needs the site to allow it; it does for
+  futiledevices.blog). Only pictures taller than wide are accepted, so a site logo is never used. Books without a cover
+  also get a "Get cover from the link" button; a cover chosen by hand is never replaced.
 - **WTR-LAB, Wuxia World:** declined earlier (before the rule above) and still not on the list.
 - **Fanqie:** declined as a link source. It publishes original novels, so the reason is not licensing: a link reader
   would copy the text in bulk, and the site's terms likely restrict that. Use paste or file import for chapters you read there.
@@ -96,7 +100,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 124 unit tests
+npm test          # 127 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```
