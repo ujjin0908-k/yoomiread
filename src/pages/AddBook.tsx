@@ -7,8 +7,8 @@ import { go } from '../hooks';
 import { shrinkImage } from '../images';
 import { SHELVES, guessLanguage, moveToShelf, newId } from '../logic';
 import type { DraftChapter } from '../import/chapters';
-import { coverForNewBook } from '../import/cover';
-import { extractChapter, extractChapterLinks, fetchPage, findContentsLink } from '../import/web';
+import { lookUpNovel } from '../import/cover';
+import { extractChapter, extractChapterLinks, fetchPage } from '../import/web';
 import { webLink } from '../sources';
 import type { Book, BookLanguage, Shelf } from '../types';
 
@@ -76,7 +76,7 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
             title: chapter.title,
             author: '',
             language: guessLanguage(listed.map((l) => l.title).join(' ')),
-            cover: await coverForNewBook(page.html, page.url),
+            cover: (await lookUpNovel(page.html, page.url))?.cover,
             chapters: [],
             sources: [{ name: host, url: page.url }],
           },
@@ -86,11 +86,18 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
         return;
       }
       if (!chapter.text) throw new Error('No story text was found on that page.');
-      // The novel's contents page, when the chapter's page says where it is: "Many from a link" starts from it later.
-      const up = findContentsLink(page.html, page.url);
-      const sources = up ? [{ name: new URL(up).hostname.replace(/^www\./, ''), url: up }] : undefined;
+      // A chapter of a novel with a contents page: the book takes the novel's title, cover and link, not the chapter's.
+      const novel = await lookUpNovel(page.html, page.url);
+      const chapterTitle = novel ? chapter.title.replace(/^[A-Z][A-Z0-9]{0,5}\s*[–—-]\s+/, '') : chapter.title;
       await save(
-        { title: chapter.title, author: '', language: guessLanguage(chapter.text), cover: await coverForNewBook(page.html, page.url), chapters: [{ ...chapter, url: page.url }], sources },
+        {
+          title: novel?.title || chapter.title,
+          author: '',
+          language: guessLanguage(chapter.text),
+          cover: novel?.cover,
+          chapters: [{ ...chapter, title: chapterTitle, url: page.url }],
+          sources: novel ? [{ name: new URL(novel.url).hostname.replace(/^www\./, ''), url: novel.url }] : undefined,
+        },
         'web',
       );
     } catch (e) {

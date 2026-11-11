@@ -3,3 +3,9 @@
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
+1:18:22 AM [vite] (client) hmr update /src/pages/AddBook.tsx, /src/pages/ChapterLinks.tsx, /src/pages/BookPage.tsx
+1:18:22 AM [vite] (client) hmr update /src/pages/BookPage.tsx, /src/pages/AddBook.tsx, /src/pages/ChapterLinks.tsx
+1:18:22 AM [vite] (client) hmr update /src/pages/AddBook.tsx
+1:18:37 AM [vite] (client) hmr update /src/pages/AddBook.tsx
+1:18:37 AM [vite] (client) hmr update /src/pages/BookPage.tsx, /src/pages/AddBook.tsx, /src/pages/ChapterLinks.tsx
+1:19:39 AM [vite] (client) hmr update /src/pages/AddBook.tsx, /src/pages/ChapterLinks.tsx, /src/pages/BookPage.tsx

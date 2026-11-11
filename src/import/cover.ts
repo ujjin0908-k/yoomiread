@@ -1,5 +1,5 @@
 import { coverShaped } from '../images';
-import { extractChapterLinks, fetchPage, findContentsLink } from './web';
+import { extractChapter, extractChapterLinks, fetchPage, findContentsLink } from './web';
 
 const MAX_BYTES = 10_000_000;
 
@@ -47,19 +47,36 @@ export async function coverFromLink(link: string): Promise<Blob> {
   const up = findContentsLink(page.html, page.url);
   if (up) {
     const contents = await fetchPage(up);
-    return fetchCover(contents.html, contents.url);
+    // A guessed contents page only counts when it really lists chapters.
+    if (extractChapterLinks(contents.html, contents.url).length >= 5) return fetchCover(contents.html, contents.url);
   }
   return fetchCover(page.html, page.url);
 }
 
-/** For a book being made right now: the cover when it can be had, nothing when it cannot. Never blocks the import. */
-export async function coverForNewBook(html: string, pageUrl: string): Promise<Blob | undefined> {
+export interface Novel {
+  /** The novel's contents page. */
+  url: string;
+  /** The novel's own title, not a chapter's. */
+  title: string;
+  cover?: Blob;
+}
+
+/**
+ * The novel behind a link: from its contents page, or from one of its chapters. Gives its contents page, its title and
+ * its cover when they can be had, and nothing when the page is not part of a novel with a list of chapters.
+ * For a book being made right now, so it never throws and never blocks the import.
+ */
+export async function lookUpNovel(html: string, pageUrl: string): Promise<Novel | undefined> {
   try {
-    if (extractChapterLinks(html, pageUrl).length >= 5) return await fetchCover(html, pageUrl);
-    const up = findContentsLink(html, pageUrl);
-    if (!up) return undefined;
-    const contents = await fetchPage(up);
-    return await fetchCover(contents.html, contents.url);
+    let contents = { html, url: pageUrl };
+    if (extractChapterLinks(html, pageUrl).length < 5) {
+      const up = findContentsLink(html, pageUrl);
+      if (!up) return undefined;
+      contents = await fetchPage(up);
+      if (extractChapterLinks(contents.html, contents.url).length < 5) return undefined;
+    }
+    const cover = await fetchCover(contents.html, contents.url).catch(() => undefined);
+    return { url: contents.url, title: extractChapter(contents.html).title, cover };
   } catch {
     return undefined;
   }

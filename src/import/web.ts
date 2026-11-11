@@ -15,8 +15,12 @@ export function extractChapter(html: string): DraftChapter {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   doc.querySelectorAll(NOISE).forEach((el) => el.remove());
 
-  // With no heading left, the page title is used, without the site's own name on the end ("Chapter 1 – Some Site").
-  const title = doc.querySelector('h1')?.textContent?.trim() || doc.title.replace(/\s+[–—|-]\s+[^–—|]+$/, '').trim() || 'Chapter';
+  // The heading, unless it is some other part of the page ("Related Novels") and the page title names the chapter.
+  // The page title comes without the site's own name on the end ("Chapter 1 – Some Site").
+  const heading = doc.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim();
+  const pageTitle = doc.title.replace(/\s+[–—|-]\s+([^–—|]+)$/, (whole, last: string) => (CHAPTER_WORD.test(last) ? whole : '')).trim();
+  const title =
+    heading && (!pageTitle || pageTitle.toLowerCase().includes(heading.toLowerCase()) || !CHAPTER_WORD.test(pageTitle)) ? heading : pageTitle || heading || 'Chapter';
 
   // The story is usually the block with the most paragraph text.
   const candidates = [...doc.querySelectorAll('article, main, section, div')];
@@ -30,7 +34,8 @@ export function extractChapter(html: string): DraftChapter {
     }
   }
 
-  let paragraphs = [...best.querySelectorAll('p')].map((p) => p.textContent?.replace(/\s+/g, ' ').trim() ?? '');
+  // A breadcrumb can leave a "> " at the start of the first paragraph.
+  let paragraphs = [...best.querySelectorAll('p')].map((p) => p.textContent?.replace(/\s+/g, ' ').replace(/^[>›»]\s+/, '').trim() ?? '');
   if (paragraphs.filter(Boolean).length < 3) {
     // Pages without <p> tags: use the line breaks of the text.
     paragraphs = (best.textContent ?? '').split(/\n+/).map((l) => l.replace(/\s+/g, ' ').trim());
@@ -72,7 +77,11 @@ function addressShape(url: string): string {
  */
 export function extractChapterLinks(html: string, pageUrl: string): ChapterLink[] {
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  doc.querySelectorAll(NOISE).forEach((el) => el.remove());
+  // Some sites keep the whole list inside <noscript>, which a script-free parser may hand over as plain text.
+  doc.querySelectorAll('noscript').forEach((el) => {
+    if (!el.children.length && (el.textContent ?? '').includes('<a')) el.innerHTML = el.textContent ?? '';
+  });
+  doc.querySelectorAll(NOISE.replace('noscript, ', '')).forEach((el) => el.remove());
   let base: URL;
   try {
     base = new URL(pageUrl);
@@ -80,8 +89,8 @@ export function extractChapterLinks(html: string, pageUrl: string): ChapterLink[
     return [];
   }
 
-  const seen = new Set<string>();
-  const all: ChapterLink[] = [];
+  // Every link on the page, in order. The same address can appear twice ("Start reading" and "Ch1 - Title").
+  const raw: ChapterLink[] = [];
   for (const a of doc.querySelectorAll('a[href]')) {
     let url: URL;
     try {
@@ -93,13 +102,20 @@ export function extractChapterLinks(html: string, pageUrl: string): ChapterLink[
     // Share buttons and reply links point back at the same page with a tag on the end.
     if (url.searchParams.has('share') || url.searchParams.has('replytocom')) continue;
     url.hash = '';
-    const title = (a.textContent ?? '').replace(/\s+/g, ' ').trim();
-    if (!title || url.href === base.href || seen.has(url.href)) continue;
-    seen.add(url.href);
-    all.push({ title, url: url.href });
+    // A small badge inside the link ("Chinese" on a chapter that is not translated yet) is kept as a note.
+    const label = a.cloneNode(true) as HTMLElement;
+    label.querySelectorAll('small, sup').forEach((badge) => badge.replaceWith(` (${badge.textContent?.trim() ?? ''}) `));
+    const title = (label.textContent ?? '').replace(/\s+/g, ' ').replace(/\(\s*\)/g, '').trim();
+    if (!title || url.href === base.href) continue;
+    raw.push({ title, url: url.href });
   }
+  const firstOfEach = (list: ChapterLink[]) => {
+    const seen = new Set<string>();
+    return list.filter((l) => !seen.has(l.url) && !!seen.add(l.url));
+  };
 
-  let links = all.filter((l) => CHAPTER_WORD.test(l.title));
+  const all = firstOfEach(raw);
+  let links = firstOfEach(raw.filter((l) => CHAPTER_WORD.test(l.title)));
   if (links.length < 5) {
     // Titles that do not say "chapter": the biggest group of posts that share one kind of address.
     const groups = new Map<string, ChapterLink[]>();
@@ -137,13 +153,28 @@ export function findContentsLink(html: string, pageUrl: string): string | undefi
   const fromTitle = /^\s*([A-Z][A-Z0-9]{0,5})\s*[–—-]\s/.exec(heading)?.[1];
   const fromAddress = base.pathname.split('/').filter(Boolean).pop()?.split('-')[0]?.toUpperCase();
   const codes = [fromTitle, fromAddress].filter((c): c is string => !!c);
-  if (!codes.length) return undefined;
   for (const script of doc.querySelectorAll('script')) {
     const source = script.textContent ?? '';
     for (const code of codes) {
       const hit = new RegExp(`[{,\\s]${code}\\s*:\\s*['"](/[^'"]+/)['"]`).exec(source);
       if (hit) return new URL(hit[1], base.origin).href;
     }
+  }
+  // Otherwise a link on the page to a parent address: /novel-tl/tour/tour-1/ sits under /novel-tl/tour/, which is the
+  // novel's page. The caller checks that page really lists chapters, so a wrong guess is dropped.
+  const linked = new Set<string>();
+  for (const a of doc.querySelectorAll('a[href]')) {
+    try {
+      const url = new URL(a.getAttribute('href')!, base);
+      if (url.origin === base.origin) linked.add(url.pathname.replace(/\/+$/, ''));
+    } catch {
+      // Not a web address: skip it.
+    }
+  }
+  const parts = base.pathname.split('/').filter(Boolean);
+  for (let n = parts.length - 1; n >= 1; n--) {
+    const path = `/${parts.slice(0, n).join('/')}`;
+    if (linked.has(path)) return new URL(`${path}/`, base.origin).href;
   }
   return undefined;
 }
