@@ -18,6 +18,18 @@ describe('reading a web page', () => {
   });
 });
 
+describe('a blog post', () => {
+  it('takes the title without the site name, and drops the empty labels after the story', () => {
+    const html = `<html><head><title>CL – Chapter 1: The Beginning – Some Scans</title></head><body>
+      <header><h1>Some Scans</h1></header>
+      <article><p>The snow was heavy.</p><p>He walked on.</p><p>The dog followed.</p><p>By:</p><p>Posted in:</p></article>
+      </body></html>`;
+    const chapter = extractChapter(html);
+    expect(chapter.title).toBe('CL – Chapter 1: The Beginning');
+    expect(chapter.text).toBe('The snow was heavy.\n\nHe walked on.\n\nThe dog followed.');
+  });
+});
+
 describe('the page fetcher only reads allowed sites', () => {
   it('allows listed sites and their subdomains', () => {
     expect(checkWebUrl('https://page.kakao.com/content/1/viewer/2')).toBeInstanceOf(URL);

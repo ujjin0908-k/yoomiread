@@ -32,7 +32,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 ## Main features
 
 - Library with shelves, reading progress, ratings and reviews.
-- Import: PDF, ePub, pasted text, and a web link (Kakao Page and Naver Series only, see below).
+- Import: PDF, ePub, pasted text, and a web link (Kakao Page, Naver Series and futiledevices.blog, see below).
 - Reader: Chinese or English view, font and paper themes, highlights in colours and folders, comments.
 - Translation: chapter by chapter or in batches, with a cost estimate; a glossary built from the first chapters
   (names and terms, approved by the reader); translate ahead while reading (next 1 to 3 chapters, set in Settings).
@@ -68,8 +68,11 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   browser both show no story text without a login. Not built.
 - **Naver Series:** answered 403 from the test environment. Untested on a real phone.
 - **Novel Updates:** blocked by its Cloudflare check.
-- **WTR-LAB, Wuxia World:** declined. They host unlicensed translated novels, and fetching chapters from them
-  would copy the books. Please don't ask for these.
+- **Link sources, rule changed by the owner on 2026-11-11:** fan-translation sites may be added when the owner asks
+  for one by name, for private reading only. The link reader takes one chapter per pasted link and keeps it on the
+  owner's phone; it does not crawl a whole novel and nothing is shared onwards. First one added: `futiledevices.blog`.
+  The list is `ALLOWED_SITES` in `netlify/edge-functions/fetch-page.ts`.
+- **WTR-LAB, Wuxia World:** declined earlier (before the rule above) and still not on the list.
 - **Fanqie:** declined as a link source. It publishes original novels, so the reason is not licensing: a link reader
   would copy the text in bulk, and the site's terms likely restrict that. Use paste or file import for chapters you read there.
 - **Highlights:** a highlight shows only in the language it was made in (original or English).
@@ -88,7 +91,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 114 unit tests
+npm test          # 115 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```
