@@ -1,23 +1,16 @@
 import { ArrowRight, Search, X } from 'lucide-react';
 import { useState } from 'react';
 import { Cover, Empty, PageTitle, TabBar, TopBar } from '../components';
-import { db } from '../db';
 import { useLive } from '../hooks';
 import { folderNames, formatDate } from '../logic';
-import type { Book, Chapter, Note } from '../types';
+import { allQuotes, type QuoteItem } from '../queries';
+import type { Book } from '../types';
 
 function useQuotes() {
-  return useLive(async () => {
-    const notes = await db.notes.where('kind').equals('highlight').reverse().sortBy('createdAt');
-    const books = new Map((await db.books.toArray()).map((b) => [b.id, b]));
-    const chapters = new Map((await db.chapters.toArray()).map((c) => [c.id, c]));
-    return notes
-      .filter((n) => books.has(n.bookId))
-      .map((n) => ({ note: n, book: books.get(n.bookId)!, chapter: chapters.get(n.chapterId) }));
-  }, []);
+  return useLive(allQuotes, [], 'quotes');
 }
 
-type QuoteItem = { note: Note; book: Book; chapter?: Chapter };
+
 
 export function Quotes() {
   const quotes = useQuotes();

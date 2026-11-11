@@ -1,20 +1,17 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { PageTitle, TabBar } from '../components';
-import { db } from '../db';
 import { useLive } from '../hooks';
 import { useCountUp } from '../motion';
-import { computeStats, formatDuration, type Stats as StatsData } from '../logic';
+import { aiSpent, readingStats } from '../queries';
+import { formatDuration, type Stats as StatsData } from '../logic';
 import { formatCost } from '../translate/prompt';
 import { lineFor } from '../mascot/lines';
 import { useMood } from '../mascot/useMood';
 import { Wizard } from '../mascot/Wizard';
 
 export function Stats() {
-  const stats = useLive(async () => computeStats(await db.books.toArray(), await db.sessions.toArray()), []);
-  const spent = useLive(async () => {
-    const books = await db.books.toArray();
-    return { total: books.reduce((sum, b) => sum + (b.spent ?? 0), 0), estimated: books.some((b) => b.spentEstimated) };
-  }, []);
+  const stats = useLive(readingStats, [], 'stats');
+  const spent = useLive(aiSpent, [], 'spent');
 
   const { mood, trouble } = useMood();
 

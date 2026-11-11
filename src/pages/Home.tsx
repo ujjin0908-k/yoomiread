@@ -17,9 +17,13 @@ export function Home() {
     const sessions = await db.sessions.toArray();
     const lines = await db.notes.where('kind').equals('highlight').count();
     const byBook = new Map<string, Chapter[]>();
-    for (const c of chapters) byBook.set(c.bookId, [...(byBook.get(c.bookId) ?? []), c]);
+    for (const c of chapters) {
+      const list = byBook.get(c.bookId);
+      if (list) list.push(c);
+      else byBook.set(c.bookId, [c]);
+    }
     return { books, byBook, sessions, lines, backup: await loadBackupState() };
-  }, []);
+  }, [], 'home');
   const [adding, setAdding] = useState(false);
   const online = useOnline();
   const { mood } = useMood();
