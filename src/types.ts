@@ -92,6 +92,27 @@ export interface Translation {
 export type GlossaryKind = 'person' | 'place' | 'term';
 export type Gender = 'he' | 'she' | 'they' | 'it';
 
+/** One thing known about a character, with the chapter it came from. */
+export interface ProfileFact {
+  text: string;
+  /** The chapter number it was read in. Missing on lines the owner wrote. */
+  chapter?: number;
+  /** Written or edited by the owner: an update never changes or removes it. */
+  mine?: boolean;
+}
+
+/** What is known about a character so far, built only from chapters the owner has read. */
+export interface CharacterProfile {
+  /** One short line for the cast list. */
+  line?: string;
+  looks: ProfileFact[];
+  about: ProfileFact[];
+  quote?: ProfileFact;
+  /** The profile covers the story up to and including this chapter number. */
+  upTo?: number;
+  updatedAt?: number;
+}
+
 /** One name or term in a book's glossary, so translations stay consistent. */
 export interface GlossaryEntry {
   id: string;
@@ -109,6 +130,12 @@ export interface GlossaryEntry {
   status: 'ok' | 'review';
   /** Optional face for the reader (small JPEG). */
   picture?: Blob;
+  /** People only: a main or a side character. Not set counts as side. */
+  role?: 'main' | 'side';
+  /** Other names the same character goes by ("Little Song", "the boss"), used to find their scenes. */
+  aliases?: string[];
+  /** People only: the character profile. */
+  profile?: CharacterProfile;
   createdAt: number;
   updatedAt: number;
 }

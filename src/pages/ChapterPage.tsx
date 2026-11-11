@@ -5,6 +5,7 @@ import { db } from '../db';
 import { go, useLive } from '../hooks';
 import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speaksAs, wordAt } from '../logic';
 import { WordSheet } from './WordSheet';
+import { ProfileLink } from './Character';
 import { Mascot } from '../mascot/Mascot';
 import { CENSORED } from '../translate/prompt';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
@@ -411,9 +412,10 @@ export function ChapterPage({ id }: { id: string }) {
               {card.original}
             </p>
             {card.gender && <span className="chip">{card.gender}</span>}
-            {card.note && <p>{card.note}</p>}
+            {(card.profile?.line ?? card.note) && <p>{card.profile?.line ?? card.note}</p>}
+            <ProfileLink entry={card} />
             <a className="link" href={`#/glossary/${card.bookId}`}>
-              Open the glossary
+              Open the cast
             </a>
           </div>
         </Sheet>

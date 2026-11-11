@@ -1581,3 +1581,542 @@ body[data-reader='night'] {
 .batch-stray .switch {
   flex: none;
 }
+
+/* ---------- The cast and character cards ---------- */
+
+/* A character's face: their picture, or initials on a colour with one shape, like the made-up book covers. */
+.face {
+  position: relative;
+  display: grid;
+  place-items: end start;
+  overflow: hidden;
+  background: #14121f;
+  color: #fff;
+}
+.face::after {
+  content: '';
+  position: absolute;
+}
+.face img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.face b {
+  position: relative;
+  z-index: 1;
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+}
+
+@property --foil {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes foil-turn {
+  to {
+    --foil: 360deg;
+  }
+}
+/* Holographic foil edge: a turning rainbow behind the card, showing as a thin rim. */
+.foil {
+  position: absolute;
+  inset: -40%;
+  background: conic-gradient(from var(--foil), #ff8a5c, #ffd23f, #c8f560, #7dd3fc, #b79cff, #ff9ecb, #ff8a5c);
+  animation: foil-turn 6s linear infinite;
+}
+
+.cast .page-title {
+  margin-bottom: 12px;
+}
+.cast .filter-row {
+  margin-bottom: 18px;
+}
+.cast.has-bar {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 110px);
+}
+.cast-label {
+  margin: 4px 0 10px;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.cast-grid {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.cast-card {
+  position: relative;
+  display: block;
+  padding: 3px;
+  border-radius: 20px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.cast-card::before {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  z-index: -1;
+  background: conic-gradient(from var(--foil), #ff8a5c, #ffd23f, #c8f560, #7dd3fc, #b79cff, #ff9ecb, #ff8a5c);
+  animation: foil-turn 6s linear infinite;
+}
+.cast-card-in {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 214px;
+  border-radius: 17px;
+  background: #fffaf3;
+  color: #14121f;
+  overflow: hidden;
+}
+.cast-face {
+  height: 122px;
+  padding: 10px;
+}
+.cast-face b {
+  font-size: 2.3rem;
+}
+.cast-new {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  z-index: 2;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #c8f560;
+  color: #14121f;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.cast-card-in strong {
+  padding: 9px 10px 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+.cast-line {
+  padding: 3px 10px 10px;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: #3b3752;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cast-rows {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cast-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 18px;
+}
+.cast-row-face,
+.pick-face {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  place-items: center;
+}
+.cast-row-face b,
+.pick-face b {
+  font-size: 1rem;
+}
+.cast-bar {
+  position: fixed;
+  left: 20px;
+  right: 20px;
+  bottom: calc(env(safe-area-inset-bottom) + 22px);
+  z-index: 6;
+  max-width: 600px;
+  margin: 0 auto;
+  height: 56px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  box-shadow: 0 12px 24px rgb(232 50 14 / 0.35);
+  cursor: pointer;
+}
+
+/* The character card page */
+.character-page .page {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 120px);
+}
+.char-hero {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  margin-top: 6px;
+}
+.char-card {
+  position: relative;
+  flex: none;
+  width: 132px;
+  height: 184px;
+  padding: 4px;
+  border-radius: 20px;
+  overflow: hidden;
+  isolation: isolate;
+  animation: b3-float 5s ease-in-out infinite;
+}
+.char-card .foil {
+  z-index: -1;
+}
+.char-card-in {
+  position: relative;
+  display: block;
+  height: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.char-face {
+  position: absolute;
+  inset: 0;
+  padding: 12px;
+  place-items: start start;
+}
+.char-face b {
+  font-size: 3.2rem;
+}
+.char-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 38%, rgb(255 255 255 / 0.35) 50%, transparent 62%);
+  translate: -170% 0;
+  animation: b3-shine 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+.char-pic {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.92);
+  color: #14121f;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.char-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 4px;
+}
+.char-meta h1 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 2.3rem;
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+  overflow-wrap: anywhere;
+}
+.char-role button {
+  min-height: 34px;
+  padding: 0 14px;
+}
+.chip-outline {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.char-upto {
+  color: var(--ink-2);
+  line-height: 1.35;
+}
+.spoiler-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 10px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: #c8f560;
+  color: #14121f;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.char-line {
+  margin: 4px 2px 10px;
+  font-family: var(--italic);
+  font-style: italic;
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+.fact-box {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border-radius: 20px;
+}
+.fact-box h2,
+.char-quote h2 {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--olive);
+}
+.fact-box ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+.fact-box li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.fact-ch {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.fact-x {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin: -4px -6px 0 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.fact-add {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.fact-add input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--surface);
+  font-size: 16px;
+}
+.char-quote {
+  margin: 10px 0;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: #14121f;
+  color: #fff;
+}
+.char-quote h2 {
+  color: #ffd23f;
+}
+.char-quote blockquote {
+  margin: 4px 0 8px;
+  font-family: var(--italic);
+  font-style: italic;
+  font-size: 1.35rem;
+  line-height: 1.12;
+}
+.char-quote .small {
+  color: #b9b5d0;
+  font-weight: 700;
+}
+.char-quote .link {
+  color: #b9b5d0;
+}
+.char-bar {
+  position: fixed;
+  left: 20px;
+  right: 20px;
+  bottom: calc(env(safe-area-inset-bottom) + 22px);
+  z-index: 6;
+  max-width: 600px;
+  margin: 0 auto;
+}
+/* The red update button: what it does on the left, the price on the right. */
+.update-btn {
+  width: 100%;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px 6px 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  text-align: left;
+  box-shadow: 0 12px 24px rgb(232 50 14 / 0.3);
+  cursor: pointer;
+}
+.update-btn > span {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+.update-btn small {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+.update-btn em {
+  flex: none;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: #14121f;
+  font-style: normal;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.update-btn:disabled {
+  background: var(--surface-2);
+  color: var(--ink-2);
+  box-shadow: none;
+  cursor: default;
+}
+
+/* "Who to update?" */
+.pick-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pick-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+.pick-row.on {
+  border: 2px solid var(--ink);
+}
+.pick-row.done {
+  opacity: 0.6;
+  cursor: default;
+}
+.pick-row input,
+.form .row input[type='checkbox'] {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+.tag-main,
+.tag-side {
+  margin-left: 4px;
+  font-style: normal;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.tag-main {
+  color: var(--olive);
+}
+.tag-side {
+  color: var(--muted);
+}
+.person-card .pill-btn {
+  margin-top: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foil,
+  .cast-card::before,
+  .char-card,
+  .char-shine {
+    animation: none;
+  }
+}
+:root[data-motion='off'] .char-shine {
+  display: none;
+}
+
+/* Form labels stack their contents; the update rows are a single line. */
+.form .pick-row {
+  flex-direction: row;
+  align-items: center;
+  text-align: left;
+}
+.form .pick-row input[type='checkbox'] {
+  width: 20px;
+}
+/* Small faces show only the initials; the colour's shape is for the big cards. */
+.cast-row-face::after,
+.pick-face::after {
+  display: none;
+}
+.char-quote blockquote {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+/* The "up to date" button sits over the page: solid, so the page does not show through. */
+.update-btn:disabled {
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  color: var(--ink-2);
+}
+.form label.row {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}

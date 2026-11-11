@@ -2,6 +2,7 @@ import { db } from '../db';
 import { newId } from '../logic';
 import type { Chapter, GlossaryEntry, ModelOption, TranslateSettings, Translation } from '../types';
 import { chat, type ChatResult } from './api';
+import { needsTranslation } from '../logic';
 import { clearTrouble, noteTrouble } from '../mascot/trouble';
 import { CENSORED, chapterMessages, cleanTitle, costOf, estimateTokens, glossaryScanMessages, isRefusal, parseTerms, pronounWarnings, splitReply, titleMessages, type ChatMessage, type ProposedTerm } from './prompt';
 import { paragraphs } from '../logic';
@@ -228,7 +229,7 @@ export async function scanGlossary(bookId: string, settings: TranslateSettings, 
     if (sample.length > 12_000) break;
   }
   if (!sample.trim()) throw new Error('This book has no chapter text to read yet.');
-  const messages = glossaryScanMessages({ bookTitle: book?.title ?? '', sample: sample.slice(0, 12_000), known });
+  const messages = glossaryScanMessages({ bookTitle: book?.title ?? '', sample: sample.slice(0, 12_000), known, plain: !needsTranslation(book, sample) });
   const result = await chat(settings, model, messages, undefined, signal);
   const spend = callCost(modelFor(settings, model), messages, result);
   await addSpend(bookId, spend.cost, spend.estimated);
