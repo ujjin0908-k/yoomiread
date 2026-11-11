@@ -4,7 +4,9 @@ import { Empty, Sheet, TopBar } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
 import { shrinkImage, useObjectUrl } from '../images';
-import { newId } from '../logic';
+import { needsTranslation, newId } from '../logic';
+import { chaptersToRead } from '../translate/profiles';
+import { UpdateSheet } from './Character';
 import { loadSettings, modelFor, scanGlossary } from '../translate/run';
 import type { Gender, GlossaryEntry, GlossaryKind } from '../types';
 
@@ -24,10 +26,39 @@ export function Avatar({ entry, size = 32, onClick }: { entry: GlossaryEntry; si
   );
 }
 
+/** Initials for a face without a picture: "Song Zang" gives SZ, 林梅 gives 林. */
+export function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return '?';
+  if (/[^\x00-\x7f]/.test(words[0][0])) return words[0][0];
+  return (words[0][0] + (words[1]?.[0] ?? '')).toUpperCase();
+}
+
+const TONES = ['olive', 'ink', 'clay', 'sage', 'night'];
+/** A colour for a character, always the same for the same name. */
+export function toneOf(name: string): string {
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return `tone-${TONES[h % TONES.length]}`;
+}
+
+/** A character's face: their picture, or their initials on their own colour. */
+export function Face({ entry, className = '' }: { entry: GlossaryEntry; className?: string }) {
+  const url = useObjectUrl(entry.picture);
+  return (
+    <span className={`face ${url ? '' : toneOf(entry.english)} ${className}`} aria-hidden="true">
+      {url ? <img src={url} alt="" /> : <b>{initials(entry.english)}</b>}
+    </span>
+  );
+}
+
 export function GlossaryPage({ bookId }: { bookId: string }) {
   const book = useLive(async () => (await db.books.get(bookId)) ?? null, [bookId]);
   const entries = useLive(() => db.glossary.where('bookId').equals(bookId).toArray(), [bookId]);
+  const chapters = useLive(() => db.chapters.where('bookId').equals(bookId).toArray(), [bookId]);
   const [open, setOpen] = useState<GlossaryEntry | 'new'>();
+  const [kind, setKind] = useState<GlossaryKind>('person');
+  const [updating, setUpdating] = useState(false);
   const [scan, setScan] = useState('');
 
   if (book === undefined) return <TopBar back="library" />;
@@ -40,16 +71,23 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
     );
   }
 
+  // An English book has no Chinese names and nothing to translate: the page is simply its cast.
+  const plain = !needsTranslation(book);
   const list = (entries ?? []).sort((a, b) => a.english.localeCompare(b.english));
   const review = list.filter((g) => g.status === 'review');
   const approved = list.filter((g) => g.status === 'ok');
+  const people = approved.filter((g) => g.kind === 'person');
+  const main = people.filter((g) => g.role === 'main');
+  const side = people.filter((g) => g.role !== 'main');
+  const others = approved.filter((g) => g.kind === kind);
+  const newFor = (g: GlossaryEntry) => chaptersToRead(chapters ?? [], g).length;
 
   async function runScan() {
     setScan('Reading the first chapters…');
     try {
       const settings = await loadSettings();
       const added = await scanGlossary(bookId, settings, modelFor(settings, book!.model).id);
-      setScan(added ? `Found ${added} names and terms. Check them below, then approve.` : 'No new names found.');
+      setScan(added ? `Found ${added} ${plain ? 'characters' : 'names and terms'}. Check them below, then approve.` : 'No new names found.');
     } catch (e) {
       setScan(e instanceof Error ? e.message : 'The scan failed.');
     }
@@ -66,63 +104,125 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
     await db.glossary.bulkDelete(junk.map((g) => g.id));
   }
 
+  const count = (k: GlossaryKind) => approved.filter((g) => g.kind === k).length;
+
   return (
     <>
       <TopBar
         back={`book/${bookId}`}
-        title="Glossary"
+        title={book.title}
         right={
-          <button type="button" className="round-btn" aria-label="Add entry" onClick={() => setOpen('new')}>
+          <button type="button" className="round-btn" aria-label="Add a name" onClick={() => setOpen('new')}>
             <Plus size={18} />
           </button>
         }
       />
-      <main className="page">
-        <h1 className="glossary-title" lang={book.language === 'zh' ? 'zh' : undefined}>
-          {book.title}
-        </h1>
-        <p className="muted small">
-          Names and terms the translator must keep the same. Only approved entries are used. Locked ones never change.
-        </p>
+      <main className={`page cast${people.length ? ' has-bar' : ''}`}>
+        <header className="page-title">
+          <div className="page-title-text">
+            <h1>
+              The cast
+              <i className="dot" aria-hidden="true">
+                .
+              </i>
+            </h1>
+            <p>
+              {plain
+                ? 'Who is who in this book. Profiles are built only from chapters you have read.'
+                : 'Names the translator keeps the same, and who is who. Only approved entries are used.'}
+            </p>
+          </div>
+        </header>
 
-        <button type="button" className="btn ghost wide" disabled={scan.endsWith('…')} onClick={() => void runScan()}>
-          <Sparkles size={16} /> Build glossary from the first chapters
-        </button>
-        {scan && <p className="small center">{scan}</p>}
+        <div className="filter-row" role="group" aria-label="Kind">
+          {(['person', 'place', 'term'] as const).map((k) => (
+            <button key={k} type="button" className={`filter-chip${kind === k ? ' on' : ''}`} aria-pressed={kind === k} onClick={() => setKind(k)}>
+              {KIND_LABEL[k]} {count(k)}
+            </button>
+          ))}
+        </div>
 
         {review.length > 0 && (
           <section className="glossary-group review">
             <div className="section-head">
-              <h2>Needs review</h2>
+              <h2>To check</h2>
               <button type="button" className="link" onClick={() => void approveAll()}>
                 <Check size={16} /> Approve all
               </button>
-              <button type="button" className="link" onClick={() => void removeEnglishOnly()}>
-                Remove English-only
-              </button>
+              {!plain && (
+                <button type="button" className="link" onClick={() => void removeEnglishOnly()}>
+                  Remove English-only
+                </button>
+              )}
             </div>
             <EntryList entries={review} onOpen={setOpen} />
           </section>
         )}
 
-        {(['person', 'place', 'term'] as const).map((kind) => {
-          const group = approved.filter((g) => g.kind === kind);
-          if (!group.length) return null;
-          return (
-            <section key={kind} className="glossary-group">
-              <div className="section-head">
-                <h2>{KIND_LABEL[kind]}</h2>
-              </div>
-              <EntryList entries={group} onOpen={setOpen} />
+        {kind === 'person' ? (
+          <>
+            {main.length > 0 && (
+              <section>
+                <h2 className="cast-label">Main characters</h2>
+                <ul className="cast-grid">
+                  {main.map((g) => (
+                    <li key={g.id}>
+                      <a className="cast-card" href={`#/character/${g.id}`}>
+                        <span className="cast-card-in">
+                          <Face entry={g} className="cast-face" />
+                          {newFor(g) > 0 && <span className="cast-new">{newFor(g)} new ch.</span>}
+                          <strong>{g.english}</strong>
+                          <span className="cast-line">{g.profile?.line ?? g.note ?? 'No profile yet'}</span>
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {side.length > 0 && (
+              <section>
+                <h2 className="cast-label">Side characters</h2>
+                <ul className="cast-rows">
+                  {side.map((g) => (
+                    <li key={g.id}>
+                      <a className="cast-row glass" href={`#/character/${g.id}`}>
+                        <Face entry={g} className="cast-row-face" />
+                        <span className="g-names">
+                          <strong>{g.english}</strong>
+                          <span className="muted small">{g.profile?.line ?? g.note ?? (plain ? 'No profile yet' : g.original)}</span>
+                        </span>
+                        {newFor(g) > 0 && g.profile && <span className="chip">{newFor(g)} new</span>}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </>
+        ) : (
+          others.length > 0 && (
+            <section className="glossary-group">
+              <EntryList entries={others} onOpen={setOpen} />
             </section>
-          );
-        })}
-
-        {entries && !list.length && (
-          <Empty title="No names yet">Build it from the first chapters, or add names by hand with +.</Empty>
+          )
         )}
+
+        {entries && !list.length && <Empty title="Nobody here yet">Find the cast in the first chapters, or add names by hand with +.</Empty>}
+
+        <button type="button" className="btn ghost wide" disabled={scan.endsWith('…')} onClick={() => void runScan()}>
+          <Sparkles size={16} /> {plain ? 'Find the cast in the first chapters' : 'Build glossary from the first chapters'}
+        </button>
+        {scan && <p className="small center">{scan}</p>}
       </main>
-      {open && <EntrySheet bookId={bookId} entry={open === 'new' ? undefined : open} onClose={() => setOpen(undefined)} />}
+
+      {people.length > 0 && (
+        <button type="button" className="cast-bar" onClick={() => setUpdating(true)}>
+          Choose who to update
+        </button>
+      )}
+      {updating && <UpdateSheet book={book} chapters={chapters ?? []} people={people} onClose={() => setUpdating(false)} />}
+      {open && <EntrySheet bookId={bookId} plain={plain} entry={open === 'new' ? undefined : open} onClose={() => setOpen(undefined)} />}
     </>
   );
 }
@@ -149,26 +249,31 @@ function EntryList({ entries, onOpen }: { entries: GlossaryEntry[]; onOpen: (g: 
   );
 }
 
-function EntrySheet({ bookId, entry, onClose }: { bookId: string; entry?: GlossaryEntry; onClose: () => void }) {
+export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; entry?: GlossaryEntry; plain?: boolean; onClose: () => void }) {
   const [original, setOriginal] = useState(entry?.original ?? '');
   const [english, setEnglish] = useState(entry?.english ?? '');
   const [kind, setKind] = useState<GlossaryKind>(entry?.kind ?? 'person');
   const [gender, setGender] = useState<Gender | ''>(entry?.gender ?? '');
   const [note, setNote] = useState(entry?.note ?? '');
+  const [role, setRole] = useState<'main' | 'side'>(entry?.role ?? 'side');
+  const [aliases, setAliases] = useState((entry?.aliases ?? []).join(', '));
   const [locked, setLocked] = useState(entry?.locked ?? false);
   const [picture, setPicture] = useState<Blob | undefined>(entry?.picture);
   const [error, setError] = useState('');
   const pictureUrl = useObjectUrl(picture);
 
   async function save(approve: boolean) {
-    if (!original.trim() || !english.trim()) return setError('Both names are needed.');
-    const clash = await db.glossary.where('[bookId+original]').equals([bookId, original.trim()]).first();
-    if (clash && clash.id !== entry?.id) return setError(`"${original.trim()}" is already in the glossary.`);
+    // An English book has one name: it is kept in both places.
+    const first = plain && !/[㐀-鿿]/.test(original) ? english.trim() : original.trim();
+    if (!first || !english.trim()) return setError(plain ? 'A name is needed.' : 'Both names are needed.');
+    const clash = await db.glossary.where('[bookId+original]').equals([bookId, first]).first();
+    if (clash && clash.id !== entry?.id) return setError(`"${first}" is already in the glossary.`);
     const now = Date.now();
     const next: GlossaryEntry = {
+      ...entry,
       id: entry?.id ?? newId(),
       bookId,
-      original: original.trim(),
+      original: first,
       english: english.trim(),
       kind,
       gender: kind === 'person' && gender ? gender : undefined,
@@ -177,6 +282,8 @@ function EntrySheet({ bookId, entry, onClose }: { bookId: string; entry?: Glossa
       // Anything I edit or add by hand counts as checked.
       status: approve || !entry ? 'ok' : entry.status,
       picture: kind === 'person' ? picture : undefined,
+      role: kind === 'person' ? role : undefined,
+      aliases: kind === 'person' && aliases.trim() ? aliases.split(',').map((a) => a.trim()).filter(Boolean) : undefined,
       createdAt: entry?.createdAt ?? now,
       updatedAt: now,
     };
@@ -221,16 +328,42 @@ function EntrySheet({ bookId, entry, onClose }: { bookId: string; entry?: Glossa
             )}
           </div>
         )}
-        <div className="row-2">
+        {plain ? (
           <label>
-            Original
-            <input lang="zh" value={original} disabled={entry?.locked && locked} onChange={(e) => setOriginal(e.target.value)} />
-          </label>
-          <label>
-            English
+            Name
             <input value={english} disabled={entry?.locked && locked} onChange={(e) => setEnglish(e.target.value)} />
           </label>
-        </div>
+        ) : (
+          <div className="row-2">
+            <label>
+              Original
+              <input lang="zh" value={original} disabled={entry?.locked && locked} onChange={(e) => setOriginal(e.target.value)} />
+            </label>
+            <label>
+              English
+              <input value={english} disabled={entry?.locked && locked} onChange={(e) => setEnglish(e.target.value)} />
+            </label>
+          </div>
+        )}
+        {kind === 'person' && (
+          <>
+            <div className="look-row">
+              <span>Character</span>
+              <div className="seg">
+                <button type="button" className={role === 'main' ? 'on' : ''} aria-pressed={role === 'main'} onClick={() => setRole('main')}>
+                  Main
+                </button>
+                <button type="button" className={role === 'side' ? 'on' : ''} aria-pressed={role === 'side'} onClick={() => setRole('side')}>
+                  Side
+                </button>
+              </div>
+            </div>
+            <label>
+              Other names <span className="muted small">(optional, with commas: nicknames, titles)</span>
+              <input value={aliases} placeholder="e.g. Little Song, the boss" onChange={(e) => setAliases(e.target.value)} />
+            </label>
+          </>
+        )}
         <div className="row-2">
           <label>
             Kind
@@ -254,7 +387,7 @@ function EntrySheet({ bookId, entry, onClose }: { bookId: string; entry?: Glossa
           )}
         </div>
         <label>
-          Note <span className="muted small">(optional, also sent to the translator)</span>
+          Note <span className="muted small">{plain ? '(optional)' : '(optional, also sent to the translator)'}</span>
           <input value={note} placeholder="e.g. always call him Senior Brother" onChange={(e) => setNote(e.target.value)} />
         </label>
         <label className="look-row">

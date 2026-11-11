@@ -77,6 +77,7 @@ const TABS = ['', 'library', 'quotes', 'stats'];
 function depth(parts: string[]): number {
   const page = parts[0] ?? '';
   if (TABS.includes(page)) return 0;
+  if (page === 'character') return 3;
   return page === 'chapter' || page === 'glossary' || page === 'quote' ? 2 : 1;
 }
 

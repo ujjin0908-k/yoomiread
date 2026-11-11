@@ -95,8 +95,16 @@ export function chapterMessages(input: {
 }
 
 /** Instructions for building a glossary from the first chapters. */
-export function glossaryScanMessages(input: { bookTitle: string; sample: string; known: GlossaryEntry[] }): ChatMessage[] {
-  const system = [
+export function glossaryScanMessages(input: { bookTitle: string; sample: string; known: GlossaryEntry[]; plain?: boolean }): ChatMessage[] {
+  // A book already in English: there is nothing to translate, the list is just the cast.
+  const system = input.plain
+    ? [
+        'You list the characters of a novel for a reader. List only named characters (kind "person"). Skip places, items and ordinary words.',
+        'Give each name exactly as the text writes it, in both "original" and "english", and the gender as he, she, they or it, judged from the text.',
+        'Answer with one JSON object per line and nothing else:',
+        '{"original": "...", "english": "...", "kind": "person", "gender": "he|she|they|it", "note": "who they are, in a few words"}',
+      ].join('\n')
+    : [
     'You prepare a glossary for translating a Chinese novel into English.',
     'List only character names (kind "person"). Skip places, items, techniques, sects, titles, ordinary words, common phrases, slang,',
     'English words, and anything that is not a character\'s name.',
@@ -105,7 +113,7 @@ export function glossaryScanMessages(input: { bookTitle: string; sample: string;
     'the kind (person, place or term) and, for people, the gender as he, she, they or it, judged from the text.',
     'Answer with one JSON object per line and nothing else:',
     '{"original": "...", "english": "...", "kind": "person|place|term", "gender": "he|she|they|it", "note": "short optional note"}',
-  ].join('\n');
+      ].join('\n');
   const known = input.known.length ? `Already in the glossary (skip these): ${input.known.map((g) => g.original).join(', ')}\n\n` : '';
   return [
     { role: 'system', content: system },

@@ -69,6 +69,14 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   fresh data is applied after the change (`afterPageChange` in `src/motion.ts`); the tabs' data is read ahead in idle
   time (`src/queries.ts`, `App.tsx`); covers keep one picture address per book; tabs use a quick fade-through; pages
   brought in by a page change arrive whole (no late rows); the background light holds still during a change.
+- Character profiles (2026-11-12, designed on the canvas row "E · Character profiles"): the glossary page is now
+  "The cast", for English books too (one name, nothing to translate). Characters are Main or Side. Each has a card
+  (`src/pages/Character.tsx`) with Looks, Who they are and one quote, each line tagged with its chapter. Updates are
+  manual: "Update <name>" on a card, or "Choose who to update" on the cast. An update reads only chapters marked read
+  since that character's last update, and of those only paragraphs naming the character (or their other names); one
+  request is shared by the characters picked together. Details must name a chapter that was sent, and quotes must be
+  found in the text, or they are dropped. Lines the owner adds are never changed. "Also look for new people" reads whole
+  chapters and adds them to "To check". Logic and tests: `src/translate/profiles.ts`.
 
 ## Things that do not work or were decided against
 
@@ -115,7 +123,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 135 unit tests
+npm test          # 148 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```
