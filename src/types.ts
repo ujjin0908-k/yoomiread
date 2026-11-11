@@ -51,6 +51,8 @@ export interface Chapter {
   bookId: string;
   number: number;
   title: string;
+  /** The web address it was read from, so a batch import does not add the same chapter twice. */
+  url?: string;
   /** Number of characters in the chapter text (the text itself is in its own table). */
   length?: number;
   read: boolean;

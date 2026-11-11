@@ -69,9 +69,12 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 - **Naver Series:** answered 403 from the test environment. Untested on a real phone.
 - **Novel Updates:** blocked by its Cloudflare check.
 - **Link sources, rule changed by the owner on 2026-11-11:** fan-translation sites may be added when the owner asks
-  for one by name, for private reading only. The link reader takes one chapter per pasted link and keeps it on the
-  owner's phone; it does not crawl a whole novel and nothing is shared onwards. First one added: `futiledevices.blog`.
-  The list is `ALLOWED_SITES` in `netlify/edge-functions/fetch-page.ts`.
+  for one by name, for private reading only. Chapters are kept on the owner's phone and nothing is shared onwards.
+  First one added: `futiledevices.blog`. The list is `ALLOWED_SITES` in `netlify/edge-functions/fetch-page.ts`.
+  Batch import (2026-11-12, asked for by the owner): "Many from a link" on a book page, or pasting a novel's contents page
+  in "From a web link", lists the chapters (`extractChapterLinks` in `src/import/web.ts`); the owner ticks which ones and
+  they are read one at a time with a pause of 0.7 seconds, saved as they arrive, and chapters already in the book are
+  skipped. The pause and the one-at-a-time rule are there so the site is not hammered.
 - **WTR-LAB, Wuxia World:** declined earlier (before the rule above) and still not on the list.
 - **Fanqie:** declined as a link source. It publishes original novels, so the reason is not licensing: a link reader
   would copy the text in bulk, and the site's terms likely restrict that. Use paste or file import for chapters you read there.
@@ -84,14 +87,14 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 3. Compare DeepSeek and Haiku timing on one chapter.
 4. Clean up old folders: `relay/` (not used) and `netlify/` (keep until Cloudflare is confirmed).
 5. Chapter 3 of one book keeps an old saved "already in English" reply. It is hidden, not deleted.
-6. Not built: batch add from several links, checking saved links for new chapters, translate on import,
-   cost by model, and "continue where I stopped" after a sync.
+6. Not built: checking saved links for new chapters (the batch list could be reopened for this), cost by model,
+   and "continue where I stopped" after a sync.
 
 ## Working on it
 
 ```
 npm install
-npm test          # 115 unit tests
+npm test          # 121 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```

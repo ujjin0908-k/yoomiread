@@ -7,7 +7,7 @@ import { go } from '../hooks';
 import { shrinkImage } from '../images';
 import { SHELVES, guessLanguage, moveToShelf, newId } from '../logic';
 import type { DraftChapter } from '../import/chapters';
-import { extractChapter, fetchPage } from '../import/web';
+import { extractChapter, extractChapterLinks, fetchPage } from '../import/web';
 import { webLink } from '../sources';
 import type { Book, BookLanguage, Shelf } from '../types';
 
@@ -21,8 +21,9 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
 
   /** Saves an imported book with its chapters, then asks "Keep this title?". */
   async function save(
-    result: { title: string; author: string; language: BookLanguage; cover?: Blob; chapters: DraftChapter[]; scanned?: boolean },
+    result: { title: string; author: string; language: BookLanguage; cover?: Blob; chapters: DraftChapter[]; scanned?: boolean; sources?: Book['sources'] },
     source: 'pdf' | 'epub' | 'web' | 'paste',
+    after?: string,
   ) {
     setStatus('Saving…');
     const now = Date.now();
@@ -34,6 +35,7 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
         language: result.language,
         shelf: 'want',
         cover: result.cover,
+        sources: result.sources,
         source,
         createdAt: now,
         updatedAt: now,
@@ -45,7 +47,7 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
       await db.books.add(book);
       await db.addChapters(
         result.chapters.map((c, i) => ({
-          chapter: { id: newId(), bookId: book.id, number: i + 1, title: c.title, read: false, createdAt: now },
+          chapter: { id: newId(), bookId: book.id, number: i + 1, title: c.title, url: c.url, read: false, createdAt: now },
           text: c.text,
         })),
       );
@@ -53,7 +55,7 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
     // Not awaited: the first chapters are translated in the background while the book page opens.
     void translateFirstChapters(book.id);
     onClose();
-    go(`book/${book.id}/${result.scanned ? 'scanned' : 'imported'}`);
+    go(`book/${book.id}/${after ?? (result.scanned ? 'scanned' : 'imported')}`);
   }
 
   async function fromLink(raw: string) {
@@ -64,8 +66,19 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
     try {
       const page = await fetchPage(url);
       const chapter = extractChapter(page.html);
+      // A contents page lists many chapters. It becomes a new book, and its chapters are listed to pick from.
+      const listed = extractChapterLinks(page.html, page.url);
+      if (listed.length >= 5) {
+        const host = new URL(page.url).hostname.replace(/^www\./, '');
+        await save(
+          { title: chapter.title, author: '', language: guessLanguage(listed.map((l) => l.title).join(' ')), chapters: [], sources: [{ name: host, url: page.url }] },
+          'web',
+          'chapters',
+        );
+        return;
+      }
       if (!chapter.text) throw new Error('No story text was found on that page.');
-      await save({ title: chapter.title, author: '', language: guessLanguage(chapter.text), chapters: [chapter] }, 'web');
+      await save({ title: chapter.title, author: '', language: guessLanguage(chapter.text), chapters: [{ ...chapter, url: page.url }] }, 'web');
     } catch (e) {
       setStatus('');
       setError(e instanceof Error ? e.message : 'Could not read that page.');
@@ -158,7 +171,7 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
             void fromLink(link);
           }}
         >
-          <p className="muted small">Paste the link to one chapter. The page is read through YoomiRead's own server, and only the sites it allows.</p>
+          <p className="muted small">Paste the link to one chapter, or to a novel's contents page to add many chapters at once. The page is read through YoomiRead's own server, and only the sites it allows.</p>
           <label>
             Chapter link
             <input inputMode="url" autoCapitalize="off" autoCorrect="off" required value={link} onChange={(e) => setLink(e.target.value)} />
