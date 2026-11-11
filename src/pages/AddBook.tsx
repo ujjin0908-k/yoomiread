@@ -5,7 +5,7 @@ import { Sheet } from '../components';
 import { db } from '../db';
 import { go } from '../hooks';
 import { shrinkImage } from '../images';
-import { SHELVES, moveToShelf, newId } from '../logic';
+import { SHELVES, guessLanguage, moveToShelf, newId } from '../logic';
 import type { DraftChapter } from '../import/chapters';
 import { extractChapter, fetchPage } from '../import/web';
 import { webLink } from '../sources';
@@ -65,7 +65,7 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
       const page = await fetchPage(url);
       const chapter = extractChapter(page.html);
       if (!chapter.text) throw new Error('No story text was found on that page.');
-      await save({ title: chapter.title, author: '', language: /[\u3400-\u9fff]/.test(chapter.text) ? 'zh' : 'other', chapters: [chapter] }, 'web');
+      await save({ title: chapter.title, author: '', language: guessLanguage(chapter.text), chapters: [chapter] }, 'web');
     } catch (e) {
       setStatus('');
       setError(e instanceof Error ? e.message : 'Could not read that page.');

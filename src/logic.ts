@@ -69,6 +69,13 @@ export function finishBook(book: Book, rating: number, review: string, now = Dat
   return { ...moved, rating: clampRating(rating), review: trimmed || undefined };
 }
 
+/** Dropping a book: shelf, an optional rating for what was read, and why it was dropped (kept as the review). */
+export function dropBook(book: Book, rating: number, reason: string, now = Date.now()): Book {
+  const moved = moveToShelf(book, 'dropped', now);
+  const trimmed = reason.trim();
+  return { ...moved, rating: rating ? clampRating(rating) : undefined, review: trimmed || undefined };
+}
+
 /**
  * Whether a book needs translating. English books are read as they are, and so is any text that
  * is written in Latin letters only (the book's language setting can be wrong).

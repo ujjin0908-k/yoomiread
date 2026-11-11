@@ -15,7 +15,8 @@ export function extractChapter(html: string): DraftChapter {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   doc.querySelectorAll(NOISE).forEach((el) => el.remove());
 
-  const title = doc.querySelector('h1')?.textContent?.trim() || doc.title.trim() || 'Chapter';
+  // With no heading left, the page title is used, without the site's own name on the end ("Chapter 1 – Some Site").
+  const title = doc.querySelector('h1')?.textContent?.trim() || doc.title.replace(/\s+[–—|-]\s+[^–—|]+$/, '').trim() || 'Chapter';
 
   // The story is usually the block with the most paragraph text.
   const candidates = [...doc.querySelectorAll('article, main, section, div')];
@@ -34,6 +35,9 @@ export function extractChapter(html: string): DraftChapter {
     // Pages without <p> tags: use the line breaks of the text.
     paragraphs = (best.textContent ?? '').split(/\n+/).map((l) => l.replace(/\s+/g, ' ').trim());
   }
-  const text = paragraphs.filter(Boolean).join('\n\n');
+  paragraphs = paragraphs.filter(Boolean);
+  // Blogs end a post with empty labels such as "By:" and "Posted in:". They are not part of the story.
+  while (paragraphs.length && /^[\w ]{1,20}:$/.test(paragraphs[paragraphs.length - 1])) paragraphs.pop();
+  const text = paragraphs.join('\n\n');
   return { title, text };
 }

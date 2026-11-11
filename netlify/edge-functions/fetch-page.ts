@@ -1,7 +1,9 @@
 // Fetches one web page for the app, so the phone can import a chapter from a link.
 // Only the sites listed here are reachable, and only over http or https on the normal ports.
 // Add a site to ALLOWED_SITES before the app can import from it.
-export const ALLOWED_SITES = ['page.kakao.com', 'series.naver.com'];
+// futiledevices.blog is a fan-translation blog. The owner asked for it on 2026-11-11, for private reading only:
+// one chapter per pasted link, saved on the owner's phone, never shared onwards.
+export const ALLOWED_SITES = ['page.kakao.com', 'series.naver.com', 'futiledevices.blog'];
 
 const MAX_BYTES = 3_000_000;
 const MAX_REDIRECTS = 3;
