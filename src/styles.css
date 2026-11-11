@@ -2191,14 +2191,15 @@ blockquote {
 
 .working-figure {
   position: relative;
-  width: 72px;
-  height: 72px;
-  animation: bob 1.6s ease-in-out infinite;
+  width: 132px;
+  height: 132px;
 }
 
 .working-figure img {
-  border-radius: 18px;
-  box-shadow: var(--shadow);
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .steam {
@@ -2253,7 +2254,6 @@ blockquote {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .working-figure,
   .steam,
   .dots i {
     animation: none;
@@ -2268,25 +2268,7 @@ blockquote {
   flex: none;
 }
 
-/* ---------- Lizard with a wand (while translating) ---------- */
-
-.lizard {
-  display: block;
-  overflow: visible;
-}
-
-.liz-tail {
-  transform-origin: 22px 60px;
-  animation: sway 1.8s ease-in-out infinite;
-}
-
-.spark {
-  transform-origin: 100px 22px;
-  animation: twinkle 1.4s ease-in-out infinite;
-}
-
-.spark.s2 { animation-delay: 0.4s; transform-origin: 112px 36px; }
-.spark.s3 { animation-delay: 0.9s; transform-origin: 92px 8px; }
+/* ---------- The streaming English under the cat (while translating) ---------- */
 
 .peek {
   width: 100%;
@@ -2312,19 +2294,7 @@ blockquote {
   animation: blink 0.9s steps(1) infinite;
 }
 
-@keyframes sway {
-  0%, 100% { transform: rotate(-6deg); }
-  50% { transform: rotate(8deg); }
-}
-
-@keyframes twinkle {
-  0%, 100% { transform: scale(0.7); opacity: 0.4; }
-  50% { transform: scale(1.15); opacity: 1; }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .liz-tail,
-  .spark,
   .caret {
     animation: none;
   }

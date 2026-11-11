@@ -43,7 +43,8 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 - Cat companion, a cat in a wizard hat (`src/mascot/`): his mood follows your reading (happy, idle, sad, high). Tap him for a line,
   or ask him about the chapters you have read. Answers are remembered on the phone so repeats cost nothing.
   Poses are the owner's animated pictures in `public/mascot/` (changed from the pixel wizard on 2026-11-10); each has a
-  still copy shown when animations are off. `cat-angry` is there but no mood uses it yet.
+  still copy shown when animations are off. The angry cat shows after a failed translation.
+  `cat-working` (the cat with a star wand in his mouth) replaces the old drawn lizard on the "translating" screens.
 - Stats, quotes page, backups (export and restore), a welcome page on every app open.
 - Look, "Loud Glass" (`src/loud.css`, chosen 2026-11-10): loud type (Bricolage Grotesque, Instrument Serif italics),
   ink black and one hot red on pale violet, coloured light behind frosted glass. Dark mode follows the phone.

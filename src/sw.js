@@ -3,7 +3,7 @@
 // The build fills in BUILD_FILES and VERSION (see vite.config.ts).
 const FILES = self.BUILD_FILES;
 // The cat's poses: the animated picture and the still one for each mood, plus the pictures on the first screens.
-const MASCOT = ['happy', 'idle', 'sad', 'high', 'angry'].flatMap((m) => [`/mascot/cat-${m}.gif`, `/mascot/cat-${m}.png`]).concat('/mascot/cat-closeup.gif', '/mascot/cat-closeup.png');
+const MASCOT = ['happy', 'idle', 'sad', 'high', 'angry', 'working'].flatMap((m) => [`/mascot/cat-${m}.gif`, `/mascot/cat-${m}.png`]).concat('/mascot/cat-closeup.gif', '/mascot/cat-closeup.png');
 const CACHE = `yoomiread-${self.VERSION}`;
 const FONT_CSS =
   'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Serif:ital@0;1&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=IM+Fell+English:ital@0;1&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Noto+Serif+SC:wght@400;600&display=swap';
