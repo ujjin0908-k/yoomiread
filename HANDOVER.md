@@ -75,6 +75,8 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   in "From a web link", lists the chapters (`extractChapterLinks` in `src/import/web.ts`); the owner ticks which ones and
   they are read one at a time with a pause of 0.7 seconds, saved as they arrive, and chapters already in the book are
   skipped. The pause and the one-at-a-time rule are there so the site is not hammered.
+  Pasting a single chapter's link works too: the chapter page's script lists the novel's contents page, which
+  `findContentsLink` reads (written for futiledevices.blog's page script; other sites need a contents page link).
 - **WTR-LAB, Wuxia World:** declined earlier (before the rule above) and still not on the list.
 - **Fanqie:** declined as a link source. It publishes original novels, so the reason is not licensing: a link reader
   would copy the text in bulk, and the site's terms likely restrict that. Use paste or file import for chapters you read there.
@@ -94,7 +96,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 121 unit tests
+npm test          # 124 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```
