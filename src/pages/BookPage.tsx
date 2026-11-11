@@ -1,6 +1,7 @@
 import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, PenLine, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Book3D, Cover, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
+import { ChapterLinks } from './ChapterLinks';
 import { celebrate } from '../motion';
 import { useImportJob } from '../translate/onImport';
 import { db } from '../db';
@@ -39,6 +40,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
     return { all: all.length, review: all.filter((g) => g.status === 'review').length };
   }, [id]);
   const [addingChapter, setAddingChapter] = useState(false);
+  const [addingMany, setAddingMany] = useState(false);
   const [editingReview, setEditingReview] = useState(false);
   const [editingDetails, setEditingDetails] = useState(false);
   const [translating, setTranslating] = useState(false);
@@ -48,6 +50,8 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const finishing = sub === 'finish';
   // Moving a book to Dropped asks for a rating and the reason first, the same way finishing asks for a review.
   const dropping = sub === 'drop';
+  // Right after a contents page was pasted as a new book: its chapters are listed to pick from.
+  const batching = sub === 'chapters';
   // Right after a PDF import: offer to fix the title.
   const justImported = sub === 'imported' || sub === 'scanned';
   const job = useImportJob(id);
@@ -166,7 +170,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
             ))}
         </dl>
 
-        {(book.novelUpdatesUrl || book.sources?.length) && (
+        {(book.novelUpdatesUrl || (book.sources?.length ?? 0) > 0) && (
           <div className="sources">
             {book.novelUpdatesUrl && (
               <a className="btn ghost" href={book.novelUpdatesUrl} target="_blank" rel="noopener noreferrer">
@@ -253,12 +257,17 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
         <section>
           <div className="section-head">
             <h2>Chapters</h2>
-            <button type="button" className="link" onClick={() => setAddingChapter(true)}>
-              <Plus size={16} /> Chapter
-            </button>
+            <div className="row">
+              <button type="button" className="link" onClick={() => setAddingMany(true)}>
+                Many from a link
+              </button>
+              <button type="button" className="link" onClick={() => setAddingChapter(true)}>
+                <Plus size={16} /> Chapter
+              </button>
+            </div>
           </div>
           {chapters && chapters.length === 0 && (
-            <p className="muted">Add chapters to leave comments and highlight lines.</p>
+            <p className="muted">Add chapters one by one, or paste a novel's contents page link to add many at once.</p>
           )}
           <ul className="chapter-list">
             {list.map((c) => (
@@ -308,6 +317,18 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
         </button>
       </main>
 
+      {(addingMany || batching) && (
+        <ChapterLinks
+          book={book}
+          chapters={list}
+          initialLink={batching ? book.sources?.[0]?.url : undefined}
+          onClose={() => {
+            setAddingMany(false);
+            // Replace the step in history so Back does not open it again.
+            if (batching) window.location.replace(`#/book/${id}`);
+          }}
+        />
+      )}
       {addingChapter && (
         <AddChapter bookId={id} next={nextChapterNumber(list)} onClose={() => setAddingChapter(false)} />
       )}

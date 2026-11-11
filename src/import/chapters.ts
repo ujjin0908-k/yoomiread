@@ -47,6 +47,8 @@ export interface Paragraph {
 export interface DraftChapter {
   title: string;
   text: string;
+  /** Set for chapters read from a web page. */
+  url?: string;
 }
 
 const CJK_END = /[㐀-鿿＀-￯　-〿]$/;

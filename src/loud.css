@@ -1541,3 +1541,38 @@ body[data-reader='night'] {
   flex-wrap: wrap;
   overflow: visible;
 }
+
+/* ---------- Adding many chapters from a contents page ---------- */
+
+.batch-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 38dvh;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.batch-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+.batch-list li:last-child {
+  border-bottom: 0;
+}
+.batch-list .check:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.batch-stray {
+  gap: 12px;
+  align-items: flex-start;
+}
+.batch-stray .switch {
+  flex: none;
+}

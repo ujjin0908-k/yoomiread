@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { extractChapter } from './web';
+import { chapterNumber, extractChapter, extractChapterLinks, findContentsChapter, looksLikeContents } from './web';
 import { checkWebUrl } from '../../netlify/edge-functions/fetch-page';
 
 describe('reading a web page', () => {
@@ -45,5 +45,51 @@ describe('the page fetcher only reads allowed sites', () => {
     expect(checkWebUrl('https://user:pw@page.kakao.com/')).toMatch(/login/);
     expect(checkWebUrl('https://page.kakao.com:8443/')).toMatch(/normal web ports/);
     expect(checkWebUrl('not a url')).toMatch(/not a web address/);
+  });
+});
+
+describe('a contents page', () => {
+  const page = (items: string) => `<html><head><title>CL – Some Novel – Some Scans</title></head><body>
+    <header><nav><a href="/">Home</a><a href="/all-projects/">All Projects</a></nav></header>
+    <h1>Some Novel</h1>
+    <div class="entry"><p>A short blurb about the novel.</p>${items}</div>
+    <a href="https://other.example/chapter-9">Chapter 9 elsewhere</a>
+    <footer><a href="/about-us/">About Us</a></footer></body></html>`;
+  const ch = (n: number) => `<p><a href="/2026/07/${String(n).padStart(2, '0')}/cl-chapter-${n}/?share=x">x</a><a href="/2026/07/${String(n).padStart(2, '0')}/cl-chapter-${n}/#comments">Chapter ${n}: Part ${n}</a></p>`;
+  const six = [1, 2, 3, 4, 5, 6].map(ch).join('');
+
+  it('lists the chapters in order, without menus, share links or other sites', () => {
+    const links = extractChapterLinks(page(six), 'https://scans.example/some-novel/');
+    expect(links.map((l) => l.title)).toEqual([1, 2, 3, 4, 5, 6].map((n) => `Chapter ${n}: Part ${n}`));
+    expect(links[0].url).toBe('https://scans.example/2026/07/01/cl-chapter-1/');
+  });
+  it('puts a newest-first list into reading order', () => {
+    const links = extractChapterLinks(page([6, 5, 4, 3, 2, 1].map(ch).join('')), 'https://scans.example/some-novel/');
+    expect(links.map((l) => chapterNumber(l.title))).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+  it('finds chapters whose titles do not say "chapter", by their addresses', () => {
+    const items = ['Dawn', 'Noon', 'Dusk', 'Night', 'Rain', 'Snow'].map((t, i) => `<p><a href="/2026/08/0${i + 1}/${t.toLowerCase()}/">${t}</a></p>`).join('');
+    expect(extractChapterLinks(page(items), 'https://scans.example/some-novel/').map((l) => l.title)).toEqual(['Dawn', 'Noon', 'Dusk', 'Night', 'Rain', 'Snow']);
+  });
+  it('is not fooled by a chapter page, which has no list of chapters', () => {
+    const chapterPage = page(`<p>The snow was heavy.</p><p><a href="/2026/07/02/cl-chapter-2/">Next chapter</a></p>`);
+    expect(looksLikeContents(chapterPage, 'https://scans.example/2026/07/01/cl-chapter-1/')).toBe(false);
+    expect(looksLikeContents(page(six), 'https://scans.example/some-novel/')).toBe(true);
+  });
+  it('knows a chapter number from its title, in English and Chinese', () => {
+    expect(chapterNumber('Chapter 12: The Quay')).toBe(12);
+    expect(chapterNumber('第38章 小白花')).toBe(38);
+    expect(chapterNumber('Prologue')).toBeUndefined();
+  });
+  it('spots the contents page that was saved as a chapter earlier', () => {
+    const links = extractChapterLinks(page(six), 'https://scans.example/some-novel/');
+    const here = { title: 'Some Novel', text: 'A short blurb about the novel.' };
+    // Same text as the page, same title as the page, or a text that lists the chapters.
+    expect(findContentsChapter([{ id: 'c1', title: 'x', text: 'A short blurb  about the novel.' }], links, here)).toBe('c1');
+    expect(findContentsChapter([{ id: 'c1', title: 'Some Novel', text: 'other' }], links, here)).toBe('c1');
+    expect(findContentsChapter([{ id: 'c1', title: 'x', text: links.map((l) => l.title).join('\n\n') }], links, here)).toBe('c1');
+    expect(findContentsChapter([{ id: 'c1', title: 'Chapter 1', text: 'The snow was heavy.' }], links, here)).toBeUndefined();
+    // A chapter that came from a link is never the contents page.
+    expect(findContentsChapter([{ id: 'c1', url: 'https://scans.example/x', title: 'Some Novel', text: here.text }], links, here)).toBeUndefined();
   });
 });
