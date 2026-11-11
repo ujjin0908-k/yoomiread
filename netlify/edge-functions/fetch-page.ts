@@ -1,9 +1,14 @@
 // Fetches one web page for the app, so the phone can import a chapter from a link.
 // Only the sites listed here are reachable, and only over http or https on the normal ports.
 // Add a site to ALLOWED_SITES before the app can import from it.
-// futiledevices.blog is a fan-translation blog. The owner asked for it on 2026-11-11, for private reading only:
-// one chapter per pasted link, saved on the owner's phone, never shared onwards.
-export const ALLOWED_SITES = ['page.kakao.com', 'series.naver.com', 'futiledevices.blog'];
+// Fan-translation and reading sites, each added when the owner asked for it by name, for private reading only
+// (rule changed on 2026-11-11): chapters are kept on the owner's phone and nothing is shared onwards.
+// What the page reader can get from each:
+//  - futiledevices.blog, chrysanthemumgarden.org: the chapter text is in the page, so chapters and contents pages work.
+//  - wuxiaworld.com: single chapters work; its list of chapters is loaded by scripts, so no batch list. Only what the
+//    site shows without logging in is fetched.
+//  - wtr-lab.com: the chapter text is loaded by scripts after the page opens, so the page reader finds none.
+export const ALLOWED_SITES = ['page.kakao.com', 'series.naver.com', 'futiledevices.blog', 'chrysanthemumgarden.org', 'wuxiaworld.com', 'wtr-lab.com'];
 
 const MAX_BYTES = 3_000_000;
 const MAX_REDIRECTS = 3;

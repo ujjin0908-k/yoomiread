@@ -32,7 +32,8 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 ## Main features
 
 - Library with shelves, reading progress, ratings and reviews.
-- Import: PDF, ePub, pasted text, and a web link (Kakao Page, Naver Series and futiledevices.blog, see below).
+- Import: PDF, ePub, pasted text, and a web link (Kakao Page, Naver Series, futiledevices.blog, chrysanthemumgarden.org,
+  wuxiaworld.com and wtr-lab.com, see below).
 - Reader: Chinese or English view, font and paper themes, highlights in colours and folders, comments.
 - Translation: chapter by chapter or in batches, with a cost estimate; a glossary built from the first chapters
   (names and terms, approved by the reader); translate ahead while reading (next 1 to 3 chapters, set in Settings).
@@ -77,7 +78,18 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   skipped. The pause and the one-at-a-time rule are there so the site is not hammered.
   Pasting a single chapter's link works too: the chapter page's script lists the novel's contents page, which
   `findContentsLink` reads (written for futiledevices.blog's page script; other sites need a contents page link).
-- **WTR-LAB, Wuxia World:** declined earlier (before the rule above) and still not on the list.
+  Covers (`src/import/cover.ts`): a book made from a link takes the novel's cover, the contents page's share picture
+  (`og:image`), fetched by the browser straight from the site's picture host (needs the site to allow it; it does for
+  futiledevices.blog). Only pictures taller than wide are accepted, so a site logo is never used. Books without a cover
+  also get a "Get cover from the link" button; a cover chosen by hand is never replaced.
+- **Added on 2026-11-12 at the owner's request, under the rule above:** `chrysanthemumgarden.org`, `wuxiaworld.com`,
+  `wtr-lab.com`. What the page reader gets from each (checked on saved copies of their pages from the build machine):
+  - Chrysanthemum Garden: chapters, contents pages (794 chapters on the first novel), cover and batch import all work. The
+    list marks most chapters "(Chinese)", the site's own label; the one chapter read came back as English text.
+  - Wuxiaworld: single chapters work. The list of chapters is loaded by scripts, so no batch list. Only what the site shows
+    without logging in is fetched, so a locked chapter would import as its teaser.
+  - WTR-LAB: the chapter text is loaded by scripts after the page opens (like Kakao Page), so the page reader finds none.
+    The site is on the list but cannot be read until the app can run those scripts.
 - **Fanqie:** declined as a link source. It publishes original novels, so the reason is not licensing: a link reader
   would copy the text in bulk, and the site's terms likely restrict that. Use paste or file import for chapters you read there.
 - **Highlights:** a highlight shows only in the language it was made in (original or English).
@@ -96,7 +108,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 124 unit tests
+npm test          # 135 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```

@@ -1,6 +1,7 @@
 import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, PenLine, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Book3D, Cover, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
+import { coverFromLink } from '../import/cover';
 import { ChapterLinks } from './ChapterLinks';
 import { celebrate } from '../motion';
 import { useImportJob } from '../translate/onImport';
@@ -41,6 +42,8 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   }, [id]);
   const [addingChapter, setAddingChapter] = useState(false);
   const [addingMany, setAddingMany] = useState(false);
+  const [coverBusy, setCoverBusy] = useState(false);
+  const [coverError, setCoverError] = useState('');
   const [editingReview, setEditingReview] = useState(false);
   const [editingDetails, setEditingDetails] = useState(false);
   const [translating, setTranslating] = useState(false);
@@ -77,6 +80,27 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
     if (shelf === 'finished') return go(`book/${id}/finish`);
     if (shelf === 'dropped') return go(`book/${id}/drop`);
     await db.books.put(moveToShelf(book!, shelf));
+  }
+
+  /** Takes the novel's cover picture from the first of its links that has one. */
+  async function getCover() {
+    setCoverBusy(true);
+    setCoverError('');
+    const links = [...(book!.sources ?? []).map((s) => s.url), ...(list.map((c) => c.url).filter(Boolean) as string[])];
+    let reason = 'This book has no link to get a cover from.';
+    try {
+      for (const link of links) {
+        try {
+          await db.books.update(id, { cover: await coverFromLink(link), updatedAt: Date.now() });
+          return;
+        } catch (e) {
+          reason = e instanceof Error ? e.message : 'Could not get a cover.';
+        }
+      }
+      setCoverError(reason);
+    } finally {
+      setCoverBusy(false);
+    }
   }
 
   async function changeCover(file: File) {
@@ -169,6 +193,15 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
               </div>
             ))}
         </dl>
+
+        {!book.cover && ((book.sources?.length ?? 0) > 0 || list.some((c) => c.url)) && (
+          <div className="sources">
+            <button type="button" className="btn ghost" disabled={coverBusy} onClick={() => void getCover()}>
+              {coverBusy ? 'Getting the cover…' : 'Get cover from the link'}
+            </button>
+            {coverError && <p className="warn small">{coverError}</p>}
+          </div>
+        )}
 
         {(book.novelUpdatesUrl || (book.sources?.length ?? 0) > 0) && (
           <div className="sources">

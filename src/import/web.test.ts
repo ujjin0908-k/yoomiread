@@ -109,3 +109,29 @@ describe('finding the contents page from a chapter', () => {
     expect(findContentsLink('<html><head><title>Plain</title></head><body><p>x</p></body></html>', 'https://scans.example/a/')).toBeUndefined();
   });
 });
+
+describe('sites with the chapters in the page', () => {
+  it('keeps a small badge such as "Chinese" as a note on the chapter title', () => {
+    const items = [1, 2, 3, 4, 5, 6]
+      .map((n) => `<a href="/novel-tl/tour/tour-${n}/">${n < 3 ? `Ch${n} - Some Title` : `Chapter ${n}<small>Chinese</small>`}</a>`)
+      .join('');
+    const links = extractChapterLinks(`<html><body><h1>Tour</h1><section>${items}</section></body></html>`, 'https://garden.example/novel-tl/tour/');
+    expect(links.map((l) => l.title)).toEqual(['Ch1 - Some Title', 'Ch2 - Some Title', 'Chapter 3 (Chinese)', 'Chapter 4 (Chinese)', 'Chapter 5 (Chinese)', 'Chapter 6 (Chinese)']);
+    expect(chapterNumber(links[0].title)).toBe(1);
+    expect(chapterNumber(links[5].title)).toBe(6);
+  });
+  it('finds the novel page from the link back to it on a chapter page', () => {
+    const html = `<html><head><title>Ch1</title></head><body><a href="/">Home</a> / <a href="/novel-tl/tour/">Tour</a><p>Story.</p></body></html>`;
+    expect(findContentsLink(html, 'https://garden.example/novel-tl/tour/tour-1/')).toBe('https://garden.example/novel-tl/tour/');
+    expect(findContentsLink(`<html><body><a href="/">Home</a><p>Story.</p></body></html>`, 'https://garden.example/novel-tl/tour/tour-1/')).toBeUndefined();
+  });
+});
+
+describe('the sites the page reader may read', () => {
+  it.each(['https://chrysanthemumgarden.org/novel-tl/tour/', 'https://www.wuxiaworld.com/novel/13-mink-street/13ms-chapter-1', 'https://wtr-lab.com/en/novel/1/x/chapter-1'])('accepts %s', (u) => {
+    expect(checkWebUrl(u)).toBeInstanceOf(URL);
+  });
+  it.each(['https://wuxiaworld.com.evil.test/', 'https://notwtr-lab.com/', 'https://chrysanthemumgarden.org.evil.test/x'])('refuses the look-alike %s', (u) => {
+    expect(checkWebUrl(u)).toMatch(/not on the list/);
+  });
+});

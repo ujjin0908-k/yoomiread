@@ -14,6 +14,14 @@ export async function shrinkImage(file: Blob, max = 720): Promise<Blob> {
   );
 }
 
+/** A picture shaped like a book cover (clearly taller than wide), shrunk. Logos and banners come back empty. */
+export async function coverShaped(file: Blob, max = 720): Promise<Blob | undefined> {
+  const source = await decode(file);
+  const tall = source.height / source.width >= 1.15;
+  if ('close' in source) source.close();
+  return tall ? shrinkImage(file, max) : undefined;
+}
+
 async function decode(file: Blob): Promise<ImageBitmap | HTMLImageElement> {
   try {
     return await createImageBitmap(file);
