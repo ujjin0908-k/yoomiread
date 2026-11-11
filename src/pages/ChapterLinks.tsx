@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Sheet } from '../components';
 import { db } from '../db';
 import { guessLanguage, newId, nextChapterNumber } from '../logic';
-import { chapterNumber, extractChapter, extractChapterLinks, fetchPage, findContentsChapter, type ChapterLink } from '../import/web';
+import { chapterNumber, extractChapter, extractChapterLinks, fetchPage, findContentsChapter, findContentsLink, type ChapterLink } from '../import/web';
 import { webLink } from '../sources';
 import type { Book, Chapter } from '../types';
 
@@ -79,9 +79,17 @@ export function ChapterLinks({
     if (!url) return setError('Paste a web address that starts with https://');
     setStatus('Reading the contents page…');
     try {
-      const page = await fetchPage(url);
-      const links = extractChapterLinks(page.html, page.url);
-      if (!links.length) throw new Error("No chapter links were found on that page. Paste the novel's contents page, not a single chapter.");
+      let page = await fetchPage(url);
+      let links = extractChapterLinks(page.html, page.url);
+      if (!links.length) {
+        // A single chapter was pasted: if the page says where its novel's contents page is, go there.
+        const up = findContentsLink(page.html, page.url);
+        if (up) {
+          page = await fetchPage(up);
+          links = extractChapterLinks(page.html, page.url);
+        }
+      }
+      if (!links.length) throw new Error("No chapter links were found on that page. Paste the novel's contents page, the one that lists all its chapters.");
       setLink(page.url);
       setFound(links);
       setPicked(new Set(links.filter((l) => !have(l)).slice(0, DEFAULT_BATCH).map((l) => l.url)));

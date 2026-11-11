@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { chapterNumber, extractChapter, extractChapterLinks, findContentsChapter, looksLikeContents } from './web';
+import { chapterNumber, extractChapter, extractChapterLinks, findContentsChapter, findContentsLink, looksLikeContents } from './web';
 import { checkWebUrl } from '../../netlify/edge-functions/fetch-page';
 
 describe('reading a web page', () => {
@@ -91,5 +91,21 @@ describe('a contents page', () => {
     expect(findContentsChapter([{ id: 'c1', title: 'Chapter 1', text: 'The snow was heavy.' }], links, here)).toBeUndefined();
     // A chapter that came from a link is never the contents page.
     expect(findContentsChapter([{ id: 'c1', url: 'https://scans.example/x', title: 'Some Novel', text: here.text }], links, here)).toBeUndefined();
+  });
+});
+
+describe('finding the contents page from a chapter', () => {
+  const chapter = (title: string) => `<html><head><title>${title} – Some Scans</title>
+    <meta property="og:title" content="${title}"></head><body><p>Story.</p>
+    <script>const P={AB:'/another-novel/',CL:'/crazy-novel-title/',DF:'/drunken/'};const N={};</script></body></html>`;
+  it('uses the code in the title', () => {
+    expect(findContentsLink(chapter('CL – Chapter 1: The Beginning'), 'https://scans.example/2026/07/27/something-else/')).toBe('https://scans.example/crazy-novel-title/');
+  });
+  it('uses the code in the web address when the title has none', () => {
+    expect(findContentsLink(chapter('Chapter 1: The Beginning'), 'https://scans.example/2026/07/27/cl-chapter-1-the-beginning/')).toBe('https://scans.example/crazy-novel-title/');
+  });
+  it('says nothing when the page gives no hint', () => {
+    expect(findContentsLink(chapter('ZZ – Chapter 1'), 'https://scans.example/2026/07/27/zz-chapter-1/')).toBeUndefined();
+    expect(findContentsLink('<html><head><title>Plain</title></head><body><p>x</p></body></html>', 'https://scans.example/a/')).toBeUndefined();
   });
 });

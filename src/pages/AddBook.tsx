@@ -7,7 +7,7 @@ import { go } from '../hooks';
 import { shrinkImage } from '../images';
 import { SHELVES, guessLanguage, moveToShelf, newId } from '../logic';
 import type { DraftChapter } from '../import/chapters';
-import { extractChapter, extractChapterLinks, fetchPage } from '../import/web';
+import { extractChapter, extractChapterLinks, fetchPage, findContentsLink } from '../import/web';
 import { webLink } from '../sources';
 import type { Book, BookLanguage, Shelf } from '../types';
 
@@ -78,7 +78,10 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
         return;
       }
       if (!chapter.text) throw new Error('No story text was found on that page.');
-      await save({ title: chapter.title, author: '', language: guessLanguage(chapter.text), chapters: [{ ...chapter, url: page.url }] }, 'web');
+      // The novel's contents page, when the chapter's page says where it is: "Many from a link" starts from it later.
+      const up = findContentsLink(page.html, page.url);
+      const sources = up ? [{ name: new URL(up).hostname.replace(/^www\./, ''), url: up }] : undefined;
+      await save({ title: chapter.title, author: '', language: guessLanguage(chapter.text), chapters: [{ ...chapter, url: page.url }], sources }, 'web');
     } catch (e) {
       setStatus('');
       setError(e instanceof Error ? e.message : 'Could not read that page.');

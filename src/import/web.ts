@@ -120,6 +120,34 @@ export function extractChapterLinks(html: string, pageUrl: string): ChapterLink[
   return links.slice(0, 2000);
 }
 
+/**
+ * From a single chapter's page, the address of its novel's contents page. Some sites (like futiledevices.blog)
+ * keep a list of novels in a script on every chapter, as short code -> address, and put the code in the chapter's
+ * title ("CL – Chapter 1") and web address ("/cl-chapter-1-..."). Returns nothing when the page gives no such hint.
+ */
+export function findContentsLink(html: string, pageUrl: string): string | undefined {
+  let base: URL;
+  try {
+    base = new URL(pageUrl);
+  } catch {
+    return undefined;
+  }
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const heading = doc.querySelector('meta[property="og:title"]')?.getAttribute('content') ?? doc.title;
+  const fromTitle = /^\s*([A-Z][A-Z0-9]{0,5})\s*[–—-]\s/.exec(heading)?.[1];
+  const fromAddress = base.pathname.split('/').filter(Boolean).pop()?.split('-')[0]?.toUpperCase();
+  const codes = [fromTitle, fromAddress].filter((c): c is string => !!c);
+  if (!codes.length) return undefined;
+  for (const script of doc.querySelectorAll('script')) {
+    const source = script.textContent ?? '';
+    for (const code of codes) {
+      const hit = new RegExp(`[{,\\s]${code}\\s*:\\s*['"](/[^'"]+/)['"]`).exec(source);
+      if (hit) return new URL(hit[1], base.origin).href;
+    }
+  }
+  return undefined;
+}
+
 /** True when a page is a list of chapters, not a chapter. */
 export function looksLikeContents(html: string, pageUrl: string): boolean {
   return extractChapterLinks(html, pageUrl).length >= 5;
