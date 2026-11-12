@@ -80,6 +80,11 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 - Looking up a word (2026-11-12): select it (press and hold, as on any iPhone page); the selection bar then shows
   "Look up" next to "Highlight" when the selection is a word or short phrase (`lookable` in `ChapterPage.tsx`). The old
   press-and-hold shortcut was removed: it fired before iPhone's own selection, so text could not be highlighted.
+- Faces in the reader (2026-11-12): `speakerOf` in `src/logic.ts` finds who speaks in a paragraph, on the phone (no
+  tokens). First a name with a speaking verb by the quote ("Chen Chong shouted", "said Song Yawen"), else a name that
+  starts a sentence of the narration near the speech ("Cao Sansui frowned. “…”"). Other names (aliases) count; names
+  inside the speech, or after "at/to/by…", do not; "he said" gives no face. Every cast member is a possible speaker,
+  and the face shows on every line they speak (it used to show once until someone else spoke).
 - Pictures (covers, character pictures, sticker photos) are saved as bytes (`src/picture.ts`), not Blobs. Safari on
   iPhone often failed to save a record again once it held a Blob read back from storage ("Error preparing Blob/File data
   to be stored in object store"), so every later change to a book with a cover failed (found 2026-11-12 via the cast
@@ -131,7 +136,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 158 unit tests
+npm test          # 159 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```

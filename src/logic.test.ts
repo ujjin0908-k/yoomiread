@@ -4,6 +4,7 @@ import {
   bookProgress,
   clampRating,
   computeStats,
+  speakerOf,
   speaksAs,
   continueChapter,
   dropBook,
@@ -227,6 +228,28 @@ describe('speaking', () => {
 
   it('counts the speaker when the speech verb follows their name', () => {
     expect(speaksAs('“Ready?” Xiang Ningxuan said, leaning closer.', 'Xiang Ningxuan')).toBe(true);
+  });
+
+  it('finds the speaker from the narration around the speech', () => {
+    const cast = [
+      { id: 'chen', names: ['Chen Chong'] },
+      { id: 'song', names: ['Song Yawen'] },
+      { id: 'cao', names: ['Cao Sansui', 'Brother Cao'] },
+    ];
+    // The owner's chapter: a name with a verb after the speech, and the speaker named only inside it is not counted.
+    expect(speakerOf('“Brother Cao, are the 1900-level games always like this?” Song Yawen asked in shock.', cast)).toBe('song');
+    expect(speakerOf('“Retreat, quickly! Before they spot us, get into the cover of the ruins. They’re marching, we need to avoid direct contact. Move!” Chen Chong shouted, lowering his massive shield.', cast)).toBe('chen');
+    // An action before the speech.
+    expect(speakerOf('Chen Chong frowned and looked at the sky. “Retreat!”', cast)).toBe('chen');
+    expect(speakerOf('Cao Sansui’s face darkened. “I have never seen this.”', cast)).toBe('cao');
+    // Verb before the name.
+    expect(speakerOf('“Run,” said Song Yawen.', cast)).toBe('song');
+    // Two people: the one acting by the speech, not the one spoken about.
+    expect(speakerOf('Song Yawen looked at Chen Chong. “Are you hurt?”', cast)).toBe('song');
+    // Only a pronoun: no face rather than a guess.
+    expect(speakerOf('“Move!” he shouted.', cast)).toBeUndefined();
+    // A longer word is not the name.
+    expect(speakerOf('Linda said, “Hi.”', [{ id: 'lin', names: ['Lin'] }])).toBeUndefined();
   });
 
   it('needs the name in the paragraph at all', () => {

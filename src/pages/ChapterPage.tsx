@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
-import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speaksAs } from '../logic';
+import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakerOf, type Speaker } from '../logic';
 import { WordSheet } from './WordSheet';
 import { ProfileLink } from './Character';
 import { Mascot } from '../mascot/Mascot';
@@ -104,9 +104,13 @@ export function ChapterPage({ id }: { id: string }) {
   const shown = view === 'translation' && translation ? translation.text : text;
   const english = view === 'translation' && !!translation && needsTranslation(book, text);
   const highlights = (notes ?? []).filter((n) => n.kind === 'highlight' && (n.on ?? 'original') === view);
-  // Faces only for people who have a picture; nobody else gets a circle.
-  const faces = (glossary ?? []).filter((g) => g.kind === 'person' && g.picture && g.status === 'ok');
-  const faceFor = (paragraph: string) => faces.find((g) => speaksAs(paragraph, english ? g.english : g.original));
+  // Everyone in the cast is a possible speaker, so a line by someone without a picture never gets someone else's face.
+  const people = (glossary ?? []).filter((g) => g.kind === 'person' && g.status === 'ok');
+  const speakers: Speaker[] = people.map((g) => ({ id: g.id, names: [english ? g.english : g.original, ...(g.aliases ?? [])].filter(Boolean) }));
+  const faceFor = (paragraph: string) => {
+    const id = speakerOf(paragraph, speakers);
+    return people.find((g) => g.id === id && g.picture);
+  };
   const comments = (notes ?? []).filter((n) => n.kind === 'chapter');
   const list = siblings ?? [];
   const index = list.findIndex((c) => c.id === id);
@@ -628,14 +632,9 @@ function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs:
  * Pairs paragraphs with a face: faceFor finds who is speaking in a paragraph, and a face shows only
  * when the speaker changes from the paragraph before, so a long conversation does not get a circle on every line.
  */
+/** Each paragraph with the face of whoever speaks in it, every time they speak. */
 function withFaces<P extends { text: string }>(list: P[], faceFor: (text: string) => GlossaryEntry | undefined) {
-  let last: string | undefined;
-  return list.map((p) => {
-    const found = faceFor(p.text);
-    const face = found && found.id !== last ? found : undefined;
-    if (found) last = found.id;
-    return { p, face };
-  });
+  return list.map((p) => ({ p, face: faceFor(p.text) }));
 }
 
 /**
