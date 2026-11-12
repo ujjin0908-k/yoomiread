@@ -4,6 +4,7 @@ import { Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
 import { shrinkImage } from '../images';
+import { toPicture } from '../picture';
 import { isRead, needsTranslation } from '../logic';
 import { chaptersToRead, planCost, planReading, readingTexts, updateProfiles, type UpdateResult } from '../translate/profiles';
 import { formatCost } from '../translate/prompt';
@@ -153,7 +154,7 @@ export function CharacterPage({ id }: { id: string }) {
                   onChange={async (e) => {
                     const f = e.target.files?.[0];
                     e.target.value = '';
-                    if (f) await save({ picture: await shrinkImage(f, 480) });
+                    if (f) await save({ picture: await toPicture(await shrinkImage(f, 480)) });
                   }}
                 />
               </label>

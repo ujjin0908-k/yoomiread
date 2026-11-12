@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Sheet } from '../components';
 import { db } from '../db';
 import { guessLanguage, newId, nextChapterNumber } from '../logic';
+import { toPicture } from '../picture';
 import { fetchCover } from '../import/cover';
 import { chapterNumber, extractChapter, extractChapterLinks, fetchPage, findContentsChapter, findContentsLink, type ChapterLink } from '../import/web';
 import { webLink } from '../sources';
@@ -176,7 +177,7 @@ export function ChapterLinks({
       // A book without a cover takes the novel's own, once, and never replaces one chosen by hand.
       if (!book.cover && contents.current) {
         const cover = await fetchCover(contents.current.html, contents.current.url).catch(() => undefined);
-        if (cover) change.cover = cover;
+        if (cover) change.cover = await toPicture(cover);
       }
       await db.books.update(book.id, change);
     } finally {

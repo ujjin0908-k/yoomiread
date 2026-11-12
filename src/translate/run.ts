@@ -77,11 +77,16 @@ export function callCost(model: ModelOption, messages: ChatMessage[], result: Ch
 /** Adds a call's cost to the book's running total. */
 export async function addSpend(bookId: string, cost: number | undefined, estimated: boolean): Promise<void> {
   if (cost === undefined) return;
-  await db.transaction('rw', db.books, async () => {
-    const b = await db.books.get(bookId);
-    if (!b) return;
-    await db.books.update(bookId, { spent: (b.spent ?? 0) + cost, spentEstimated: b.spentEstimated || estimated });
-  });
+  // Keeping count must never stop the translation or scan it counts: a failed save is only logged.
+  try {
+    await db.transaction('rw', db.books, async () => {
+      const b = await db.books.get(bookId);
+      if (!b) return;
+      await db.books.update(bookId, { spent: (b.spent ?? 0) + cost, spentEstimated: b.spentEstimated || estimated });
+    });
+  } catch (e) {
+    console.warn('The cost was not saved:', e);
+  }
 }
 
 /** Adds proposed terms the glossary does not have yet, as "needs review". */

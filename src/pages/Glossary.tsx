@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Empty, Sheet, TopBar } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
-import { shrinkImage, useObjectUrl } from '../images';
+import { shrinkImage } from '../images';
+import { toPicture, usePictureUrl, type Picture } from '../picture';
 import { needsTranslation, newId } from '../logic';
 import { chaptersToRead } from '../translate/profiles';
 import { UpdateSheet } from './Character';
@@ -14,7 +15,7 @@ const KIND_LABEL: Record<GlossaryKind, string> = { person: 'People', place: 'Pla
 
 /** A round face for a glossary person; nothing at all when there is no picture. */
 export function Avatar({ entry, size = 32, onClick }: { entry: GlossaryEntry; size?: number; onClick?: () => void }) {
-  const url = useObjectUrl(entry.picture);
+  const url = usePictureUrl(entry.picture);
   if (!url) return null;
   const img = <img className="avatar" src={url} alt="" width={size} height={size} />;
   return onClick ? (
@@ -44,7 +45,7 @@ export function toneOf(name: string): string {
 
 /** A character's face: their picture, or their initials on their own colour. */
 export function Face({ entry, className = '' }: { entry: GlossaryEntry; className?: string }) {
-  const url = useObjectUrl(entry.picture);
+  const url = usePictureUrl(entry.picture);
   return (
     <span className={`face ${url ? '' : toneOf(entry.english)} ${className}`} aria-hidden="true">
       {url ? <img src={url} alt="" /> : <b>{initials(entry.english)}</b>}
@@ -260,9 +261,9 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
   const [role, setRole] = useState<'main' | 'side'>(entry?.role ?? 'side');
   const [aliases, setAliases] = useState((entry?.aliases ?? []).join(', '));
   const [locked, setLocked] = useState(entry?.locked ?? false);
-  const [picture, setPicture] = useState<Blob | undefined>(entry?.picture);
+  const [picture, setPicture] = useState<Picture | undefined>(entry?.picture);
   const [error, setError] = useState('');
-  const pictureUrl = useObjectUrl(picture);
+  const pictureUrl = usePictureUrl(picture);
 
   async function save(approve: boolean) {
     // An English book has one name: it is kept in both places.
@@ -318,7 +319,7 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
                 hidden
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
-                  if (f) setPicture(await shrinkImage(f, 200));
+                  if (f) setPicture(await toPicture(await shrinkImage(f, 200)));
                   e.target.value = '';
                 }}
               />

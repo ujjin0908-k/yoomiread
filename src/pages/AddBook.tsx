@@ -7,6 +7,7 @@ import { go } from '../hooks';
 import { shrinkImage } from '../images';
 import { SHELVES, guessLanguage, moveToShelf, newId } from '../logic';
 import type { DraftChapter } from '../import/chapters';
+import { toPicture } from '../picture';
 import { lookUpNovel } from '../import/cover';
 import { extractChapter, extractChapterLinks, fetchPage } from '../import/web';
 import { webLink } from '../sources';
@@ -28,6 +29,8 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
   ) {
     setStatus('Saving…');
     const now = Date.now();
+    // Saved as bytes, not a Blob (see picture.ts).
+    const cover = result.cover ? await toPicture(result.cover) : undefined;
     const book: Book = moveToShelf(
       {
         id: newId(),
@@ -35,7 +38,7 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
         author: result.author,
         language: result.language,
         shelf: 'want',
-        cover: result.cover,
+        cover,
         sources: result.sources,
         source,
         createdAt: now,
@@ -284,6 +287,7 @@ function ManualBook({ shelf, onClose }: { shelf: Shelf; onClose: () => void }) {
 
   async function save() {
     const now = Date.now();
+    const picture = cover ? await toPicture(cover) : undefined;
     const base: Book = {
       id: newId(),
       title: title.trim(),
@@ -291,7 +295,7 @@ function ManualBook({ shelf, onClose }: { shelf: Shelf; onClose: () => void }) {
       originalTitle: originalTitle.trim() || undefined,
       language,
       shelf: 'want',
-      cover,
+      cover: picture,
       source: 'manual',
       createdAt: now,
       updatedAt: now,

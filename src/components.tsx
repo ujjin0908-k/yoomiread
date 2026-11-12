@@ -1,6 +1,6 @@
 import { BarChart3, ChevronLeft, Home, LibraryBig, Quote, X } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
-import { useObjectUrl } from './images';
+import { usePictureUrl } from './picture';
 import { motionOk } from './motion';
 import type { Book } from './types';
 
@@ -170,7 +170,7 @@ function tone(title: string): string {
 
 /** Book cover: the real image if there is one, else a made-up cover with the title. */
 export function Cover({ book, shape = 'rect', size = 'md' }: { book: Book; shape?: 'rect' | 'arch'; size?: 'xs' | 'sm' | 'md' | 'lg' }) {
-  const url = useObjectUrl(book.cover, book.id);
+  const url = usePictureUrl(book.cover, book.id);
   // A picture the phone cannot show falls back to the made-up cover, not a broken-image icon.
   const [failed, setFailed] = useState<string>();
   return (

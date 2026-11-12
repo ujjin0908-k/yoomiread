@@ -77,6 +77,11 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   request is shared by the characters picked together. Details must name a chapter that was sent, and quotes must be
   found in the text, or they are dropped. Lines the owner adds are never changed. "Also look for new people" reads whole
   chapters and adds them to "To check". Logic and tests: `src/translate/profiles.ts`.
+- Pictures (covers, character pictures, sticker photos) are saved as bytes (`src/picture.ts`), not Blobs. Safari on
+  iPhone often failed to save a record again once it held a Blob read back from storage ("Error preparing Blob/File data
+  to be stored in object store"), so every later change to a book with a cover failed (found 2026-11-12 via the cast
+  scan). Old Blobs are converted at start-up (`storePicturesAsBytes` in `src/db.ts`); one Safari can no longer read is
+  dropped so the record works again. Never store a Blob in the database again.
 
 ## Things that do not work or were decided against
 
@@ -123,7 +128,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 150 unit tests
+npm test          # 155 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```
