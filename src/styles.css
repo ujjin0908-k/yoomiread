@@ -1377,6 +1377,16 @@ button {
   box-shadow: 0 10px 28px rgb(0 0 0 / 0.22);
 }
 
+/* "Look up" next to "Highlight": the lighter of the two. */
+.pill-btn.ghost-pill {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+.selection-bar .pill-btn {
+  flex: none;
+}
+
 .selection-bar .muted {
   overflow: hidden;
   white-space: nowrap;

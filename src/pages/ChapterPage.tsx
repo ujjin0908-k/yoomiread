@@ -1,9 +1,9 @@
-import { AlertTriangle, Bookmark, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
+import { AlertTriangle, BookOpen, Bookmark, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
-import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speaksAs, wordAt } from '../logic';
+import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speaksAs } from '../logic';
 import { WordSheet } from './WordSheet';
 import { ProfileLink } from './Character';
 import { Mascot } from '../mascot/Mascot';
@@ -66,33 +66,7 @@ export function ChapterPage({ id }: { id: string }) {
   useScrollMemory(chapter, text !== undefined && translation !== undefined, setScroll);
   const [barsAway, setBarsAway] = useState(false);
   useAutoHideBars(setBarsAway);
-  // Press and hold a word to look it up (a quick tap is for showing or hiding the bars).
-  const holdTimer = useRef<number>();
-  const holdFired = useRef(false);
-  const holdAt = useRef<{ x: number; y: number }>();
   const zhNow = book?.language === 'zh';
-  function holdStart(x: number, y: number) {
-    holdAt.current = { x, y };
-    holdFired.current = false;
-    window.clearTimeout(holdTimer.current);
-    holdTimer.current = window.setTimeout(() => {
-      const range = document.caretRangeFromPoint?.(x, y);
-      if (!range || range.startContainer.nodeType !== Node.TEXT_NODE) return;
-      const isZh = zhNow && !english;
-      const word = wordAt((range.startContainer as Text).data, range.startOffset, isZh ? 'zh' : 'en');
-      if (!word) return;
-      holdFired.current = true;
-      window.getSelection()?.removeAllRanges();
-      setLookup({ word, lang: isZh ? 'zh' : 'en' });
-    }, 450);
-  }
-  function holdMove(x: number, y: number) {
-    const start = holdAt.current;
-    if (start && Math.hypot(x - start.x, y - start.y) > 10) window.clearTimeout(holdTimer.current);
-  }
-  function holdEnd() {
-    window.clearTimeout(holdTimer.current);
-  }
 
   // Reader theme colors the whole page while it is open, including the top of the screen (the status bar).
   useEffect(() => {
@@ -214,16 +188,8 @@ export function ChapterPage({ id }: { id: string }) {
             className={`reader ${prefs.dropCap ? 'drop' : ''}`}
             ref={textRef}
             lang={zh ? 'zh' : 'en'}
-            onPointerDown={(e) => holdStart(e.clientX, e.clientY)}
-            onPointerMove={(e) => holdMove(e.clientX, e.clientY)}
-            onPointerUp={holdEnd}
-            onPointerCancel={holdEnd}
             onClick={(e) => {
-              // A press-and-hold already looked a word up; a highlight opens its note; a drag selects text instead.
-              if (holdFired.current) {
-                holdFired.current = false;
-                return;
-              }
+              // A highlight opens its note; a press-and-hold or drag selects text (the bar then offers Highlight and Look up).
               const sel = window.getSelection();
               if ((sel && !sel.isCollapsed) || (e.target as HTMLElement).closest('mark')) return;
               // Any other tap shows or hides the top bar and the footer.
@@ -315,6 +281,21 @@ export function ChapterPage({ id }: { id: string }) {
             <Highlighter size={16} />
             <span>Highlight</span>
           </button>
+          {lookable(pending.quote) && (
+            <button
+              type="button"
+              className="pill-btn small ghost-pill"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                const isZh = zhNow && !english;
+                setLookup({ word: lookable(pending.quote)!, lang: isZh ? 'zh' : 'en' });
+                window.getSelection()?.removeAllRanges();
+              }}
+            >
+              <BookOpen size={16} />
+              <span>Look up</span>
+            </button>
+          )}
         </div>
       ) : (
         <footer className={`reader-foot${barsAway ? ' away' : ''}`}>
@@ -655,6 +636,17 @@ function withFaces<P extends { text: string }>(list: P[], faceFor: (text: string
     if (found) last = found.id;
     return { p, face };
   });
+}
+
+/**
+ * The word or short phrase to look up from a selection, or undefined when the selection is too long to be one
+ * (then only Highlight is offered). Punctuation at the edges is dropped.
+ */
+export function lookable(quote: string): string | undefined {
+  const word = quote.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+  if (!word) return undefined;
+  if (/\p{Script=Han}/u.test(word)) return [...word].length <= 8 ? word : undefined;
+  return word.split(/\s+/).length <= 3 && word.length <= 40 ? word : undefined;
 }
 
 /** Moves highlights into one paragraph's coordinates, cut to its edges. */

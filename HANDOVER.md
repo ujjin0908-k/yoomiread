@@ -77,6 +77,9 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   request is shared by the characters picked together. Details must name a chapter that was sent, and quotes must be
   found in the text, or they are dropped. Lines the owner adds are never changed. "Also look for new people" reads whole
   chapters and adds them to "To check". Logic and tests: `src/translate/profiles.ts`.
+- Looking up a word (2026-11-12): select it (press and hold, as on any iPhone page); the selection bar then shows
+  "Look up" next to "Highlight" when the selection is a word or short phrase (`lookable` in `ChapterPage.tsx`). The old
+  press-and-hold shortcut was removed: it fired before iPhone's own selection, so text could not be highlighted.
 - Pictures (covers, character pictures, sticker photos) are saved as bytes (`src/picture.ts`), not Blobs. Safari on
   iPhone often failed to save a record again once it held a Blob read back from storage ("Error preparing Blob/File data
   to be stored in object store"), so every later change to a book with a cover failed (found 2026-11-12 via the cast
@@ -128,7 +131,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 156 unit tests
+npm test          # 158 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```
