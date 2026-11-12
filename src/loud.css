@@ -1689,8 +1689,9 @@ body[data-reader='night'] {
 .cast-face img {
   object-position: 50% 15%;
 }
+/* No initials on main cards: the name is shown under the picture. */
 .cast-face b {
-  font-size: 2.3rem;
+  display: none;
 }
 .cast-new {
   position: absolute;
