@@ -299,21 +299,48 @@ function insideQuotes(paragraph: string): boolean[] {
 /** Verbs of speaking, right after a name: "Pu Yu said", or 普宇说 / 普宇问. */
 const SPEECH_VERB = /\b(said|asked|replied|answered|whispered|murmured|shouted|called|cried|added|muttered|snapped|laughed|sighed|demanded|growled)\b|说|问|答|喊|叫|笑道|低声|沉声|冷声/;
 
+/** Speaking verbs that come before the name: "said Pu Yu". */
+const SPEECH_VERB_BEFORE = /\b(said|asked|replied|answered|whispered|murmured|shouted|called|cried|added|muttered|snapped|demanded|growled)\s*$/;
+/** Words just before a name that make it someone listened to or looked at, not the one acting: "by Pu Yu's ear". */
+const NOT_SUBJECT = /\b(by|to|at|toward|towards|behind|beside|near|with|from|for|of|on|in|into|and|than|like|saw|see|told|asked|watched|looked)\s+$/i;
+/** Where a sentence starts in the narration: the paragraph start, or after . ! ? : ; a dash or a closing quote. */
+const SENTENCE_START = /(^|[.!?:;—–。！？：；”」』"]\s*)$/;
+
+export type Speaker = { id: string; names: string[] };
+
 /**
- * True when the character is the one speaking: their name is in the narration, followed closely by a speech verb,
- * with a quotation mark nearby ("Pu Yu said, “…”" or "“…” Pu Yu said."). A name inside the speech ("“Pu Yu, come here.”"),
- * a name who is only listening ("a voice by Pu Yu's ear: “…”"), and a name only in narration do not count.
+ * Who is speaking in a paragraph, worked out on this phone (nothing is sent anywhere). In order:
+ * 1. a name with a speaking verb by a quotation mark ("Pu Yu said, “…”", "“…” said Pu Yu", 普宇说：“…”);
+ * 2. otherwise, a name starting a sentence of the narration near the speech ("Chen Chong frowned. “Retreat!”"),
+ *    the one closest to a quotation mark if there are several.
+ * A name inside the speech, a name only listened to ("a voice by Pu Yu's ear"), and narration far from any speech
+ * do not count. Lines with only "he said" have no name, so no speaker.
  */
-export function speaksAs(paragraph: string, name: string, reach = 30): boolean {
-  if (!name) return false;
+export function speakerOf(paragraph: string, people: Speaker[], reach = 30, near = 100): string | undefined {
   const quotes = [...paragraph.matchAll(QUOTE)].map((m) => m.index ?? 0);
-  if (!quotes.length) return false;
+  if (!quotes.length) return undefined;
   const inside = insideQuotes(paragraph);
-  for (let at = paragraph.indexOf(name); at >= 0; at = paragraph.indexOf(name, at + 1)) {
-    if (inside[at]) continue;
-    const end = at + name.length;
-    if (!SPEECH_VERB.test(paragraph.slice(end, end + 25))) continue;
-    if (quotes.some((q) => q >= at - reach && q <= end + reach)) return true;
+  const distance = (at: number, end: number) => Math.min(...quotes.map((q) => (q < at ? at - q : q > end ? q - end : 0)));
+  let beat: { id: string; d: number } | undefined;
+  for (const person of people) {
+    for (const name of person.names) {
+      if (!name) continue;
+      for (let at = paragraph.indexOf(name); at >= 0; at = paragraph.indexOf(name, at + 1)) {
+        if (inside[at]) continue;
+        const end = at + name.length;
+        // Part of a longer word ("Lin" in "Linda") is not the name.
+        if (/^[A-Za-z]/.test(name) && (/[A-Za-z]$/.test(paragraph.slice(0, at)) || /^[A-Za-z]/.test(paragraph.slice(end)))) continue;
+        const d = distance(at, end);
+        const before = paragraph.slice(Math.max(0, at - 25), at);
+        if (d <= reach && (SPEECH_VERB.test(paragraph.slice(end, end + 25)) || SPEECH_VERB_BEFORE.test(before))) return person.id;
+        if (d <= near && SENTENCE_START.test(before) && !NOT_SUBJECT.test(before) && (!beat || d < beat.d)) beat = { id: person.id, d };
+      }
+    }
   }
-  return false;
+  return beat?.id;
+}
+
+/** True when this name is the one speaking in the paragraph (see `speakerOf`). */
+export function speaksAs(paragraph: string, name: string, reach = 30): boolean {
+  return !!name && speakerOf(paragraph, [{ id: name, names: [name] }], reach) === name;
 }
