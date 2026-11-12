@@ -173,7 +173,6 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
                           <Face entry={g} className="cast-face" />
                           {newFor(g) > 0 && <span className="cast-new">{newFor(g)} new ch.</span>}
                           <strong>{g.english}</strong>
-                          <span className="cast-line">{g.profile?.line ?? g.note ?? 'No profile yet'}</span>
                         </span>
                       </a>
                     </li>

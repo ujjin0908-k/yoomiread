@@ -1676,18 +1676,22 @@ body[data-reader='night'] {
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 214px;
   border-radius: 17px;
   background: #fffaf3;
   color: #14121f;
   overflow: hidden;
 }
+/* A tall picture with only the name under it; the top of the picture (usually the face) stays in view. */
 .cast-face {
-  height: 122px;
+  aspect-ratio: 3 / 4;
   padding: 10px;
 }
+.cast-face img {
+  object-position: 50% 15%;
+}
+/* No initials on main cards: the name is shown under the picture. */
 .cast-face b {
-  font-size: 2.3rem;
+  display: none;
 }
 .cast-new {
   position: absolute;
@@ -1704,22 +1708,12 @@ body[data-reader='night'] {
   text-transform: uppercase;
 }
 .cast-card-in strong {
-  padding: 9px 10px 0;
+  padding: 9px 10px 11px;
   font-family: var(--display);
   font-weight: 800;
   font-size: 1.1rem;
   letter-spacing: -0.03em;
   line-height: 1.05;
-}
-.cast-line {
-  padding: 3px 10px 10px;
-  font-size: 0.75rem;
-  line-height: 1.3;
-  color: #3b3752;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 .cast-rows {
   list-style: none;
