@@ -131,8 +131,12 @@ export interface ProposedTerm {
 
 const GENDERS: Gender[] = ['he', 'she', 'they', 'it'];
 
-/** Reads "one JSON object per line"; skips anything that is not a usable entry. */
-export function parseTerms(raw: string): ProposedTerm[] {
+/**
+ * Reads "one JSON object per line"; skips anything that is not a usable entry.
+ * `plain` is for a book already in English: names are written in Latin letters, so they are kept, and the one
+ * name given (in either field) is used for both.
+ */
+export function parseTerms(raw: string, plain = false): ProposedTerm[] {
   const out: ProposedTerm[] = [];
   const seen = new Set<string>();
   for (const line of raw.split('\n')) {
@@ -140,10 +144,11 @@ export function parseTerms(raw: string): ProposedTerm[] {
     if (!t.startsWith('{')) continue;
     try {
       const o = JSON.parse(t) as Record<string, unknown>;
-      const original = String(o.original ?? '').trim();
+      const given = String(o.original ?? '').trim();
       const english = String(o.english ?? '').trim();
-      // A term must come from the Chinese text: English words in the list are never kept.
-      if (!original || !english || seen.has(original) || !/[㐀-鿿豈-﫿]/.test(original)) continue;
+      const original = plain ? given || english : given;
+      // A term of a Chinese book must come from the Chinese text: English words in its list are never kept.
+      if (!original || !english || seen.has(original) || (!plain && !/[㐀-鿿豈-﫿]/.test(original))) continue;
       // Only character names are proposed: places, items and terms are never added.
       if (o.kind !== 'person') continue;
       const gender = GENDERS.includes(o.gender as Gender) ? (o.gender as Gender) : undefined;

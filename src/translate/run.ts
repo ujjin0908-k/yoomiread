@@ -233,7 +233,7 @@ export async function scanGlossary(bookId: string, settings: TranslateSettings, 
   const result = await chat(settings, model, messages, undefined, signal);
   const spend = callCost(modelFor(settings, model), messages, result);
   await addSpend(bookId, spend.cost, spend.estimated);
-  return addProposals(bookId, parseTerms(result.text));
+  return addProposals(bookId, parseTerms(result.text, !needsTranslation(book, sample)));
 }
 
 /** Asks the model for an English title. */
