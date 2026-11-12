@@ -2130,3 +2130,12 @@ body[data-reader='night'] {
 .new-people .update-btn {
   box-shadow: none;
 }
+
+/* On a profile in the old style: what the next update will do. */
+.char-note {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: #ffd23f;
+  color: #14121f;
+}

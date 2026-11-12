@@ -80,6 +80,11 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 - Looking up a word (2026-11-12): select it (press and hold, as on any iPhone page); the selection bar then shows
   "Look up" next to "Highlight" when the selection is a word or short phrase (`lookable` in `ChapterPage.tsx`). The old
   press-and-hold shortcut was removed: it fired before iPhone's own selection, so text could not be highlighted.
+- Profiles as who / powers / status (2026-11-13, owner's ask: scene-by-scene lines and looks were not wanted). A card
+  shows Who they are (identity, role, team, relationships; never "drinks wine"), Powers (abilities, skills, items) and
+  Status (rank, title, faction, condition), plus the quote. Status is replaced by the newest, powers add up. Looks are
+  no longer asked for or shown (data kept). Profiles without `v: 2` are rebuilt from Ch. 1 on their next update, keeping
+  the owner's lines, the one-liner and the quote; the card says so.
 - Faces in the reader (2026-11-12): `speakerOf` in `src/logic.ts` finds who speaks in a paragraph, on the phone (no
   tokens). First a name with a speaking verb by the quote ("Chen Chong shouted", "said Song Yawen"), else a name that
   starts a sentence of the narration near the speech ("Cao Sansui frowned. “…”"). Other names (aliases) count; names
@@ -136,7 +141,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 159 unit tests
+npm test          # 162 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```
