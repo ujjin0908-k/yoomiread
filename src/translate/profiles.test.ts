@@ -25,7 +25,7 @@ describe('what an update reads', () => {
     c3: 'Jun slept.\n\nNobody spoke.',
     c4: 'Mei dies. (unread)',
   };
-  const mei = person('p1', 'Mei', { profile: { looks: [], about: [], upTo: 1 } });
+  const mei = person('p1', 'Mei', { profile: { looks: [], about: [], upTo: 1, v: 2 } });
   const jun = person('p2', 'Jun');
 
   it('reads only finished chapters after the one the profile is up to', () => {
@@ -79,23 +79,23 @@ describe('trusting the answer', () => {
 describe('folding an update into a profile', () => {
   it('adds new lines, skips repeats, and never touches what the owner wrote', () => {
     const mine = { text: 'My favourite', mine: true };
-    const before = { looks: [{ text: 'Red coat', chapter: 1 }], about: [mine], quote: { text: 'Mine.', mine: true }, upTo: 1 };
-    const after = mergeProfile(before, { name: 'Mei', looks: [{ text: 'red coat', chapter: 2 }, { text: 'Short hair', chapter: 2 }], about: [{ text: 'Quiet', chapter: 2 }], quote: { text: 'New quote', chapter: 2 } }, 3, 99);
+    const before = { looks: [{ text: 'Red coat', chapter: 1 }], about: [mine], quote: { text: 'Mine.', mine: true }, upTo: 1, v: 2 as const };
+    const after = mergeProfile(before, { name: 'Mei', looks: [{ text: 'red coat', chapter: 2 }, { text: 'Short hair', chapter: 2 }], about: [{ text: 'Quiet', chapter: 2 }], powers: [], status: [], quote: { text: 'New quote', chapter: 2 } }, 3, 99);
     expect(after.looks.map((f) => f.text)).toEqual(['Red coat', 'Short hair']);
     expect(after.about).toEqual([mine, { text: 'Quiet', chapter: 2 }]);
     expect(after.quote?.text).toBe('Mine.');
     expect(after.upTo).toBe(3);
   });
   it('moves the profile forward even when the chapters said nothing new', () => {
-    expect(mergeProfile({ looks: [], about: [], upTo: 2 }, undefined, 5, 1).upTo).toBe(5);
+    expect(mergeProfile({ looks: [], about: [], upTo: 2, v: 2 }, undefined, 5, 1).upTo).toBe(5);
   });
   it('makes room by dropping the oldest lines, never the owner\'s', () => {
-    const full = Array.from({ length: 8 }, (_, i) => ({ text: 'fact ' + i, chapter: 1, mine: i === 0 }));
-    const after = mergeProfile({ looks: [], about: full }, { name: 'x', looks: [], about: [{ text: 'newest', chapter: 2 }] }, 2, 1);
-    expect(after.about).toHaveLength(8);
+    const full = Array.from({ length: 6 }, (_, i) => ({ text: 'fact ' + i, chapter: 1, mine: i === 0 }));
+    const after = mergeProfile({ looks: [], about: full, v: 2 }, { name: 'x', looks: [], about: [{ text: 'newest', chapter: 2 }], powers: [], status: [] }, 2, 1);
+    expect(after.about).toHaveLength(6);
     expect(after.about[0].text).toBe('fact 0');
     expect(after.about.map((f) => f.text)).not.toContain('fact 1');
-    expect(after.about[7].text).toBe('newest');
+    expect(after.about[5].text).toBe('newest');
   });
 });
 
@@ -107,5 +107,38 @@ describe('looking for new characters', () => {
     expect(chaptersToSearch(chapters, 3)).toEqual([]);
     const texts = new Map([['c2', 'Two'], ['c3', ''], ['c4', 'SPOILER']]);
     expect(searchPlan(chapters, texts, 1)).toEqual([{ chapter: 2, text: 'Two' }]);
+  });
+});
+
+describe('who they are, powers and status', () => {
+  const chunk = [{ chapter: 4, text: 'Cheng Shi, priest of Birth, rose to Ladder Rank 2000 and drew his die, Fate.' }];
+  it('reads powers and status from the reply, only for chapters that were sent', () => {
+    const raw = '{"name": "Cheng Shi", "about": [{"text": "Priest of Birth", "ch": 4}], "powers": [{"text": "Die called Fate", "ch": 4}, {"text": "Flight", "ch": 9}], "status": [{"text": "Ladder Rank 2000", "ch": 4}]}';
+    const { updates } = parseProfileReply(raw, chunk);
+    expect(updates[0].powers).toEqual([{ text: 'Die called Fate', chapter: 4 }]);
+    expect(updates[0].status).toEqual([{ text: 'Ladder Rank 2000', chapter: 4 }]);
+  });
+
+  it('replaces the status with the newest one, keeping lines the owner wrote; powers add up', () => {
+    const mine = { text: 'My note', mine: true };
+    const before = { looks: [], about: [], powers: [{ text: 'Die', chapter: 2 }], status: [{ text: 'Ladder Rank 1900', chapter: 2 }, mine], v: 2 as const, upTo: 2 };
+    const after = mergeProfile(before, { name: 'x', looks: [], about: [], powers: [{ text: 'Time acceleration', chapter: 5 }], status: [{ text: 'Ladder Rank 2000', chapter: 5 }] }, 5, 1);
+    expect(after.status).toEqual([mine, { text: 'Ladder Rank 2000', chapter: 5 }]);
+    expect(after.powers?.map((f) => f.text)).toEqual(['Die', 'Time acceleration']);
+    // No new status: the old one stays.
+    expect(mergeProfile(after, undefined, 6, 1).status).toEqual(after.status);
+  });
+
+  it('rebuilds an old-style profile from chapter 1, keeping only the owner\'s lines, line and quote', () => {
+    const old = { line: 'Fertility priest', looks: [{ text: 'smiles playfully', chapter: 4 }], about: [{ text: 'downs half a bottle of wine', chapter: 7 }, { text: 'Mine', mine: true }], quote: { text: 'I won’t die.', chapter: 9 }, upTo: 17 };
+    const entry = person('p9', 'Cheng Shi', { profile: old });
+    expect(chaptersToRead([chapter(1), chapter(2), chapter(3)], entry).map((c) => c.number)).toEqual([1, 2, 3]);
+    const after = mergeProfile(old, undefined, 3, 1);
+    expect(after.v).toBe(2);
+    expect(after.about).toEqual([{ text: 'Mine', mine: true }]);
+    expect(after.looks).toEqual([]);
+    expect(after.line).toBe('Fertility priest');
+    expect(after.quote?.text).toBe('I won’t die.');
+    expect(after.upTo).toBe(3);
   });
 });

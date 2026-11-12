@@ -66,7 +66,7 @@ function useEstimate(book: Book | undefined, chapters: Chapter[], picked: Glossa
   return { settings, cost: planCost(plan, settings, id, picked.length), chapters: needed, ready: true, model: id, empty: !plan.parts.length };
 }
 
-/** One character's card: looks, who they are, and one quote, from the chapters the owner has read. */
+/** One character's card: who they are, their powers and status, and one quote, from the chapters the owner has read. */
 export function CharacterPage({ id }: { id: string }) {
   const entry = useLive(async () => (await db.glossary.get(id)) ?? null, [id]);
   const book = useLive(async () => (entry ? await db.books.get(entry.bookId) : undefined), [entry?.bookId]);
@@ -196,8 +196,15 @@ export function CharacterPage({ id }: { id: string }) {
 
         {p?.line && <p className="char-line">{p.line}</p>}
 
-        <Facts title="Looks" facts={p?.looks ?? []} onChange={(looks) => void saveProfile({ looks })} />
+        {p && p.v !== 2 && (
+          <p className="char-note small">
+            Profiles now show who {words.subject} {entry.gender === 'they' || !entry.gender ? 'are' : 'is'}, {words.possessive} powers and status. The next
+            update rebuilds this one from Ch. 1; lines you wrote are kept.
+          </p>
+        )}
         <Facts title={`Who ${words.subject} ${entry.gender === 'they' || !entry.gender ? 'are' : 'is'}`} facts={p?.about ?? []} onChange={(about) => void saveProfile({ about })} />
+        <Facts title="Powers" facts={p?.powers ?? []} onChange={(powers) => void saveProfile({ powers })} />
+        <Facts title="Status" facts={p?.status ?? []} onChange={(status) => void saveProfile({ status })} />
 
         {p?.quote ? (
           <section className="char-quote">

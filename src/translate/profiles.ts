@@ -6,17 +6,19 @@ import { costOf, estimateTokens, isRefusal, type ChatMessage } from './prompt';
 import { addSpend, callCost, modelFor } from './run';
 
 /**
- * Character profiles: looks, who they are, and one quote, built only from chapters the owner has read.
+ * Character profiles: who they are, their powers, their status, and one quote, built only from chapters the owner has read.
  * Nothing here runs on its own. The owner picks who to update; only chapters read since that character's last
  * update are looked at, and of those only the paragraphs that name the character, which keeps each update cheap.
  */
 
 const MAX_LOOKS = 6;
-const MAX_ABOUT = 8;
+const MAX_ABOUT = 6;
+const MAX_POWERS = 10;
+const MAX_STATUS = 6;
 /** About 6,000 tokens of story per request. */
 const CHUNK_CHARS = 24_000;
 
-export const EMPTY_PROFILE: CharacterProfile = { looks: [], about: [] };
+export const EMPTY_PROFILE: CharacterProfile = { looks: [], about: [], powers: [], status: [], v: 2 };
 
 /** Every name a character goes by, longest first, so "Song Zang" is tried before "Song". A single letter is not a name; a single Chinese character can be. */
 export function namesOf(entry: GlossaryEntry): string[] {
@@ -33,7 +35,8 @@ export function mentions(paragraph: string, names: string[]): boolean {
 
 /** The chapters an update for this character would read: finished ones after the chapter the profile is up to. */
 export function chaptersToRead(chapters: Chapter[], entry: GlossaryEntry): Chapter[] {
-  const upTo = entry.profile?.upTo ?? 0;
+  // A profile in the old style (looks and scene-by-scene notes) is rebuilt from the start.
+  const upTo = entry.profile?.v === 2 ? (entry.profile.upTo ?? 0) : 0;
   return chapters.filter((c) => isRead(c) && c.number > upTo).sort((a, b) => a.number - b.number);
 }
 
@@ -110,10 +113,15 @@ export function profileMessages(input: { book: Book; chunk: ReadingPlan['parts']
     'Use ONLY what the excerpts say. Never guess, never use outside knowledge of the story, never mention later events.',
     'Write in English, in short plain phrases (under 14 words each), no full stops needed.',
     'For each listed character that the excerpts tell something NEW about, answer with one JSON object on its own line:',
-    '{"name": "<exactly as listed>", "line": "<who they are in one short line>", "looks": [{"text": "...", "ch": 3}],',
-    ' "about": [{"text": "...", "ch": 3}], "quote": {"text": "<their exact words, copied from an excerpt>", "ch": 3}}',
-    '"looks" is appearance only: face, body, hair, clothes, voice. "about" is who they are: role, manner, skills, what others say of them.',
-    'Give at most 3 new "looks" and 4 new "about" per character. Skip anything already in their notes. Leave out any field with nothing new.',
+    '{"name": "<exactly as listed>", "line": "<who they are in one short line>", "about": [{"text": "...", "ch": 3}],',
+    ' "powers": [{"text": "...", "ch": 3}], "status": [{"text": "...", "ch": 3}], "quote": {"text": "<their exact words, copied from an excerpt>", "ch": 3}}',
+    '"about" is WHO THEY ARE: identity, occupation or class, team or faction, relationships to other characters, goals, and',
+    'personality in a few words. It is NOT a list of things they did in a scene: no "drinks wine", "sits on the ground", "shares a cola".',
+    '"powers" is what they can do: abilities, skills, talents, spells, and the items or weapons they fight with, using the names the story gives.',
+    '"status" is where they stand as of the LATEST chapter in the excerpts: rank or level, title, faction, and condition (injured, cursed,',
+    'dead, missing) when the story says so. Give the full current status every time, as it replaces the old one.',
+    'Give at most 3 new "about", 4 new "powers" and 5 "status" lines per character. Skip anything already in their notes.',
+    'Leave out any field with nothing new. Never invent a power or a rank that the excerpts do not state.',
     '"quote" must be something the character says, copied word for word from the excerpts, under 30 words. Leave it out when unsure.',
     'A character with nothing new gets no line at all.',
     input.findNew
@@ -125,9 +133,11 @@ export function profileMessages(input: { book: Book; chunk: ReadingPlan['parts']
     .join('\n');
   const notes = input.people
     .map((p) => {
-      const have = [...(p.profile?.looks ?? []), ...(p.profile?.about ?? [])].map((f) => f.text);
+      const current = p.profile?.v === 2 ? p.profile : undefined;
+      const list = (label: string, facts?: ProfileFact[]) => (facts?.length ? ` ${label}: ${facts.map((f) => f.text).join('; ')}.` : '');
+      const have = current ? list('Who', current.about) + list('Powers', current.powers) + list('Status', current.status) : '';
       const names = namesOf(p).filter((n) => n !== p.english);
-      return `- ${p.english}${names.length ? ` (also: ${names.join(', ')})` : ''}${p.gender ? `, ${p.gender}` : ''}${have.length ? `. Notes so far: ${have.join('; ')}` : ''}`;
+      return `- ${p.english}${names.length ? ` (also: ${names.join(', ')})` : ''}${p.gender ? `, ${p.gender}` : ''}${have ? `. Notes so far:${have}` : ''}`;
     })
     .join('\n');
   const known = input.findNew ? `\n\nAlready known (do not list as new): ${input.known.join(', ') || 'nobody'}` : '';
@@ -143,6 +153,8 @@ export interface ProfileUpdate {
   line?: string;
   looks: ProfileFact[];
   about: ProfileFact[];
+  powers: ProfileFact[];
+  status: ProfileFact[];
   quote?: ProfileFact;
 }
 export interface NewPerson {
@@ -192,9 +204,11 @@ export function parseProfileReply(raw: string, chunk: ReadingPlan['parts']): { u
       line: typeof row.line === 'string' ? row.line.trim().slice(0, 90) || undefined : undefined,
       looks: facts(row.looks),
       about: facts(row.about),
+      powers: facts(row.powers),
+      status: facts(row.status),
       quote: quoteOk ? { text: quoteText, chapter: quoteCh } : undefined,
     };
-    if (update.looks.length || update.about.length || update.quote || update.line) updates.push(update);
+    if (update.looks.length || update.about.length || update.powers.length || update.status.length || update.quote || update.line) updates.push(update);
   }
   return { updates, fresh };
 }
@@ -218,14 +232,23 @@ function addFacts(have: ProfileFact[], more: ProfileFact[], max: number): Profil
 
 /** Folds an update into a profile. Lines the owner wrote always stay; a quote the owner chose is never replaced. */
 export function mergeProfile(profile: CharacterProfile | undefined, update: ProfileUpdate | undefined, upTo: number, now = Date.now()): CharacterProfile {
-  const base = profile ?? EMPTY_PROFILE;
+  // An old-style profile keeps only the owner's own lines, its one-line summary and its quote; the rest is rebuilt.
+  const base: CharacterProfile =
+    profile?.v === 2
+      ? profile
+      : { ...EMPTY_PROFILE, line: profile?.line, quote: profile?.quote, looks: (profile?.looks ?? []).filter((f) => f.mine), about: (profile?.about ?? []).filter((f) => f.mine), upTo: 0 };
+  const mine = (base.status ?? []).filter((f) => f.mine);
   return {
     line: update?.line ?? base.line,
     looks: addFacts(base.looks, update?.looks ?? [], MAX_LOOKS),
     about: addFacts(base.about, update?.about ?? [], MAX_ABOUT),
+    powers: addFacts(base.powers ?? [], update?.powers ?? [], MAX_POWERS),
+    // The status is where they stand now: a new one replaces the old, except lines the owner wrote.
+    status: update?.status.length ? addFacts(mine, update.status, MAX_STATUS) : (base.status ?? []),
     quote: base.quote?.mine ? base.quote : (update?.quote ?? base.quote),
     upTo: Math.max(base.upTo ?? 0, upTo),
     updatedAt: now,
+    v: 2,
   };
 }
 

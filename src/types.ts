@@ -109,9 +109,17 @@ export interface ProfileFact {
 export interface CharacterProfile {
   /** One short line for the cast list. */
   line?: string;
+  /** Appearance. No longer asked for or shown (2026-11-13); kept so nothing the owner wrote is lost. */
   looks: ProfileFact[];
+  /** Who they are: identity, role, team, relationships, goals. Not a log of things they did in scenes. */
   about: ProfileFact[];
+  /** Powers, skills, talents, and items they fight with. */
+  powers?: ProfileFact[];
+  /** Where they stand as of the latest update: rank, title, faction, condition. Replaced, not added to. */
+  status?: ProfileFact[];
   quote?: ProfileFact;
+  /** 2 for profiles built as who / powers / status. Older ones are rebuilt from chapter 1 on their next update. */
+  v?: 2;
   /** The profile covers the story up to and including this chapter number. */
   upTo?: number;
   updatedAt?: number;
