@@ -1,3 +1,5 @@
+import type { Picture } from './picture';
+
 export type Shelf = 'want' | 'reading' | 'finished' | 'dropped';
 
 export type BookLanguage = 'zh' | 'en' | 'other';
@@ -23,7 +25,7 @@ export interface Book {
   language: BookLanguage;
   shelf: Shelf;
   /** Cover image: taken from the PDF's first page, or added by hand. */
-  cover?: Blob;
+  cover?: Picture;
   source?: 'manual' | 'pdf' | 'epub' | 'web' | 'paste';
   /** 0.5 to 5 in half steps; set when the book is finished. */
   rating?: number;
@@ -129,7 +131,7 @@ export interface GlossaryEntry {
   /** 'review': proposed by the model, not used in translations until approved. */
   status: 'ok' | 'review';
   /** Optional face for the reader (small JPEG). */
-  picture?: Blob;
+  picture?: Picture;
   /** People only: a main or a side character. Not set counts as side. */
   role?: 'main' | 'side';
   /** Other names the same character goes by ("Little Song", "the boss"), used to find their scenes. */

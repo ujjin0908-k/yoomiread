@@ -1,6 +1,7 @@
 import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, PenLine, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Book3D, Cover, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
+import { toPicture } from '../picture';
 import { coverFromLink } from '../import/cover';
 import { ChapterLinks } from './ChapterLinks';
 import { celebrate } from '../motion';
@@ -91,7 +92,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
     try {
       for (const link of links) {
         try {
-          await db.books.update(id, { cover: await coverFromLink(link), updatedAt: Date.now() });
+          await db.books.update(id, { cover: await toPicture(await coverFromLink(link)), updatedAt: Date.now() });
           return;
         } catch (e) {
           reason = e instanceof Error ? e.message : 'Could not get a cover.';
@@ -104,7 +105,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   }
 
   async function changeCover(file: File) {
-    await db.books.update(id, { cover: await shrinkImage(file), updatedAt: Date.now() });
+    await db.books.update(id, { cover: await toPicture(await shrinkImage(file)), updatedAt: Date.now() });
   }
 
   async function remove() {

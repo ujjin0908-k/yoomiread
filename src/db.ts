@@ -140,3 +140,32 @@ export interface LibraryData {
 }
 
 export const db = new YoomiDB();
+
+/**
+ * Pictures saved by older versions are Blobs, which Safari often cannot save a second time. Converts them to bytes,
+ * one record at a time, outside any transaction (reading a Blob's bytes cannot happen inside one). Safe to run on
+ * every start: it only touches records that still hold a Blob.
+ */
+export async function storePicturesAsBytes(target = db): Promise<number> {
+  const { asStored } = await import('./picture');
+  let fixed = 0;
+  for (const b of await target.books.toArray()) {
+    if (!(b.cover instanceof Blob)) continue;
+    await target.books.put({ ...b, cover: await asStored(b.cover) });
+    fixed++;
+  }
+  for (const g of await target.glossary.toArray()) {
+    if (!(g.picture instanceof Blob)) continue;
+    await target.glossary.put({ ...g, picture: await asStored(g.picture) });
+    fixed++;
+  }
+  const stickers = await target.settings.get('stickers');
+  const list = Array.isArray(stickers?.value) ? (stickers!.value as { photo?: unknown }[]) : [];
+  if (list.some((s) => s.photo instanceof Blob)) {
+    const next = [];
+    for (const s of list) next.push(s.photo instanceof Blob ? { ...s, photo: await asStored(s.photo) } : s);
+    await target.settings.put({ key: 'stickers', value: next });
+    fixed++;
+  }
+  return fixed;
+}

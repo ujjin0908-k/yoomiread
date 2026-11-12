@@ -106,12 +106,18 @@ const empty = { chapters: [] as Chapter[], notes: [] as Note[], sessions: [] as 
 
 describe('backups', () => {
   it('round trips, covers included', async () => {
-    const cover = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' });
+    const cover = { type: 'image/jpeg', bytes: new Uint8Array([1, 2, 3]).buffer };
     const raw = JSON.stringify(await makeBackup({ ...empty, books: [{ ...book, cover }] }, 5));
     const back = parseBackup(raw);
     expect(back.books[0].title).toBe('Test Book');
     expect(back.books[0].cover?.type).toBe('image/jpeg');
-    expect([...new Uint8Array(await back.books[0].cover!.arrayBuffer())]).toEqual([1, 2, 3]);
+    expect([...new Uint8Array(back.books[0].cover!.bytes)]).toEqual([1, 2, 3]);
+  });
+
+  it('still backs up a cover saved by an older version as a Blob', async () => {
+    const old = new Blob([new Uint8Array([4, 5])], { type: 'image/png' }) as unknown as Book['cover'];
+    const back = parseBackup(JSON.stringify(await makeBackup({ ...empty, books: [{ ...book, cover: old }] }, 5)));
+    expect([...new Uint8Array(back.books[0].cover!.bytes)]).toEqual([4, 5]);
   });
 
   it('still reads version 1 backups', () => {

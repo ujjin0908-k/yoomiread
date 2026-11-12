@@ -1,3 +1,4 @@
+import { pictureBlob, type Picture } from './picture';
 import type { LibraryData } from './db';
 import type { Backup, GlossaryEntry } from './types';
 
@@ -8,21 +9,32 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
   return `data:${blob.type || 'application/octet-stream'};base64,${btoa(bin)}`;
 }
 
-function dataUrlToBlob(url: string): Blob {
+function dataUrlToPicture(url: string): Picture {
   const m = /^data:([^;,]*);base64,(.*)$/.exec(url);
   if (!m) throw new Error('A cover in the backup is damaged.');
   const bin = atob(m[2]);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new Blob([bytes], { type: m[1] });
+  return { type: m[1] || 'image/jpeg', bytes: bytes.buffer };
+}
+
+/** A picture as a data URL; an old Blob that can no longer be read is left out rather than failing the backup. */
+async function pictureToDataUrl(picture: Picture | Blob | undefined): Promise<string | undefined> {
+  const blob = pictureBlob(picture);
+  if (!blob) return undefined;
+  try {
+    return await blobToDataUrl(blob);
+  } catch {
+    return undefined;
+  }
 }
 
 export async function makeBackup(data: LibraryData, now = Date.now()): Promise<Backup> {
   const books = await Promise.all(
-    data.books.map(async (b) => ({ ...b, cover: b.cover ? await blobToDataUrl(b.cover) : undefined })),
+    data.books.map(async (b) => ({ ...b, cover: await pictureToDataUrl(b.cover) })),
   );
   const glossary = await Promise.all(
-    data.glossary.map(async (g) => ({ ...g, picture: g.picture ? await blobToDataUrl(g.picture) : undefined })),
+    data.glossary.map(async (g) => ({ ...g, picture: await pictureToDataUrl(g.picture) })),
   );
   return {
     app: 'yoomiread',
@@ -56,12 +68,12 @@ export function parseBackup(raw: string): LibraryData {
     throw new Error('The backup has chapters or notes for a book that is not in it.');
   }
   return {
-    books: b.books.map((x) => ({ ...x, cover: x.cover ? dataUrlToBlob(x.cover) : undefined })),
+    books: b.books.map((x) => ({ ...x, cover: x.cover ? dataUrlToPicture(x.cover) : undefined })),
     chapters: b.chapters,
     notes: b.notes,
     sessions: (b.sessions ?? []).filter((s) => bookIds.has(s.bookId)),
     glossary: (b.glossary ?? [])
       .filter((g) => bookIds.has(g.bookId))
-      .map((g): GlossaryEntry => ({ ...g, picture: g.picture ? dataUrlToBlob(g.picture) : undefined })),
+      .map((g): GlossaryEntry => ({ ...g, picture: g.picture ? dataUrlToPicture(g.picture) : undefined })),
   };
 }

@@ -2,7 +2,8 @@ import { ImagePlus } from 'lucide-react';
 import { useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { db } from './db';
 import { useLive } from './hooks';
-import { shrinkImage, useObjectUrl } from './images';
+import { shrinkImage } from './images';
+import { toPicture, usePictureUrl, type Picture } from './picture';
 import { newId } from './logic';
 import type { Shelf } from './types';
 
@@ -21,7 +22,7 @@ export interface PlacedSticker {
   /** Tilt in degrees. */
   rot: number;
   /** For kind "photo": the picture, shrunk. */
-  photo?: Blob;
+  photo?: Picture;
 }
 
 const KEY = 'stickers';
@@ -92,7 +93,7 @@ async function change(update: (all: PlacedSticker[]) => PlacedSticker[]): Promis
 }
 
 /** Puts a new sticker on a shelf's pocket, a little off centre and tilted, so several do not stack exactly. */
-export function addSticker(shelf: Shelf, kind: string, photo?: Blob): Promise<void> {
+export function addSticker(shelf: Shelf, kind: string, photo?: Picture): Promise<void> {
   const jitter = () => (Math.random() - 0.5) * 0.3;
   return change((all) =>
     all.filter((s) => s.shelf === shelf).length >= MAX_PER_POCKET
@@ -102,7 +103,7 @@ export function addSticker(shelf: Shelf, kind: string, photo?: Blob): Promise<vo
 }
 
 function Art({ sticker }: { sticker: PlacedSticker }) {
-  const url = useObjectUrl(sticker.photo);
+  const url = usePictureUrl(sticker.photo);
   if (sticker.kind === 'photo') return url ? <img className="stk-photo" src={url} alt="" draggable={false} /> : null;
   return <>{STICKERS.find((s) => s.kind === sticker.kind)?.art}</>;
 }
@@ -193,7 +194,7 @@ export function StickerTray({ shelf, shelfLabel, count, onDone }: { shelf: Shelf
               if (!f) return;
               setError('');
               shrinkImage(f, 240)
-                .then((photo) => addSticker(shelf, 'photo', photo))
+                .then(async (photo) => addSticker(shelf, 'photo', await toPicture(photo)))
                 .catch((err) => setError(err instanceof Error ? ` ${err.message}` : ' Could not read that image.'));
             }}
           />

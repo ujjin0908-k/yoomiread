@@ -7,6 +7,8 @@ import './motion.css';
 import './loud.css';
 
 initMotion();
+// Old pictures become bytes, so Safari can keep saving books that have a cover.
+void import('./db').then(({ storePicturesAsBytes }) => storePicturesAsBytes()).catch((e) => console.warn('Pictures were not converted:', e));
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
