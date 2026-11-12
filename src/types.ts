@@ -17,6 +17,8 @@ export interface BookStyle {
 
 export interface Book {
   id: string;
+  /** The cast has been searched for new characters up to and including this chapter number. */
+  castUpTo?: number;
   /** The style for this book's translations (optional). */
   style?: BookStyle;
   title: string;

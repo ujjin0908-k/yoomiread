@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Chapter, GlossaryEntry } from '../types';
-import { chaptersToRead, chunkParts, mentions, mergeProfile, namesOf, parseProfileReply, planReading } from './profiles';
+import { chaptersToRead, chaptersToSearch, chunkParts, mentions, mergeProfile, namesOf, parseProfileReply, planReading, searchPlan } from './profiles';
 
 const person = (id: string, english: string, extra: Partial<GlossaryEntry> = {}): GlossaryEntry => ({
   id, bookId: 'b', original: english, english, kind: 'person', locked: false, status: 'ok', createdAt: 1, updatedAt: 1, ...extra,
@@ -96,5 +96,16 @@ describe('folding an update into a profile', () => {
     expect(after.about[0].text).toBe('fact 0');
     expect(after.about.map((f) => f.text)).not.toContain('fact 1');
     expect(after.about[7].text).toBe('newest');
+  });
+});
+
+describe('looking for new characters', () => {
+  const chapters = [chapter(1), chapter(2), chapter(3), chapter(4, false)];
+  it('reads only finished chapters after the last search, never an unread one', () => {
+    expect(chaptersToSearch(chapters, 1).map((c) => c.number)).toEqual([2, 3]);
+    expect(chaptersToSearch(chapters).map((c) => c.number)).toEqual([1, 2, 3]);
+    expect(chaptersToSearch(chapters, 3)).toEqual([]);
+    const texts = new Map([['c2', 'Two'], ['c3', ''], ['c4', 'SPOILER']]);
+    expect(searchPlan(chapters, texts, 1)).toEqual([{ chapter: 2, text: 'Two' }]);
   });
 });

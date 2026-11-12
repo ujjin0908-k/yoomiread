@@ -293,15 +293,7 @@ export async function updateProfiles(input: {
         await db.glossary.update(person.id, { profile: mergeProfile(person.profile, update, through, now), updatedAt: now });
         if (update) touched.add(person.id);
       }
-      if (findNew && fresh.length) {
-        const have = new Set(all.flatMap((g) => namesOf(g)).map(squash));
-        const rows: GlossaryEntry[] = fresh
-          .filter((f) => !have.has(squash(f.original)) && !have.has(squash(f.english)))
-          .filter((f, n, list) => list.findIndex((x) => squash(x.original) === squash(f.original)) === n)
-          .map((f) => ({ id: newId(), bookId: book.id, original: f.original, english: f.english, kind: 'person', gender: f.gender, note: f.note, locked: false, status: 'review', createdAt: now, updatedAt: now }));
-        await db.glossary.bulkAdd(rows);
-        result.added += rows.length;
-      }
+      if (findNew && fresh.length) result.added += await addNewPeople(book.id, fresh, all, now);
     } catch (e) {
       if (!signal?.aborted) result.stopped = e instanceof Error ? e.message : 'The provider did not answer.';
       break;
@@ -320,4 +312,98 @@ export async function updateProfiles(input: {
   }
   for (const p of picked) (touched.has(p.id) ? result.updated : result.unchanged).push(p.english);
   return result;
+}
+
+/** Adds people who are not in the cast yet, under "To check". Returns how many were added. */
+export async function addNewPeople(bookId: string, fresh: NewPerson[], all: GlossaryEntry[], now = Date.now()): Promise<number> {
+  const have = new Set(all.flatMap((g) => namesOf(g)).map(squash));
+  const rows: GlossaryEntry[] = fresh
+    .filter((f) => !have.has(squash(f.original)) && !have.has(squash(f.english)))
+    .filter((f, n, list) => list.findIndex((x) => squash(x.original) === squash(f.original)) === n)
+    .map((f) => ({ id: newId(), bookId, original: f.original, english: f.english, kind: 'person', gender: f.gender, note: f.note, locked: false, status: 'review', createdAt: now, updatedAt: now }));
+  if (rows.length) await db.glossary.bulkAdd(rows);
+  return rows.length;
+}
+
+/** The chapters "Look for new characters" reads: finished ones after the chapter the cast was last searched to. */
+export function chaptersToSearch(chapters: Chapter[], castUpTo = 0): Chapter[] {
+  return chapters.filter((c) => isRead(c) && c.number > castUpTo).sort((a, b) => a.number - b.number);
+}
+
+export function newPeopleMessages(input: { book: Book; chunk: ReadingPlan['parts']; known: string[] }): ChatMessage[] {
+  const system = [
+    'You list the named characters of a novel for a reader. You are given chapters the reader has already read,',
+    'each marked with its chapter number, and the names already in the reader\'s list.',
+    'List every named character in these chapters who is NOT already in the list (by any of their names).',
+    'Use only what the text says. Skip people who are only called by a job or a description, unless that is clearly how the story names them.',
+    'Answer with one JSON object per line and nothing else:',
+    '{"new": "<name exactly as written in the text>", "english": "<the name in English>", "gender": "he|she|they|it", "note": "<who they are, under 10 words>"}',
+    'If there is nobody new, answer with nothing.',
+  ].join('\n');
+  const story = input.chunk.map((p) => `[Chapter ${p.chapter}]\n${p.text}`).join('\n\n');
+  return [
+    { role: 'system', content: system },
+    { role: 'user', content: `Book: ${input.book.title}\n\nAlready in the list: ${input.known.join(', ') || 'nobody'}\n\nChapters:\n\n${story}` },
+  ];
+}
+
+/** What a search would read, and a rough price, before anything is sent. */
+export function searchPlan(chapters: Chapter[], texts: Map<string, string>, castUpTo = 0): ReadingPlan['parts'] {
+  return chaptersToSearch(chapters, castUpTo)
+    .map((c) => ({ chapter: c.number, text: texts.get(c.id) ?? '' }))
+    .filter((p) => p.text.trim());
+}
+
+export function searchCost(parts: ReadingPlan['parts'], settings: TranslateSettings, modelId: string, known: number): number | undefined {
+  if (!parts.length) return 0;
+  let input = 0;
+  const chunks = chunkParts(parts);
+  for (const chunk of chunks) input += estimateTokens(chunk.map((p) => p.text).join('\n')).input + known * 4;
+  return costOf(modelFor(settings, modelId), input, chunks.length * 250);
+}
+
+/**
+ * "Look for new characters": reads the chapters finished since the cast was last searched, whole, and adds anyone
+ * new under "To check". Profiles are not touched. Remembers how far it got after each request, so stopping keeps it.
+ */
+export async function findNewPeople(input: {
+  book: Book;
+  chapters: Chapter[];
+  settings: TranslateSettings;
+  model: string;
+  signal?: AbortSignal;
+  onStatus?: (line: string) => void;
+}): Promise<{ added: number; cost: number; read: number; stopped?: string }> {
+  const { book, chapters, settings, model, signal } = input;
+  const todo = chaptersToSearch(chapters, book.castUpTo);
+  const texts = await readingTexts(book, todo);
+  const chunks = chunkParts(searchPlan(chapters, texts, book.castUpTo));
+  const out = { added: 0, cost: 0, read: 0, stopped: undefined as string | undefined };
+  for (let i = 0; i < chunks.length && !signal?.aborted; i++) {
+    const chunk = chunks[i];
+    const last = chunk[chunk.length - 1].chapter;
+    input.onStatus?.(`Reading chapters ${chunk[0].chapter}${last !== chunk[0].chapter ? `–${last}` : ''} (${i + 1} of ${chunks.length})`);
+    const all = await db.glossary.where('bookId').equals(book.id).toArray();
+    const messages = newPeopleMessages({ book, chunk, known: [...new Set(all.flatMap((g) => namesOf(g)))] });
+    try {
+      const reply = await chat(settings, model, messages, undefined, signal);
+      const spend = callCost(modelFor(settings, model), messages, reply);
+      await addSpend(book.id, spend.cost, spend.estimated);
+      out.cost += spend.cost ?? 0;
+      if (isRefusal(reply.text)) throw new Error('The model would not read these chapters. Try the other model.');
+      out.added += await addNewPeople(book.id, parseProfileReply(reply.text, chunk).fresh, all);
+      out.read += chunk.length;
+      await db.books.update(book.id, { castUpTo: last });
+    } catch (e) {
+      if (!signal?.aborted) out.stopped = e instanceof Error ? e.message : 'The provider did not answer.';
+      break;
+    }
+  }
+  if (signal?.aborted) out.stopped = 'Stopped.';
+  // Finished chapters with no text were never sent; with everything else read, the search is up to date past them.
+  if (!out.stopped && todo.length) {
+    const lastRead = todo[todo.length - 1].number;
+    if (lastRead > ((await db.books.get(book.id))?.castUpTo ?? 0)) await db.books.update(book.id, { castUpTo: lastRead });
+  }
+  return out;
 }

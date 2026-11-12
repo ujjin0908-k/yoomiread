@@ -6,7 +6,7 @@ import { useLive } from '../hooks';
 import { shrinkImage } from '../images';
 import { toPicture } from '../picture';
 import { isRead, needsTranslation } from '../logic';
-import { chaptersToRead, planCost, planReading, readingTexts, updateProfiles, type UpdateResult } from '../translate/profiles';
+import { chaptersToRead, chaptersToSearch, findNewPeople, planCost, planReading, readingTexts, searchCost, searchPlan, updateProfiles, type UpdateResult } from '../translate/profiles';
 import { formatCost } from '../translate/prompt';
 import { loadSettings, modelFor } from '../translate/run';
 import type { Book, Chapter, CharacterProfile, GlossaryEntry, ProfileFact, TranslateSettings } from '../types';
@@ -424,3 +424,86 @@ export function ProfileLink({ entry }: { entry: GlossaryEntry }) {
   );
 }
 
+
+/**
+ * "Look for new characters" on the cast: reads the chapters finished since the last search, shows the price first,
+ * and puts anyone new under "To check". Nobody's profile is changed.
+ */
+export function NewPeopleSearch({ book, chapters, known }: { book: Book; chapters: Chapter[]; known: number }) {
+  const [settings, setSettings] = useState<TranslateSettings>();
+  const [texts, setTexts] = useState<Map<string, string>>();
+  const [status, setStatus] = useState('');
+  const [result, setResult] = useState('');
+  const stop = useRef<AbortController>();
+  const todo = chaptersToSearch(chapters, book.castUpTo);
+  const todoKey = todo.map((c) => c.id).join();
+
+  useEffect(() => {
+    void loadSettings().then(setSettings);
+    return () => stop.current?.abort();
+  }, []);
+  useEffect(() => {
+    if (!todo.length) return;
+    let live = true;
+    void readingTexts(book, todo).then((t) => live && setTexts(t));
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book.id, todoKey]);
+
+  const running = !!status;
+  const model = settings ? modelFor(settings, book.model).id : undefined;
+  const ready = !!settings && (!todo.length || (!!texts && todo.every((c) => texts.has(c.id))));
+  const cost = ready && settings && model && texts ? searchCost(searchPlan(chapters, texts, book.castUpTo), settings, model, known) : undefined;
+  const keyMissing = settings && (!settings.apiKey.trim() || !settings.baseUrl.trim());
+
+  async function run() {
+    stop.current = new AbortController();
+    setResult('');
+    setStatus('Starting');
+    try {
+      const done = await findNewPeople({ book, chapters, settings: settings!, model: model!, signal: stop.current.signal, onStatus: setStatus });
+      const parts = [done.added ? `Found ${done.added} new ${done.added === 1 ? 'character' : 'characters'}: check them under "To check" at the top.` : `Nobody new in ${span(todo)}.`];
+      if (done.cost) parts.push(`Cost ${formatCost(done.cost)}.`);
+      if (done.stopped) parts.push(done.stopped === 'Stopped.' ? 'Stopped; what was read is kept.' : `Stopped: ${done.stopped}`);
+      setResult(parts.join(' '));
+    } finally {
+      setStatus('');
+    }
+  }
+
+  return (
+    <section className="new-people glass">
+      <div className="row between">
+        <strong>New characters</strong>
+        <span className="muted small">{book.castUpTo ? `Searched up to Ch. ${book.castUpTo}` : 'Not searched yet'}</span>
+      </div>
+      {!todo.length ? (
+        <p className="muted small">Nothing new to read yet. Finish more chapters, then look again.</p>
+      ) : keyMissing ? (
+        <p className="warn small">Add the provider address and key in Settings to look for new characters.</p>
+      ) : running ? (
+        <>
+          <Working label={status} />
+          <button type="button" className="btn wide" onClick={() => stop.current?.abort()}>
+            Stop
+          </button>
+        </>
+      ) : (
+        <button type="button" className="update-btn" disabled={!ready} onClick={() => void run()}>
+          <span>
+            Look for new characters
+            <small>in {span(todo)}, the chapters you have finished</small>
+          </span>
+          <em>{ready ? `about ${formatCost(cost)}` : '…'}</em>
+        </button>
+      )}
+      {result && (
+        <p className={`small${result.includes('Stopped:') ? ' warn' : ''}`} role="status">
+          {result}
+        </p>
+      )}
+    </section>
+  );
+}
