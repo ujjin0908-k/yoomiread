@@ -301,3 +301,19 @@ describe('skipped passages', () => {
     expect(translationWarnings(original, ['A.', 'B.', 'C.', 'D.', 'E.'].join('\n\n'), [])).toEqual([]);
   });
 });
+
+describe('reading the cast of a book that is already in English', () => {
+  const reply = [
+    '{"original": "Lin Mei", "english": "Lin Mei", "kind": "person", "gender": "she", "note": "the ferry girl"}',
+    '{"english": "Old Jun", "kind": "person", "gender": "he"}',
+    '{"original": "Jade Harbor", "english": "Jade Harbor", "kind": "place"}',
+    '{"original": "Lin Mei", "english": "Lin Mei", "kind": "person"}',
+  ].join('\n');
+  it('keeps names written in Latin letters, once each, and still only people', () => {
+    expect(parseTerms(reply, true).map((t) => t.english)).toEqual(['Lin Mei', 'Old Jun']);
+    expect(parseTerms(reply, true)[1].original).toBe('Old Jun');
+  });
+  it('still drops English words from the list of a Chinese book', () => {
+    expect(parseTerms(reply)).toEqual([]);
+  });
+});

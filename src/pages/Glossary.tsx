@@ -236,9 +236,11 @@ function EntryList({ entries, onOpen }: { entries: GlossaryEntry[]; onOpen: (g: 
             <span className="avatar-slot">{g.picture ? <Avatar entry={g} size={36} /> : <span className="avatar-empty">{g.english.slice(0, 1)}</span>}</span>
             <span className="g-names">
               <strong>{g.english}</strong>
-              <span className="muted" lang="zh">
-                {g.original}
-              </span>
+              {g.original !== g.english && (
+                <span className="muted" lang="zh">
+                  {g.original}
+                </span>
+              )}
             </span>
             {g.gender && <span className="chip">{g.gender}</span>}
             {g.locked && <Lock size={14} className="muted" aria-label="Locked" />}

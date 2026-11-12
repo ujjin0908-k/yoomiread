@@ -123,7 +123,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 148 unit tests
+npm test          # 150 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```
