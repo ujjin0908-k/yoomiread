@@ -7,7 +7,7 @@ import { shrinkImage } from '../images';
 import { toPicture, usePictureUrl, type Picture } from '../picture';
 import { needsTranslation, newId } from '../logic';
 import { chaptersToRead } from '../translate/profiles';
-import { UpdateSheet } from './Character';
+import { NewPeopleSearch, UpdateSheet } from './Character';
 import { loadSettings, modelFor, scanGlossary } from '../translate/run';
 import type { Gender, GlossaryEntry, GlossaryKind } from '../types';
 
@@ -211,10 +211,16 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
 
         {entries && !list.length && <Empty title="Nobody here yet">Find the cast in the first chapters, or add names by hand with +.</Empty>}
 
-        <button type="button" className="btn ghost wide" disabled={scan.endsWith('…')} onClick={() => void runScan()}>
-          <Sparkles size={16} /> {plain ? 'Find the cast in the first chapters' : 'Build glossary from the first chapters'}
-        </button>
-        {scan && <p className="small center">{scan}</p>}
+        {list.length > 0 ? (
+          <NewPeopleSearch book={book} chapters={chapters ?? []} known={list.length} />
+        ) : (
+          <>
+            <button type="button" className="btn ghost wide" disabled={scan.endsWith('…')} onClick={() => void runScan()}>
+              <Sparkles size={16} /> {plain ? 'Find the cast in the first chapters' : 'Build glossary from the first chapters'}
+            </button>
+            {scan && <p className="small center">{scan}</p>}
+          </>
+        )}
       </main>
 
       {people.length > 0 && (

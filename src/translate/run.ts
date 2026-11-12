@@ -227,10 +227,13 @@ export async function scanGlossary(bookId: string, settings: TranslateSettings, 
   ]);
   // Up to about 12,000 characters from the start of the book: enough to meet the main cast.
   let sample = '';
+  // The last chapter read whole, so "Look for new characters" later starts after it.
+  let wholeTo = 0;
   for (const c of chapters) {
     const t = (await db.texts.get(c.id))?.text;
     if (!t) continue;
     sample += `\n\n${c.title}\n${t}`;
+    if (sample.length <= 12_000) wholeTo = c.number;
     if (sample.length > 12_000) break;
   }
   if (!sample.trim()) throw new Error('This book has no chapter text to read yet.');
@@ -238,6 +241,7 @@ export async function scanGlossary(bookId: string, settings: TranslateSettings, 
   const result = await chat(settings, model, messages, undefined, signal);
   const spend = callCost(modelFor(settings, model), messages, result);
   await addSpend(bookId, spend.cost, spend.estimated);
+  if (wholeTo > (book?.castUpTo ?? 0)) await db.books.update(bookId, { castUpTo: wholeTo }).catch(() => {});
   return addProposals(bookId, parseTerms(result.text, !needsTranslation(book, sample)));
 }
 

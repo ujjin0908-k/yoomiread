@@ -2120,3 +2120,19 @@ body[data-reader='night'] {
   align-items: flex-start;
   gap: 10px;
 }
+
+/* "Look for new characters" on the cast */
+.new-people {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 18px;
+  padding: 14px;
+  border-radius: 22px;
+}
+.new-people p {
+  margin: 0;
+}
+.new-people .update-btn {
+  box-shadow: none;
+}
