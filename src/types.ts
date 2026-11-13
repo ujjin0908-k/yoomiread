@@ -107,6 +107,8 @@ export interface ProfileFact {
   chapter?: number;
   /** Written or edited by the owner: an update never changes or removes it. */
   mine?: boolean;
+  /** From a book guide (written in advance, not read from a chapter): kept by updates like the owner's own. */
+  guide?: boolean;
 }
 
 /** What is known about a character so far, built only from chapters the owner has read. */

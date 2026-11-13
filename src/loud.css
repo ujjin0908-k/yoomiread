@@ -2186,3 +2186,6 @@ body[data-reader='night'] {
 .cast .filter-row {
   flex-wrap: wrap;
 }
+.guide-box .link {
+  align-self: flex-start;
+}

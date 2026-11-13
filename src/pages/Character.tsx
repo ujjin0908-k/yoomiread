@@ -196,7 +196,10 @@ export function CharacterPage({ id }: { id: string }) {
         </section>
 
         <p className="spoiler-bar">
-          <ShieldCheck size={16} /> No spoilers: built only from chapters you have read
+          <ShieldCheck size={16} />{' '}
+          {[...(p?.about ?? []), ...(p?.powers ?? []), ...(p?.status ?? [])].some((f) => f.guide)
+            ? 'Lines marked "guide" come from the book guide and can spoil; the rest is from chapters you have read'
+            : 'No spoilers: built only from chapters you have read'}
         </p>
 
         {p?.line && <p className="char-line">{p.line}</p>}
@@ -282,7 +285,7 @@ function Facts({ title, facts, onChange }: { title: string; facts: ProfileFact[]
         {facts.map((f, i) => (
           <li key={`${i}-${f.text}`}>
             <span>
-              {f.text} <span className="fact-ch">· {f.chapter ? `Ch. ${f.chapter}` : 'yours'}</span>
+              {f.text} <span className="fact-ch">· {f.chapter ? `Ch. ${f.chapter}` : f.guide ? 'guide' : 'yours'}</span>
             </span>
             <button type="button" className="fact-x" aria-label={`Remove "${f.text}"`} onClick={() => onChange(facts.filter((_, n) => n !== i))}>
               <X size={14} />

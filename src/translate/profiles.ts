@@ -223,7 +223,7 @@ function addFacts(have: ProfileFact[], more: ProfileFact[], max: number): Profil
   }
   // When the list is full the oldest lines make room, but never one the owner wrote.
   while (out.length > max) {
-    const drop = out.findIndex((f) => !f.mine);
+    const drop = out.findIndex((f) => !f.mine && !f.guide);
     if (drop < 0) break;
     out.splice(drop, 1);
   }
@@ -236,8 +236,17 @@ export function mergeProfile(profile: CharacterProfile | undefined, update: Prof
   const base: CharacterProfile =
     profile?.v === 2
       ? profile
-      : { ...EMPTY_PROFILE, line: profile?.line, quote: profile?.quote, looks: (profile?.looks ?? []).filter((f) => f.mine), about: (profile?.about ?? []).filter((f) => f.mine), upTo: 0 };
-  const mine = (base.status ?? []).filter((f) => f.mine);
+      : {
+          ...EMPTY_PROFILE,
+          line: profile?.line,
+          quote: profile?.quote,
+          looks: (profile?.looks ?? []).filter((f) => f.mine),
+          about: (profile?.about ?? []).filter((f) => f.mine || f.guide),
+          powers: (profile?.powers ?? []).filter((f) => f.mine || f.guide),
+          status: (profile?.status ?? []).filter((f) => f.mine || f.guide),
+          upTo: 0,
+        };
+  const mine = (base.status ?? []).filter((f) => f.mine || f.guide);
   return {
     line: update?.line ?? base.line,
     looks: addFacts(base.looks, update?.looks ?? [], MAX_LOOKS),
