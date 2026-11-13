@@ -1,3 +1,4 @@
+import { chapterBefore } from '../trail';
 import { Check, ImagePlus, Lock, Plus, Sparkles, Trash2, Unlock } from 'lucide-react';
 import { useState } from 'react';
 import { Empty, Sheet, TopBar } from '../components';
@@ -11,7 +12,8 @@ import { NewPeopleSearch, UpdateSheet } from './Character';
 import { loadSettings, modelFor, scanGlossary } from '../translate/run';
 import type { Gender, GlossaryEntry, GlossaryKind } from '../types';
 
-const KIND_LABEL: Record<GlossaryKind, string> = { person: 'People', place: 'Places', term: 'Terms' };
+const KIND_LABEL: Record<GlossaryKind, string> = { person: 'People', place: 'Places', god: 'Gods', group: 'Groups', term: 'Terms' };
+const KINDS: GlossaryKind[] = ['person', 'place', 'god', 'group', 'term'];
 
 /** A round face for a glossary person; nothing at all when there is no picture. */
 export function Avatar({ entry, size = 32, onClick }: { entry: GlossaryEntry; size?: number; onClick?: () => void }) {
@@ -110,7 +112,11 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
   return (
     <>
       <TopBar
-        back={`book/${bookId}`}
+        // Back to the chapter being read, when the cast was opened from it.
+        back={(() => {
+          const ch = chapterBefore((chapters ?? []).map((c) => c.id));
+          return ch ? `chapter/${ch}` : `book/${bookId}`;
+        })()}
         title={book.title}
         right={
           <button type="button" className="round-btn" aria-label="Add a name" onClick={() => setOpen('new')}>
@@ -136,7 +142,7 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
         </header>
 
         <div className="filter-row" role="group" aria-label="Kind">
-          {(['person', 'place', 'term'] as const).map((k) => (
+          {KINDS.map((k) => (
             <button key={k} type="button" className={`filter-chip${kind === k ? ' on' : ''}`} aria-pressed={kind === k} onClick={() => setKind(k)}>
               {KIND_LABEL[k]} {count(k)}
             </button>
@@ -201,11 +207,13 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
             )}
           </>
         ) : (
-          others.length > 0 && (
-            <section className="glossary-group">
-              <EntryList entries={others} onOpen={setOpen} />
-            </section>
-          )
+          <section className="glossary-group">
+            {others.length > 0 ? (
+              <WorldList entries={others} onOpen={setOpen} />
+            ) : (
+              <p className="muted small center">No {KIND_LABEL[kind].toLowerCase()} yet. "Look for new names and places" below finds them in the chapters you have read.</p>
+            )}
+          </section>
         )}
 
         {entries && !list.length && <Empty title="Nobody here yet">Find the cast in the first chapters, or add names by hand with +.</Empty>}
@@ -230,6 +238,40 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
       {updating && <UpdateSheet book={book} chapters={chapters ?? []} people={people} onClose={() => setUpdating(false)} />}
       {open && <EntrySheet bookId={bookId} plain={plain} entry={open === 'new' ? undefined : open} onClose={() => setOpen(undefined)} />}
     </>
+  );
+}
+
+/** Places, gods, groups and terms: each with what it is, line by line, with the chapter it was read in. */
+function WorldList({ entries, onOpen }: { entries: GlossaryEntry[]; onOpen: (g: GlossaryEntry) => void }) {
+  return (
+    <ul className="world-list">
+      {entries.map((g) => {
+        const facts = g.profile?.about ?? [];
+        return (
+          <li key={g.id}>
+            <button type="button" className="world-card glass" onClick={() => onOpen(g)}>
+              <strong>{g.english}</strong>
+              {g.original !== g.english && (
+                <span className="muted small" lang="zh">
+                  {g.original}
+                </span>
+              )}
+              {g.note && !facts.some((f) => f.text === g.note) && <span className="world-note">{g.note}</span>}
+              {facts.length > 0 && (
+                <ul>
+                  {facts.map((f, i) => (
+                    <li key={i}>
+                      {f.text}
+                      {f.chapter ? <em> · Ch. {f.chapter}</em> : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -378,6 +420,8 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
             <select value={kind} onChange={(e) => setKind(e.target.value as GlossaryKind)}>
               <option value="person">Person</option>
               <option value="place">Place</option>
+              <option value="god">God</option>
+              <option value="group">Group</option>
               <option value="term">Term</option>
             </select>
           </label>

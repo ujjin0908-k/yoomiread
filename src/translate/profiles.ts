@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { isRead, needsTranslation, newId } from '../logic';
-import type { Book, Chapter, CharacterProfile, GlossaryEntry, ProfileFact, TranslateSettings } from '../types';
+import type { Book, Chapter, CharacterProfile, GlossaryEntry, GlossaryKind, ProfileFact, TranslateSettings } from '../types';
 import { chat } from './api';
 import { costOf, estimateTokens, isRefusal, type ChatMessage } from './prompt';
 import { addSpend, callCost, modelFor } from './run';
@@ -337,42 +337,151 @@ export async function updateProfiles(input: {
   return result;
 }
 
-/** Adds people who are not in the cast yet, under "To check". Returns how many were added. */
-export async function addNewPeople(bookId: string, fresh: NewPerson[], all: GlossaryEntry[], now = Date.now()): Promise<number> {
+/** The kinds that are not people: the world of the story. */
+export const WORLD_KINDS: GlossaryKind[] = ['place', 'god', 'group', 'term'];
+const MAX_WORLD_FACTS = 8;
+
+/** A name the search found that is not in the glossary yet. */
+export interface NewThing {
+  original: string;
+  english: string;
+  kind: GlossaryKind;
+  gender?: GlossaryEntry['gender'];
+  note?: string;
+  /** The chapter the note was read in, when it is one of the chapters sent. */
+  chapter?: number;
+}
+
+/** Adds names that are not in the glossary yet, under "To check". Places, gods, groups and terms start with their note as a first line. */
+export async function addNewThings(bookId: string, fresh: NewThing[], all: GlossaryEntry[], now = Date.now()): Promise<GlossaryEntry[]> {
   const have = new Set(all.flatMap((g) => namesOf(g)).map(squash));
   const rows: GlossaryEntry[] = fresh
     .filter((f) => !have.has(squash(f.original)) && !have.has(squash(f.english)))
     .filter((f, n, list) => list.findIndex((x) => squash(x.original) === squash(f.original)) === n)
-    .map((f) => ({ id: newId(), bookId, original: f.original, english: f.english, kind: 'person', gender: f.gender, note: f.note, locked: false, status: 'review', createdAt: now, updatedAt: now }));
+    .map((f) => ({
+      id: newId(),
+      bookId,
+      original: f.original,
+      english: f.english,
+      kind: f.kind,
+      gender: f.kind === 'person' ? f.gender : undefined,
+      note: f.note,
+      profile: f.kind !== 'person' && f.note && f.chapter ? { ...EMPTY_PROFILE, about: [{ text: f.note, chapter: f.chapter }], upTo: f.chapter } : undefined,
+      locked: false,
+      status: 'review',
+      createdAt: now,
+      updatedAt: now,
+    }));
   if (rows.length) await db.glossary.bulkAdd(rows);
-  return rows.length;
+  return rows;
 }
 
-/** The chapters "Look for new characters" reads: finished ones after the chapter the cast was last searched to. */
-export function chaptersToSearch(chapters: Chapter[], castUpTo = 0): Chapter[] {
-  return chapters.filter((c) => isRead(c) && c.number > castUpTo).sort((a, b) => a.number - b.number);
+/** Adds people who are not in the cast yet, under "To check". Returns how many were added. */
+export async function addNewPeople(bookId: string, fresh: NewPerson[], all: GlossaryEntry[], now = Date.now()): Promise<number> {
+  return (await addNewThings(bookId, fresh.map((f) => ({ ...f, kind: 'person' as const })), all, now)).length;
 }
 
-export function newPeopleMessages(input: { book: Book; chunk: ReadingPlan['parts']; known: string[] }): ChatMessage[] {
+/** The chapters the story search reads: finished ones after the chapter it last searched to. */
+export function chaptersToSearch(chapters: Chapter[], upTo = 0): Chapter[] {
+  return chapters.filter((c) => isRead(c) && c.number > upTo).sort((a, b) => a.number - b.number);
+}
+
+/** Where the story search starts: the world search, or for a book searched before it existed, nowhere yet. */
+export const searchedTo = (book: Book) => book.worldUpTo ?? 0;
+
+export function worldMessages(input: { book: Book; chunk: ReadingPlan['parts']; known: GlossaryEntry[] }): ChatMessage[] {
   const system = [
-    'You list the named characters of a novel for a reader. You are given chapters the reader has already read,',
-    'each marked with its chapter number, and the names already in the reader\'s list.',
-    'List every named character in these chapters who is NOT already in the list (by any of their names).',
-    'Use only what the text says. Skip people who are only called by a job or a description, unless that is clearly how the story names them.',
-    'Answer with one JSON object per line and nothing else:',
-    '{"new": "<name exactly as written in the text>", "english": "<the name in English>", "gender": "he|she|they|it", "note": "<who they are, under 10 words>"}',
-    'If there is nobody new, answer with nothing.',
+    'You keep a reader\'s guide to the people and the world of a novel. You are given chapters the reader has already read,',
+    'each marked with its chapter number, and what the guide already holds.',
+    'Use ONLY what these chapters say. Never guess, never use outside knowledge of the story, never mention later events.',
+    'Write in English, in short plain phrases (under 16 words each).',
+    '1. For every named person, place, god, group or term in these chapters that is NOT in the guide (by any of its names), one line:',
+    '{"new": "<name exactly as written>", "english": "<the name in English>", "kind": "person|place|god|group|term", "gender": "he|she|they|it", "note": "<what or who it is>", "ch": 3}',
+    '   person: a named character. place: a world, realm, country, city, region or named building.',
+    '   god: a god, deity or divine power the story names (and the path or faith that follows it).',
+    '   group: a faction, sect, guild, church, school, team or organisation.',
+    '   term: a named power system, rank, class, title, skill, artifact, item or rule of the world that matters to the story.',
+    '   "gender" is for people only. Skip ordinary words, unnamed things, and objects seen once.',
+    '2. For each place, god, group or term ALREADY in the guide that these chapters tell something new about, one line:',
+    '{"about": "<name exactly as listed>", "facts": [{"text": "...", "ch": 3}]}',
+    '   Facts say what it is, who rules or follows it, what it can do, and how it connects to others. Not what happened in a scene.',
+    '   At most 3 new facts each. Skip anything already in the guide. Do not write lines about people already in the guide.',
+    'Answer with JSON lines only. If there is nothing, answer with nothing.',
   ].join('\n');
+  const people = input.known.filter((g) => g.kind === 'person').flatMap((g) => namesOf(g));
+  const world = input.known
+    .filter((g) => g.kind !== 'person')
+    .map((g) => {
+      const facts = (g.profile?.about ?? []).map((f) => f.text);
+      return `- ${g.english} (${g.kind})${g.note ? `: ${g.note}` : ''}${facts.length ? `. Known: ${facts.join('; ')}` : ''}`;
+    });
   const story = input.chunk.map((p) => `[Chapter ${p.chapter}]\n${p.text}`).join('\n\n');
   return [
     { role: 'system', content: system },
-    { role: 'user', content: `Book: ${input.book.title}\n\nAlready in the list: ${input.known.join(', ') || 'nobody'}\n\nChapters:\n\n${story}` },
+    {
+      role: 'user',
+      content: `Book: ${input.book.title}\n\nPeople in the guide: ${[...new Set(people)].join(', ') || 'nobody'}\n\nWorld in the guide:\n${world.join('\n') || '(nothing yet)'}\n\nChapters:\n\n${story}`,
+    },
   ];
 }
 
+/** Reads the search's answer. Facts must name a chapter that was sent; anything else is dropped. */
+export function parseWorldReply(raw: string, chunk: ReadingPlan['parts']): { fresh: NewThing[]; facts: { name: string; facts: ProfileFact[] }[] } {
+  const sent = new Set(chunk.map((p) => p.chapter));
+  const kinds: GlossaryKind[] = ['person', ...WORLD_KINDS];
+  const fresh: NewThing[] = [];
+  const facts: { name: string; facts: ProfileFact[] }[] = [];
+  for (const line of raw.split('\n')) {
+    const at = line.indexOf('{');
+    if (at < 0) continue;
+    let row: Record<string, unknown>;
+    try {
+      row = JSON.parse(line.slice(at, line.lastIndexOf('}') + 1));
+    } catch {
+      continue;
+    }
+    if (typeof row.new === 'string' && row.new.trim()) {
+      const kind = kinds.includes(row.kind as GlossaryKind) ? (row.kind as GlossaryKind) : 'person';
+      const gender = kind === 'person' && ['he', 'she', 'they', 'it'].includes(String(row.gender)) ? (row.gender as NewThing['gender']) : undefined;
+      const ch = Number(row.ch);
+      fresh.push({
+        original: row.new.trim(),
+        english: String(row.english ?? row.new).trim() || row.new.trim(),
+        kind,
+        gender,
+        note: typeof row.note === 'string' ? row.note.trim().slice(0, 140) || undefined : undefined,
+        chapter: sent.has(ch) ? ch : undefined,
+      });
+    } else if (typeof row.about === 'string' && Array.isArray(row.facts)) {
+      const list = row.facts
+        .map((f) => ({ text: String((f as { text?: unknown })?.text ?? '').trim(), chapter: Number((f as { ch?: unknown })?.ch) }))
+        .filter((f) => f.text && f.text.length <= 160 && sent.has(f.chapter));
+      if (list.length) facts.push({ name: row.about.trim(), facts: list });
+    }
+  }
+  return { fresh, facts };
+}
+
+/** Adds new facts to places, gods, groups and terms already in the glossary. Returns how many entries changed. */
+export async function addWorldFacts(found: { name: string; facts: ProfileFact[] }[], all: GlossaryEntry[], now = Date.now()): Promise<number> {
+  let changed = 0;
+  for (const item of found) {
+    const entry = all.find((g) => g.kind !== 'person' && namesOf(g).some((n) => squash(n) === squash(item.name)));
+    if (!entry) continue;
+    const before = entry.profile?.about ?? [];
+    const about = addFacts(before, item.facts, MAX_WORLD_FACTS);
+    if (about.length === before.length && about.every((f, i) => f === before[i])) continue;
+    const upTo = Math.max(entry.profile?.upTo ?? 0, ...item.facts.map((f) => f.chapter ?? 0));
+    entry.profile = { ...EMPTY_PROFILE, ...entry.profile, about, upTo, updatedAt: now, v: 2 };
+    await db.glossary.update(entry.id, { profile: entry.profile, updatedAt: now });
+    changed++;
+  }
+  return changed;
+}
+
 /** What a search would read, and a rough price, before anything is sent. */
-export function searchPlan(chapters: Chapter[], texts: Map<string, string>, castUpTo = 0): ReadingPlan['parts'] {
-  return chaptersToSearch(chapters, castUpTo)
+export function searchPlan(chapters: Chapter[], texts: Map<string, string>, upTo = 0): ReadingPlan['parts'] {
+  return chaptersToSearch(chapters, upTo)
     .map((c) => ({ chapter: c.number, text: texts.get(c.id) ?? '' }))
     .filter((p) => p.text.trim());
 }
@@ -381,42 +490,59 @@ export function searchCost(parts: ReadingPlan['parts'], settings: TranslateSetti
   if (!parts.length) return 0;
   let input = 0;
   const chunks = chunkParts(parts);
-  for (const chunk of chunks) input += estimateTokens(chunk.map((p) => p.text).join('\n')).input + known * 4;
-  return costOf(modelFor(settings, modelId), input, chunks.length * 250);
+  for (const chunk of chunks) input += estimateTokens(chunk.map((p) => p.text).join('\n')).input + 300 + known * 15;
+  return costOf(modelFor(settings, modelId), input, chunks.length * 700);
+}
+
+export interface SearchResult {
+  added: GlossaryEntry[];
+  /** Places, gods, groups and terms that got new facts. */
+  updated: number;
+  cost: number;
+  read: number;
+  stopped?: string;
 }
 
 /**
- * "Look for new characters": reads the chapters finished since the cast was last searched, whole, and adds anyone
- * new under "To check". Profiles are not touched. Remembers how far it got after each request, so stopping keeps it.
+ * "Look for new names and places": reads the chapters finished since the last search, whole, adds new people, places,
+ * gods, groups and terms under "To check", and adds new facts to the world entries already there. Character profiles
+ * are not touched. Remembers how far it got after each request, so stopping keeps what was done.
  */
-export async function findNewPeople(input: {
+export async function searchStory(input: {
   book: Book;
   chapters: Chapter[];
   settings: TranslateSettings;
   model: string;
   signal?: AbortSignal;
   onStatus?: (line: string) => void;
-}): Promise<{ added: number; cost: number; read: number; stopped?: string }> {
+}): Promise<SearchResult> {
   const { book, chapters, settings, model, signal } = input;
-  const todo = chaptersToSearch(chapters, book.castUpTo);
+  const from = searchedTo(book);
+  const todo = chaptersToSearch(chapters, from);
   const texts = await readingTexts(book, todo);
-  const chunks = chunkParts(searchPlan(chapters, texts, book.castUpTo));
-  const out = { added: 0, cost: 0, read: 0, stopped: undefined as string | undefined };
+  const chunks = chunkParts(searchPlan(chapters, texts, from));
+  const out: SearchResult = { added: [], updated: 0, cost: 0, read: 0 };
+  const mark = async (n: number) => {
+    const now = await db.books.get(book.id);
+    await db.books.update(book.id, { worldUpTo: Math.max(n, now?.worldUpTo ?? 0), castUpTo: Math.max(n, now?.castUpTo ?? 0) });
+  };
   for (let i = 0; i < chunks.length && !signal?.aborted; i++) {
     const chunk = chunks[i];
     const last = chunk[chunk.length - 1].chapter;
     input.onStatus?.(`Reading chapters ${chunk[0].chapter}${last !== chunk[0].chapter ? `–${last}` : ''} (${i + 1} of ${chunks.length})`);
     const all = await db.glossary.where('bookId').equals(book.id).toArray();
-    const messages = newPeopleMessages({ book, chunk, known: [...new Set(all.flatMap((g) => namesOf(g)))] });
+    const messages = worldMessages({ book, chunk, known: all });
     try {
       const reply = await chat(settings, model, messages, undefined, signal);
       const spend = callCost(modelFor(settings, model), messages, reply);
       await addSpend(book.id, spend.cost, spend.estimated);
       out.cost += spend.cost ?? 0;
       if (isRefusal(reply.text)) throw new Error('The model would not read these chapters. Try the other model.');
-      out.added += await addNewPeople(book.id, parseProfileReply(reply.text, chunk).fresh, all);
+      const { fresh, facts } = parseWorldReply(reply.text, chunk);
+      out.updated += await addWorldFacts(facts, all);
+      out.added.push(...(await addNewThings(book.id, fresh, all)));
       out.read += chunk.length;
-      await db.books.update(book.id, { castUpTo: last });
+      await mark(last);
     } catch (e) {
       if (!signal?.aborted) out.stopped = e instanceof Error ? e.message : 'The provider did not answer.';
       break;
@@ -424,9 +550,6 @@ export async function findNewPeople(input: {
   }
   if (signal?.aborted) out.stopped = 'Stopped.';
   // Finished chapters with no text were never sent; with everything else read, the search is up to date past them.
-  if (!out.stopped && todo.length) {
-    const lastRead = todo[todo.length - 1].number;
-    if (lastRead > ((await db.books.get(book.id))?.castUpTo ?? 0)) await db.books.update(book.id, { castUpTo: lastRead });
-  }
+  if (!out.stopped && todo.length) await mark(todo[todo.length - 1].number);
   return out;
 }

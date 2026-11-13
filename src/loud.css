@@ -2139,3 +2139,50 @@ body[data-reader='night'] {
   background: #ffd23f;
   color: #14121f;
 }
+
+/* Places, gods, groups and terms on the cast page: what each one is, with its chapter. */
+.world-list {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.world-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  text-align: left;
+  font: inherit;
+  color: #14121f;
+  cursor: pointer;
+}
+.world-card strong {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+.world-note {
+  font-size: 0.85rem;
+  color: #3b3752;
+}
+.world-card ul {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+.world-card em {
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #5d5876;
+}
+.cast .filter-row {
+  flex-wrap: wrap;
+}

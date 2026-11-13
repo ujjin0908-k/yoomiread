@@ -18,6 +18,8 @@ export interface BookStyle {
 export interface Book {
   id: string;
   /** The cast has been searched for new characters up to and including this chapter number. */
+  /** The story has been searched for new people, places, gods, groups and terms up to and including this chapter number. */
+  worldUpTo?: number;
   castUpTo?: number;
   /** The style for this book's translations (optional). */
   style?: BookStyle;
@@ -93,7 +95,9 @@ export interface Translation {
   createdAt: number;
 }
 
-export type GlossaryKind = 'person' | 'place' | 'term';
+/** person: a character. place: city, realm, building. god: a god or divine power. group: faction, sect, guild, team, church.
+ * term: a named power system, rank, title, skill, artifact, item or game rule. */
+export type GlossaryKind = 'person' | 'place' | 'god' | 'group' | 'term';
 export type Gender = 'he' | 'she' | 'they' | 'it';
 
 /** One thing known about a character, with the chapter it came from. */

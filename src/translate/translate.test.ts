@@ -48,6 +48,23 @@ describe('prompt', () => {
     expect(msgs[1].content).not.toContain('渡口');
     expect(msgs[0].content).toContain(NEW_TERMS);
   });
+
+  it('sends only glossary entries named in this chapter (by name or other name)', () => {
+    const msgs = chapterMessages({
+      bookTitle: 'B',
+      chapterTitle: '第一章',
+      text: '梅走到渡口。阿梅笑了。',
+      glossary: [
+        entry({}),
+        entry({ original: '渡口', english: 'the Ferry', kind: 'place', gender: undefined }),
+        entry({ original: '极乐城', english: 'Bliss City', kind: 'place', gender: undefined }),
+        entry({ original: 'Fertility', english: 'Fertility', kind: 'god', gender: undefined }),
+      ],
+    });
+    expect(msgs[1].content).toContain('渡口 = the Ferry (place)');
+    expect(msgs[1].content).not.toContain('Bliss City');
+    expect(msgs[1].content).not.toContain('Fertility');
+  });
 });
 
 describe('reading the reply', () => {

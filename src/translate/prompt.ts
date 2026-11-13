@@ -57,7 +57,8 @@ export function chapterMessages(input: {
   /** The book's style settings (tone, honorifics, notes, and a sample paragraph). */
   style?: BookStyle;
 }): ChatMessage[] {
-  const approved = input.glossary.filter((g) => g.status === 'ok');
+  // Only entries named in this chapter: the rest would add cost and nothing else.
+  const approved = input.glossary.filter((g) => g.status === 'ok' && [g.original, ...(g.aliases ?? [])].some((n) => n && input.text.includes(n)));
   const system = [
     'You translate Chinese web novels into natural, readable English for a single reader.',
     'Rules:',
