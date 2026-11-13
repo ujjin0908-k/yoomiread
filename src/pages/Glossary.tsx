@@ -1,5 +1,7 @@
+import { applyGuide, guideFor, parseGuide, type Guide } from '../guides';
+import { chapterBefore } from '../trail';
 import { Check, ImagePlus, Lock, Plus, Sparkles, Trash2, Unlock } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Empty, Sheet, TopBar } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
@@ -9,9 +11,10 @@ import { needsTranslation, newId } from '../logic';
 import { chaptersToRead } from '../translate/profiles';
 import { NewPeopleSearch, UpdateSheet } from './Character';
 import { loadSettings, modelFor, scanGlossary } from '../translate/run';
-import type { Gender, GlossaryEntry, GlossaryKind } from '../types';
+import type { Book, Gender, GlossaryEntry, GlossaryKind } from '../types';
 
-const KIND_LABEL: Record<GlossaryKind, string> = { person: 'People', place: 'Places', term: 'Terms' };
+const KIND_LABEL: Record<GlossaryKind, string> = { person: 'People', place: 'Places', god: 'Gods', group: 'Groups', term: 'Terms' };
+const KINDS: GlossaryKind[] = ['person', 'place', 'god', 'group', 'term'];
 
 /** A round face for a glossary person; nothing at all when there is no picture. */
 export function Avatar({ entry, size = 32, onClick }: { entry: GlossaryEntry; size?: number; onClick?: () => void }) {
@@ -110,7 +113,11 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
   return (
     <>
       <TopBar
-        back={`book/${bookId}`}
+        // Back to the chapter being read, when the cast was opened from it.
+        back={(() => {
+          const ch = chapterBefore((chapters ?? []).map((c) => c.id));
+          return ch ? `chapter/${ch}` : `book/${bookId}`;
+        })()}
         title={book.title}
         right={
           <button type="button" className="round-btn" aria-label="Add a name" onClick={() => setOpen('new')}>
@@ -136,7 +143,7 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
         </header>
 
         <div className="filter-row" role="group" aria-label="Kind">
-          {(['person', 'place', 'term'] as const).map((k) => (
+          {KINDS.map((k) => (
             <button key={k} type="button" className={`filter-chip${kind === k ? ' on' : ''}`} aria-pressed={kind === k} onClick={() => setKind(k)}>
               {KIND_LABEL[k]} {count(k)}
             </button>
@@ -201,14 +208,18 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
             )}
           </>
         ) : (
-          others.length > 0 && (
-            <section className="glossary-group">
-              <EntryList entries={others} onOpen={setOpen} />
-            </section>
-          )
+          <section className="glossary-group">
+            {others.length > 0 ? (
+              <WorldList entries={others} onOpen={setOpen} />
+            ) : (
+              <p className="muted small center">No {KIND_LABEL[kind].toLowerCase()} yet. "Look for new names and places" below finds them in the chapters you have read.</p>
+            )}
+          </section>
         )}
 
         {entries && !list.length && <Empty title="Nobody here yet">Find the cast in the first chapters, or add names by hand with +.</Empty>}
+
+        <GuideBox book={book} />
 
         {list.length > 0 ? (
           <NewPeopleSearch book={book} chapters={chapters ?? []} known={list.length} />
@@ -230,6 +241,102 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
       {updating && <UpdateSheet book={book} chapters={chapters ?? []} people={people} onClose={() => setUpdating(false)} />}
       {open && <EntrySheet bookId={bookId} plain={plain} entry={open === 'new' ? undefined : open} onClose={() => setOpen(undefined)} />}
     </>
+  );
+}
+
+/**
+ * Fills the glossary from a guide written in advance: the one that comes with the app for this book, or a guide file.
+ * Free: nothing is sent to the provider.
+ */
+function GuideBox({ book }: { book: Book }) {
+  const builtIn = guideFor(book);
+  const [result, setResult] = useState('');
+  const [busy, setBusy] = useState(false);
+  const file = useRef<HTMLInputElement>(null);
+
+  async function fill(load: () => Promise<Guide>) {
+    setBusy(true);
+    setResult('');
+    try {
+      const guide = await load();
+      const { added, filled } = await applyGuide(book.id, guide);
+      setResult(`From the ${guide.book} guide: added ${added}, filled in ${filled} already here. Free, nothing was sent.`);
+    } catch (e) {
+      setResult(e instanceof Error ? e.message : 'Could not read the guide.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="new-people glass guide-box">
+      <div className="row between">
+        <strong>Book guide</strong>
+        <span className="muted small">free · spoilers</span>
+      </div>
+      {builtIn && (
+        <button type="button" className="update-btn" disabled={busy} onClick={() => void fill(builtIn)}>
+          <span>
+            Fill in from the book guide
+            <small>the 16 gods and 6 paths, places, groups, game rules and main characters</small>
+          </span>
+          <em>free</em>
+        </button>
+      )}
+      <button type="button" className="link small" disabled={busy} onClick={() => file.current?.click()}>
+        Import a guide file (.json)
+      </button>
+      <input
+        ref={file}
+        type="file"
+        accept="application/json,.json"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          if (f) void fill(async () => parseGuide(await f.text()));
+        }}
+      />
+      {result && (
+        <p className="small" role="status">
+          {result}
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** Places, gods, groups and terms: each with what it is, line by line, with the chapter it was read in. */
+function WorldList({ entries, onOpen }: { entries: GlossaryEntry[]; onOpen: (g: GlossaryEntry) => void }) {
+  return (
+    <ul className="world-list">
+      {entries.map((g) => {
+        const facts = g.profile?.about ?? [];
+        return (
+          <li key={g.id}>
+            <button type="button" className="world-card glass" onClick={() => onOpen(g)}>
+              <strong>{g.english}</strong>
+              {g.original !== g.english && (
+                <span className="muted small" lang="zh">
+                  {g.original}
+                </span>
+              )}
+              {g.note && !facts.some((f) => f.text === g.note) && <span className="world-note">{g.note}</span>}
+              {facts.length > 0 && (
+                <ul>
+                  {facts.map((f, i) => (
+                    <li key={i}>
+                      {f.text}
+                      {f.chapter ? <em> · Ch. {f.chapter}</em> : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -378,6 +485,8 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
             <select value={kind} onChange={(e) => setKind(e.target.value as GlossaryKind)}>
               <option value="person">Person</option>
               <option value="place">Place</option>
+              <option value="god">God</option>
+              <option value="group">Group</option>
               <option value="term">Term</option>
             </select>
           </label>

@@ -80,6 +80,23 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 - Looking up a word (2026-11-12): select it (press and hold, as on any iPhone page); the selection bar then shows
   "Look up" next to "Highlight" when the selection is a word or short phrase (`lookable` in `ChapterPage.tsx`). The old
   press-and-hold shortcut was removed: it fired before iPhone's own selection, so text could not be highlighted.
+- Book guides (2026-11-13, owner: "fill out some info" instead of spending tokens; spoilers are fine). A guide is a
+  ready-made glossary (`src/guides/`): people, places, gods, groups, terms with other names, notes and lines. The cast
+  page's "Book guide" box fills in from the built-in guide when the book title matches (`guideFor`), or from a guide
+  file (.json, same shape as `Guide`). Free: nothing is sent. Names already there keep everything and gain other names,
+  note and lines; old-style profiles are settled (old scene lines dropped, no paid rebuild). Guide lines show "· guide"
+  and are kept by updates like the owner's. Built-in: Foolish Game of the Gods (诸神愚戏), written from Baidu Baike
+  (Chinese and English) and the English translation's chapter titles; Chinese names only where the sources gave them.
+  Loaded on demand (own chunk), so it does not grow the main app.
+- The world of the story (2026-11-13, owner's ask: the book has great world building). Kinds are now person, place,
+  god, group (faction, sect, guild, church, team) and term (power system, rank, title, skill, item, rule). "New in the
+  story" on the cast (`searchStory` in `src/translate/profiles.ts`, replaces "Look for new characters") reads the
+  chapters finished since `book.worldUpTo` and adds new people, places, gods, groups and terms under "To check", and
+  new facts (with chapter) to world entries already there (`profile.about`). Places/gods/groups/terms show as cards with
+  those facts. Translation still proposes names only, and a translation request now sends only glossary entries named
+  in that chapter (by original or other name), so a big world glossary costs nothing extra.
+- Back from the cast or a character goes to the chapter it was opened from (`src/trail.ts`), until the book page or a
+  tab is opened.
 - Profiles as who / powers / status (2026-11-13, owner's ask: scene-by-scene lines and looks were not wanted). A card
   shows Who they are (identity, role, team, relationships; never "drinks wine"), Powers (abilities, skills, items) and
   Status (rank, title, faction, condition), plus the quote. Status is replaced by the newest, powers add up. Looks are
@@ -141,7 +158,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 162 unit tests
+npm test          # 173 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```

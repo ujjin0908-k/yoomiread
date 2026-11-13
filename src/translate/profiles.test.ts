@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Chapter, GlossaryEntry } from '../types';
-import { chaptersToRead, chaptersToSearch, chunkParts, mentions, mergeProfile, namesOf, parseProfileReply, planReading, searchPlan } from './profiles';
+import { chaptersToRead, chaptersToSearch, chunkParts, mentions, mergeProfile, namesOf, parseProfileReply, parseWorldReply, planReading, searchPlan, worldMessages } from './profiles';
 
 const person = (id: string, english: string, extra: Partial<GlossaryEntry> = {}): GlossaryEntry => ({
   id, bookId: 'b', original: english, english, kind: 'person', locked: false, status: 'ok', createdAt: 1, updatedAt: 1, ...extra,
@@ -140,5 +140,35 @@ describe('who they are, powers and status', () => {
     expect(after.line).toBe('Fertility priest');
     expect(after.quote?.text).toBe('I won’t die.');
     expect(after.upTo).toBe(3);
+  });
+});
+
+describe('searching the story for its world', () => {
+  const chunk = [{ chapter: 5, text: 'In Bliss City the priests of Birth pray to the god Fertility. The Ladder ranks every player.' }];
+  it('reads new people, places, gods, groups and terms, and facts only for chapters that were sent', () => {
+    const raw = [
+      '{"new": "Bliss City", "english": "Bliss City", "kind": "place", "note": "City where priests of Birth pray", "ch": 5}',
+      '{"new": "Fertility", "english": "Fertility", "kind": "god", "gender": "she", "note": "God that Birth\'s priests worship", "ch": 5}',
+      '{"new": "The Ladder", "english": "The Ladder", "kind": "term", "note": "Ranking of all players", "ch": 9}',
+      '{"new": "Zhang Wei", "english": "Zhang Wei", "kind": "spaceship"}',
+      '{"about": "Birth", "facts": [{"text": "Its priests pray in Bliss City", "ch": 5}, {"text": "Later truth", "ch": 30}]}',
+    ].join('\n');
+    const { fresh, facts } = parseWorldReply(raw, chunk);
+    expect(fresh.map((f) => [f.english, f.kind, f.chapter])).toEqual([
+      ['Bliss City', 'place', 5],
+      ['Fertility', 'god', 5],
+      ['The Ladder', 'term', undefined],
+      ['Zhang Wei', 'person', undefined],
+    ]);
+    // Gender is for people only.
+    expect(fresh[1].gender).toBeUndefined();
+    expect(facts).toEqual([{ name: 'Birth', facts: [{ text: 'Its priests pray in Bliss City', chapter: 5 }] }]);
+  });
+
+  it('tells the model what the guide already holds', () => {
+    const known = [person('p1', 'Cheng Shi'), { ...person('w1', 'Birth'), kind: 'god' as const, note: 'A god', profile: { looks: [], about: [{ text: 'Grants new life', chapter: 2 }] } }];
+    const user = worldMessages({ book: { id: 'b', title: 'Book' } as never, chunk, known })[1].content;
+    expect(user).toContain('People in the guide: Cheng Shi');
+    expect(user).toContain('- Birth (god): A god. Known: Grants new life');
   });
 });

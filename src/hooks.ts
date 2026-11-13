@@ -1,3 +1,4 @@
+import { noteRoute } from './trail';
 import { liveQuery } from 'dexie';
 import { useEffect, useRef, useState } from 'react';
 import { afterPageChange, animatePage, markIntent, navKind } from './motion';
@@ -54,10 +55,12 @@ export function useRoute(): string[] {
   const [parts, setParts] = useState(read);
   const shown = useRef(parts);
   useEffect(() => {
+    noteRoute(shown.current);
     const onChange = () => {
       const from = shown.current;
       const to = read();
       shown.current = to;
+      noteRoute(to);
       animatePage(
         navKind(from, to),
         () => {
