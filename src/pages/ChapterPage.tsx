@@ -5,7 +5,8 @@ import { db } from '../db';
 import { go, useLive } from '../hooks';
 import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakerOf, type Speaker } from '../logic';
 import { WordSheet } from './WordSheet';
-import { ProfileLink } from './Character';
+import { GlossaryCard } from './GlossaryCard';
+import { glossaryFor } from '../glossaryMatch';
 import { Mascot } from '../mascot/Mascot';
 import { CENSORED } from '../translate/prompt';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
@@ -112,6 +113,8 @@ export function ChapterPage({ id }: { id: string }) {
     return people.find((g) => g.id === id && g.picture);
   };
   const comments = (notes ?? []).filter((n) => n.kind === 'chapter');
+  // A name in the glossary was selected: the bar offers its short explanation instead of the dictionary.
+  const known = pending ? glossaryFor(pending.quote, (glossary ?? []).filter((g) => g.status === 'ok')) : undefined;
   const list = siblings ?? [];
   const index = list.findIndex((c) => c.id === id);
   const prev = list[index - 1];
@@ -285,7 +288,20 @@ export function ChapterPage({ id }: { id: string }) {
             <Highlighter size={16} />
             <span>Highlight</span>
           </button>
-          {lookable(pending.quote) && (
+          {known ? (
+            <button
+              type="button"
+              className="pill-btn small ghost-pill"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setCard(known);
+                window.getSelection()?.removeAllRanges();
+              }}
+            >
+              <BookOpen size={16} />
+              <span>Glossary</span>
+            </button>
+          ) : lookable(pending.quote) && (
             <button
               type="button"
               className="pill-btn small ghost-pill"
@@ -389,22 +405,7 @@ export function ChapterPage({ id }: { id: string }) {
           }}
         />
       )}
-      {card && (
-        <Sheet title={card.english} onClose={() => setCard(undefined)}>
-          <div className="person-card">
-            <Avatar entry={card} size={96} />
-            <p lang="zh" className="muted">
-              {card.original}
-            </p>
-            {card.gender && <span className="chip">{card.gender}</span>}
-            {(card.profile?.line ?? card.note) && <p>{card.profile?.line ?? card.note}</p>}
-            <ProfileLink entry={card} />
-            <a className="link" href={`#/glossary/${card.bookId}`}>
-              Open the cast
-            </a>
-          </div>
-        </Sheet>
-      )}
+      {card && <GlossaryCard entry={card} onClose={() => setCard(undefined)} />}
     </div>
   );
 }

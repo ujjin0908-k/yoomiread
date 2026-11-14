@@ -80,6 +80,10 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 - Looking up a word (2026-11-12): select it (press and hold, as on any iPhone page); the selection bar then shows
   "Look up" next to "Highlight" when the selection is a word or short phrase (`lookable` in `ChapterPage.tsx`). The old
   press-and-hold shortcut was removed: it fired before iPhone's own selection, so text could not be highlighted.
+- Glossary from the reader (2026-11-14): select a word; when it is a glossary name ("[Fate]", "Deceit's", "the Sea of
+  Desire", or a whole word of one name like "Sansui"), the selection bar shows "Glossary" instead of "Look up", and opens
+  a short card (`src/pages/GlossaryCard.tsx`): kind, note, the lines with Ch./guide tags, and for people a link to
+  their full card. Matching: `glossaryFor` in `src/glossaryMatch.ts`. Faces in the reader open the same card.
 - Book guides (2026-11-13, owner: "fill out some info" instead of spending tokens; spoilers are fine). A guide is a
   ready-made glossary (`src/guides/`): people, places, gods, groups, terms with other names, notes and lines. The cast
   page's "Book guide" box fills in from the built-in guide when the book title matches (`guideFor`), or from a guide
@@ -158,7 +162,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 173 unit tests
+npm test          # 176 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```
