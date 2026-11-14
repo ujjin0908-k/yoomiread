@@ -73,6 +73,16 @@ describe('book guides', () => {
     expect(after.about).toEqual([{ text: 'Protagonist', guide: true }]);
   });
 
+  it('corrects what an earlier guide added, so filling in again gives the Nature Cult its own entry', async () => {
+    await db.glossary.add(row({ id: 'na', english: 'Natural Alliance', original: '自然教派', kind: 'group', aliases: ['Nature Sect', 'Naturalist Sect'] }));
+    await applyGuide('b', FOOLISH_GAME);
+    const groups = (await db.glossary.toArray()).filter((g) => g.kind === 'group');
+    expect(groups.filter((g) => g.english === 'Natural Alliance')).toHaveLength(1);
+    expect((await db.glossary.get('na'))?.original).toBe('Natural Alliance');
+    expect(groups.find((g) => g.english === 'Nature Cult')?.original).toBe('自然教派');
+    expect(groups.some((g) => g.english === 'Logic Association')).toBe(true);
+  });
+
   it('says plainly when a file is not a guide', () => {
     expect(() => parseGuide('hello')).toThrow(/not JSON/);
     expect(() => parseGuide('{"x": 1}')).toThrow(/entries/);

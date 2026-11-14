@@ -72,6 +72,14 @@ function addGuideLines(have: ProfileFact[] = [], lines: string[] = []): ProfileF
  */
 export async function applyGuide(bookId: string, guide: Guide, now = Date.now()): Promise<{ added: number; filled: number }> {
   const all = (await db.glossary.where('bookId').equals(bookId).toArray()) as GlossaryEntry[];
+  for (const fix of guide.fixes ?? []) {
+    for (const g of all.filter((x) => x.kind === fix.kind && squash(x.english) === squash(fix.english))) {
+      const drop = new Set((fix.removeAliases ?? []).map(squash));
+      const change = { original: fix.original ?? g.original, aliases: g.aliases?.filter((a) => !drop.has(squash(a))), updatedAt: now };
+      await db.glossary.update(g.id, change);
+      Object.assign(g, change);
+    }
+  }
   let added = 0;
   let filled = 0;
   const fresh: GlossaryEntry[] = [];
