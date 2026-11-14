@@ -2554,3 +2554,47 @@ html[data-reader='night'] { background: #161614; }
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
 }
+
+/* The short glossary explanation opened from the reader. */
+.g-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.g-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.g-card-head .chip {
+  margin-right: 6px;
+}
+.g-card-head p {
+  margin: 4px 0 0;
+}
+.g-card-lead {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  line-height: 1.4;
+}
+.g-card h3 {
+  margin: 4px 0 2px;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.g-card ul {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.4;
+}
+.g-card li em {
+  font-style: normal;
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+.g-card .pill-btn {
+  align-self: flex-start;
+}
