@@ -22,4 +22,6 @@ export interface Guide {
   /** Book titles (lower case) this guide is for. */
   titles: string[];
   entries: GuideEntry[];
+  /** Corrections to entries an earlier version of the guide added, found by English name and kind. */
+  fixes?: { english: string; kind: GlossaryKind; original?: string; removeAliases?: string[] }[];
 }

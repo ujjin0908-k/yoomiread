@@ -15,6 +15,9 @@ const term = (english: string, original: string, aliases: string[], note: string
 export const FOOLISH_GAME: Guide = {
   book: 'Foolish Game of the Gods',
   titles: ['foolish game of the gods', 'the foolish game of gods', 'foolish game of gods', "gods' foolish play", '诸神愚戏', '諸神愚戲', 'zhu shen yu xi'],
+  // Corrections to what an earlier version of this guide added (2026-11-14): the Nature Cult was filed under the
+  // Natural Alliance. Applied before filling in, so filling in again gives each its own entry.
+  fixes: [{ english: 'Natural Alliance', kind: 'group', original: 'Natural Alliance', removeAliases: ['Nature Sect', 'Naturalist Sect'] }],
   entries: [
     // The six paths. Each has its gods; opposing gods share a leaderboard.
     term('Path of the Void', '虚无', ['Void path', 'Void'], 'Path of two gods: Deceit (its appearance) and Fate (its essence)', ['The main story takes place in the Void Era']),
@@ -166,7 +169,14 @@ export const FOOLISH_GAME: Guide = {
     group('Tower of Logic', '理质之塔', ['Tower of Rationality'], 'A great power on the Continent of Hope, ruled by a council of scholars', ['Works with the Agency Hand on underground resources']),
     group('Council of Scholars', '博学主席会', ['Council of Learned Chairmen'], 'The ruling council of the Tower of Logic'),
     group('Grand Tribunal', 'Grand Tribunal', [], 'One of the two great powers above ground on the Continent of Hope'),
-    group('Natural Alliance', '自然教派', ['Nature Sect', 'Naturalist Sect'], 'A looser alliance, behind the Tribunal and the Tower, with shared-rule agreements'),
+    group('Natural Alliance', 'Natural Alliance', [], 'A looser alliance, behind the Tribunal and the Tower, with shared-rule agreements'),
+    group('Nature Cult', '自然教派', ['Nature Sect', 'Naturalist Sect'], 'A faction of players that claims to seek "true nature"', [
+      'Began in the early Faith Game as a legitimate faction of mostly Life path players',
+      'As players of other paths joined, its teachings drifted; it now stands between Life and Descent',
+      'Walks a line between "embracing one’s nature" and indulging in corruption',
+      'Seeks godhood like the Logic Association, but quietly',
+    ]),
+    group('Logic Association', 'Logic Association', ['Rationalist Association'], 'A faction of players that seeks godhood openly', ['More brazen about it than the Nature Cult']),
     group('Afterglow Church', 'Afterglow Church', [], 'Underground followers of Chaos with no leaders', ['Gather, cause chaos and scatter; want to tear apart the afterglow of Order']),
     group('Extreme Desire Brotherhood', 'Extreme Desire Brotherhood', [], 'Underground followers of Corruption who run the metal trade'),
     group('Agency Hand', 'Agency Hand', [], 'Plunders underground resources for the surface powers'),
