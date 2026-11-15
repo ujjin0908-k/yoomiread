@@ -1,3 +1,6 @@
+import { DEFAULT_COVER, saveBackdrop, useBackdrop } from '../backdrop';
+import { shrinkImage } from '../images';
+import { toPicture, usePictureUrl } from '../picture';
 import { Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { TopBar } from '../components';
@@ -121,6 +124,7 @@ export function Settings() {
             />
           </label>
         </section>
+        <ReadingBackground />
         <section className="card">
           <h3>On iPhone</h3>
           <p className="muted">
@@ -314,6 +318,65 @@ function TranslationSettings() {
         Test connection
       </button>
       {note && <p className="small">{note}</p>}
+    </section>
+  );
+}
+
+/** A picture of your own behind the pages while reading, under the page colour so the text stays clear. */
+function ReadingBackground() {
+  const backdrop = useBackdrop();
+  const url = usePictureUrl(backdrop?.picture, 'backdrop');
+  const [busy, setBusy] = useState(false);
+  return (
+    <section className="card form">
+      <h3>Reading background</h3>
+      <p className="muted small">A picture of your own behind the book while you read. Kept on this phone only (not in backups).</p>
+      {url && (
+        <div className="backdrop-preview" style={{ backgroundImage: `url(${url})` }}>
+          <span style={{ opacity: backdrop!.cover }} />
+          <p>The quick look of a page over your picture.</p>
+        </div>
+      )}
+      <div className="row">
+        <label className="btn">
+          {busy ? 'Saving…' : backdrop ? 'Change picture' : 'Choose a picture'}
+          <input
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              setBusy(true);
+              try {
+                await saveBackdrop({ picture: await toPicture(await shrinkImage(f, 1800)), cover: backdrop?.cover ?? DEFAULT_COVER });
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
+        </label>
+        {backdrop && (
+          <button type="button" className="btn ghost" onClick={() => void saveBackdrop(undefined)}>
+            Remove
+          </button>
+        )}
+      </div>
+      {backdrop && (
+        <label>
+          Picture strength
+          <input
+            type="range"
+            min={0.5}
+            max={0.95}
+            step={0.05}
+            value={1.45 - backdrop.cover}
+            onChange={(e) => void saveBackdrop({ ...backdrop, cover: Math.round((1.45 - Number(e.target.value)) * 100) / 100 })}
+          />
+          <span className="muted small">Stronger shows more of the picture; lighter keeps the text easier to read.</span>
+        </label>
+      )}
     </section>
   );
 }

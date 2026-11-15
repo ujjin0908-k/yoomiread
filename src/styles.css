@@ -2659,3 +2659,38 @@ html[data-reader='night'] { background: #161614; }
   opacity: 0.5;
   font-size: 0.85rem;
 }
+
+/* Your own picture behind the book while reading, under the page colour. */
+.reader-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  pointer-events: none;
+}
+.reader-backdrop span {
+  position: absolute;
+  inset: 0;
+}
+.backdrop-preview {
+  position: relative;
+  height: 140px;
+  border-radius: 14px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  display: grid;
+  place-items: center;
+}
+.backdrop-preview span {
+  position: absolute;
+  inset: 0;
+  background: var(--surface, #f7f3ea);
+}
+.backdrop-preview p {
+  position: relative;
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+}
