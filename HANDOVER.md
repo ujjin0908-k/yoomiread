@@ -80,10 +80,10 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 - Looking up a word (2026-11-12): select it (press and hold, as on any iPhone page); the selection bar then shows
   "Look up" next to "Highlight" when the selection is a word or short phrase (`lookable` in `ChapterPage.tsx`). The old
   press-and-hold shortcut was removed: it fired before iPhone's own selection, so text could not be highlighted.
-- Picture book (2026-11-15, owner's ask). Places, gods and groups can have a picture (saved up to 1600 px) and a
+- Picture book (2026-11-15, owner's ask). Places, gods, groups and terms (paths, items) can have a picture (saved up to 1600 px) and a
   "How it looks" description (`GlossaryEntry.look`). "Copy picture prompt" (entry editor and glossary card) copies
   what it is + the description + the book's art style (`Book.artStyle`, set by a guide; `src/art.ts`) + wide format, to
-  paste into ChatGPT. The Foolish Game guide has a description for every place, god and group
+  paste into ChatGPT. The Foolish Game guide has a description for every place, god, group and path
   (`src/guides/foolish-game-looks.ts`) and a dark-fantasy style in the spirit of Elden Ring. In the reader, a place,
   god or group with a picture shows big after the paragraph that first names it, once per chapter (`scenesFor` in
   `src/scenes.ts`); a one-word name counts only in brackets or capitalised mid-sentence, so "at that time" is not the
