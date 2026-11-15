@@ -1,6 +1,7 @@
+import { picturePrompt } from '../art';
 import { applyGuide, guideFor, parseGuide, type Guide } from '../guides';
 import { chapterBefore } from '../trail';
-import { Check, ImagePlus, Lock, Plus, Sparkles, Trash2, Unlock } from 'lucide-react';
+import { Check, Copy, ImagePlus, Lock, Plus, Sparkles, Trash2, Unlock } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Empty, Sheet, TopBar } from '../components';
 import { db } from '../db';
@@ -315,6 +316,7 @@ function WorldList({ entries, onOpen }: { entries: GlossaryEntry[]; onOpen: (g: 
         return (
           <li key={g.id}>
             <button type="button" className="world-card glass" onClick={() => onOpen(g)}>
+              <WorldArt entry={g} />
               <strong>{g.english}</strong>
               {g.original !== g.english && (
                 <span className="muted small" lang="zh">
@@ -338,6 +340,13 @@ function WorldList({ entries, onOpen }: { entries: GlossaryEntry[]; onOpen: (g: 
       })}
     </ul>
   );
+}
+
+/** A place's, god's or group's picture on its card, or a hint that a description is ready for one. */
+function WorldArt({ entry }: { entry: GlossaryEntry }) {
+  const url = usePictureUrl(entry.picture, entry.id);
+  if (url) return <img className="world-art" src={url} alt="" loading="lazy" />;
+  return entry.look ? <span className="world-hint">Picture description ready · open to copy it</span> : null;
 }
 
 function EntryList({ entries, onOpen }: { entries: GlossaryEntry[]; onOpen: (g: GlossaryEntry) => void }) {
@@ -374,7 +383,10 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
   const [aliases, setAliases] = useState((entry?.aliases ?? []).join(', '));
   const [locked, setLocked] = useState(entry?.locked ?? false);
   const [picture, setPicture] = useState<Picture | undefined>(entry?.picture);
+  const [look, setLook] = useState(entry?.look ?? '');
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const book = useLive(async () => (await db.books.get(bookId)) ?? null, [bookId]);
   const pictureUrl = usePictureUrl(picture);
 
   async function save(approve: boolean) {
@@ -396,9 +408,10 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
       locked,
       // Anything I edit or add by hand counts as checked.
       status: approve || !entry ? 'ok' : entry.status,
-      picture: kind === 'person' ? picture : undefined,
+      picture,
+      look: look.trim() || undefined,
       role: kind === 'person' ? role : undefined,
-      aliases: kind === 'person' && aliases.trim() ? aliases.split(',').map((a) => a.trim()).filter(Boolean) : undefined,
+      aliases: aliases.trim() ? aliases.split(',').map((a) => a.trim()).filter(Boolean) : undefined,
       createdAt: entry?.createdAt ?? now,
       updatedAt: now,
     };
@@ -420,6 +433,32 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
           void save(true);
         }}
       >
+        {kind !== 'person' && (
+          <div className="scene-pick">
+            {pictureUrl ? <img src={pictureUrl} alt="" /> : <span className="scene-empty">No picture yet</span>}
+            <div className="row">
+              <label className="link">
+                <ImagePlus size={16} /> {picture ? 'Change picture' : 'Add picture'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    // Kept large enough for a full-width picture in the reader, small enough for the phone.
+                    if (f) setPicture(await toPicture(await shrinkImage(f, 1600)));
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+              {picture && (
+                <button type="button" className="link" onClick={() => setPicture(undefined)}>
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         {kind === 'person' && (
           <div className="picture-pick">
             {pictureUrl ? <img className="avatar" src={pictureUrl} alt="" width={64} height={64} /> : <span className="avatar-empty big">{english.slice(0, 1) || '?'}</span>}
@@ -473,12 +512,12 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
                 </button>
               </div>
             </div>
-            <label>
-              Other names <span className="muted small">(optional, with commas: nicknames, titles)</span>
-              <input value={aliases} placeholder="e.g. Little Song, the boss" onChange={(e) => setAliases(e.target.value)} />
-            </label>
           </>
         )}
+        <label>
+          Other names <span className="muted small">(optional, with commas{kind === 'person' ? ': nicknames, titles' : ''})</span>
+          <input value={aliases} placeholder={kind === 'person' ? 'e.g. Little Song, the boss' : 'e.g. other spellings'} onChange={(e) => setAliases(e.target.value)} />
+        </label>
         <div className="row-2">
           <label>
             Kind
@@ -507,6 +546,21 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
           Note <span className="muted small">{plain ? '(optional)' : '(optional, also sent to the translator)'}</span>
           <input value={note} placeholder="e.g. always call him Senior Brother" onChange={(e) => setNote(e.target.value)} />
         </label>
+        <label>
+          How it looks <span className="muted small">(a picture description to paste into an image app)</span>
+          <textarea rows={kind === 'person' ? 3 : 5} value={look} placeholder="What you would see: shape, size, colours, light, mood" onChange={(e) => setLook(e.target.value)} />
+        </label>
+        {look.trim() && (
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              void navigator.clipboard?.writeText(picturePrompt({ ...(entry as GlossaryEntry), english: english.trim(), kind, look }, book?.artStyle)).then(() => setCopied(true));
+            }}
+          >
+            <Copy size={16} /> {copied ? 'Copied: paste it into ChatGPT' : 'Copy picture prompt'}
+          </button>
+        )}
         <label className="look-row">
           <span>
             {locked ? <Lock size={14} /> : <Unlock size={14} />} Lock (never change this name)

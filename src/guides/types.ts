@@ -14,6 +14,8 @@ export interface GuideEntry {
   about?: string[];
   powers?: string[];
   status?: string[];
+  /** How it looks, as a picture description. */
+  look?: string;
 }
 
 /** A ready-made glossary for one book. Also the shape of an imported guide file. */
@@ -22,6 +24,8 @@ export interface Guide {
   /** Book titles (lower case) this guide is for. */
   titles: string[];
   entries: GuideEntry[];
+  /** The art style for this book's pictures. */
+  style?: string;
   /** Corrections to entries an earlier version of the guide added, found by English name and kind. */
   fixes?: { english: string; kind: GlossaryKind; original?: string; removeAliases?: string[] }[];
 }

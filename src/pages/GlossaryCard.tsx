@@ -1,4 +1,9 @@
+import { useState } from 'react';
+import { picturePrompt } from '../art';
 import { Sheet } from '../components';
+import { db } from '../db';
+import { useLive } from '../hooks';
+import { usePictureUrl } from '../picture';
 import type { GlossaryEntry, GlossaryKind, ProfileFact } from '../types';
 import { ProfileLink } from './Character';
 import { Avatar } from './Glossary';
@@ -18,9 +23,11 @@ export function GlossaryCard({ entry, onClose }: { entry: GlossaryEntry; onClose
       ]
     : [['', (p?.about ?? []).filter((f) => f.text !== entry.note)]];
   const empty = !lead && lists.every(([, l]) => !l.length);
+  const scene = usePictureUrl(person ? undefined : entry.picture, entry.id);
   return (
     <Sheet title={entry.english} onClose={onClose}>
       <div className="g-card">
+        {scene && <img className="g-card-art" src={scene} alt={entry.english} />}
         <div className="g-card-head">
           {person && entry.picture && <Avatar entry={entry} size={64} />}
           <div>
@@ -51,8 +58,41 @@ export function GlossaryCard({ entry, onClose }: { entry: GlossaryEntry; onClose
         )}
         {empty && <p className="muted small">No explanation yet. "New in the story" or the book guide on the cast can fill it in.</p>}
         {entry.aliases?.length ? <p className="muted small">Also: {entry.aliases.join(', ')}</p> : null}
+        {entry.look && <LookBox entry={entry} />}
         {person && <ProfileLink entry={entry} />}
       </div>
     </Sheet>
+  );
+}
+
+/** How it looks, with a button that copies the whole picture prompt (description and the book's art style). */
+export function LookBox({ entry }: { entry: GlossaryEntry }) {
+  const book = useLive(async () => (await db.books.get(entry.bookId)) ?? null, [entry.bookId]);
+  const [copied, setCopied] = useState(false);
+  return (
+    <details className="look-box">
+      <summary>How it looks{entry.picture ? '' : ' (for a picture)'}</summary>
+      <p>{entry.look}</p>
+      <button
+        type="button"
+        className="pill-btn small"
+        onClick={() => void navigator.clipboard?.writeText(picturePrompt(entry, book?.artStyle)).then(() => setCopied(true))}
+      >
+        <span>{copied ? 'Copied: paste it into ChatGPT' : 'Copy picture prompt'}</span>
+      </button>
+      <p className="muted small">Then add the picture with Edit on the cast page.</p>
+    </details>
+  );
+}
+
+/** A big picture in the chapter, after the paragraph that first names the place, god or group. Tap for its card. */
+export function StoryPicture({ entry, onOpen }: { entry: GlossaryEntry; onOpen: () => void }) {
+  const url = usePictureUrl(entry.picture, entry.id);
+  if (!url) return null;
+  return (
+    <figure className="story-art" onClick={(e) => (e.stopPropagation(), onOpen())}>
+      <img src={url} alt={entry.english} loading="lazy" />
+      <figcaption>{entry.english}</figcaption>
+    </figure>
   );
 }

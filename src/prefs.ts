@@ -7,9 +7,11 @@ export interface ReaderPrefs {
   theme: 'paper' | 'sepia' | 'parchment' | 'mint' | 'rose' | 'night';
   spacing: 'snug' | 'normal' | 'airy';
   dropCap: boolean;
+  /** The picture book: big pictures of places, gods and groups in the chapter. */
+  storyPictures: boolean;
 }
 
-export const DEFAULT_PREFS: ReaderPrefs = { size: 2, font: 'serif', theme: 'paper', spacing: 'normal', dropCap: true };
+export const DEFAULT_PREFS: ReaderPrefs = { size: 2, font: 'serif', theme: 'paper', spacing: 'normal', dropCap: true, storyPictures: true };
 export const FONT_SIZES = [16, 17.5, 19, 21, 23.5];
 const KEY = 'yoomiread.reader';
 

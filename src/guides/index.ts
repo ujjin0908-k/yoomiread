@@ -50,8 +50,9 @@ export function parseGuide(text: string): Guide {
       about: strings(e.about),
       powers: strings(e.powers),
       status: strings(e.status),
+      look: typeof e.look === 'string' ? e.look.trim() || undefined : undefined,
     }));
-  return { book: String(r.book ?? 'Imported guide'), titles: strings(r.titles) ?? [], entries };
+  return { book: String(r.book ?? 'Imported guide'), titles: strings(r.titles) ?? [], entries, style: typeof r.style === 'string' ? r.style.trim() || undefined : undefined };
 }
 
 /** Adds lines from the guide that are not there yet. Guide lines are kept by later updates, like the owner's own. */
@@ -111,6 +112,7 @@ export async function applyGuide(bookId: string, guide: Guide, now = Date.now())
       const change: Partial<GlossaryEntry> = {
         aliases: aliases.length ? [...(match.aliases ?? []), ...aliases.filter((a) => !(match.aliases ?? []).includes(a))] : match.aliases,
         note: match.note || e.note,
+        look: match.look || e.look,
         gender: match.gender ?? (e.kind === 'person' ? e.gender : undefined),
         role: match.role ?? e.role,
         kind: e.kind,
@@ -132,6 +134,7 @@ export async function applyGuide(bookId: string, guide: Guide, now = Date.now())
         gender: e.kind === 'person' ? e.gender : undefined,
         role: e.kind === 'person' ? (e.role ?? 'side') : undefined,
         note: e.note,
+        look: e.look,
         profile: profileFrom(undefined),
         locked: false,
         status: 'ok',
@@ -143,5 +146,10 @@ export async function applyGuide(bookId: string, guide: Guide, now = Date.now())
     }
   }
   if (fresh.length) await db.glossary.bulkAdd(fresh);
+  // The guide's art style, unless the owner set one.
+  if (guide.style) {
+    const book = await db.books.get(bookId);
+    if (book && !book.artStyle) await db.books.update(bookId, { artStyle: guide.style });
+  }
   return { added, filled };
 }

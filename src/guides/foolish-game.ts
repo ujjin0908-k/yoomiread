@@ -1,3 +1,4 @@
+import { FOOLISH_GAME_LOOKS, FOOLISH_GAME_STYLE } from './foolish-game-looks';
 import type { Guide } from './types';
 
 /**
@@ -12,8 +13,9 @@ const place = (english: string, original: string, aliases: string[], note: strin
 const group = (english: string, original: string, aliases: string[], note: string, about: string[] = []) => ({ english, original, kind: 'group' as const, aliases, note, about });
 const term = (english: string, original: string, aliases: string[], note: string, about: string[] = []) => ({ english, original, kind: 'term' as const, aliases, note, about });
 
-export const FOOLISH_GAME: Guide = {
+const GUIDE: Guide = {
   book: 'Foolish Game of the Gods',
+  style: FOOLISH_GAME_STYLE,
   titles: ['foolish game of the gods', 'the foolish game of gods', 'foolish game of gods', "gods' foolish play", '诸神愚戏', '諸神愚戲', 'zhu shen yu xi'],
   // Corrections to what an earlier version of this guide added (2026-11-14): the Nature Cult was filed under the
   // Natural Alliance. Applied before filling in, so filling in again gives each its own entry.
@@ -283,3 +285,6 @@ export const FOOLISH_GAME: Guide = {
     p('President Gong', '龚会长', ['Leader of the Society of the Mediocre'], { aliases: ['Gong'] }),
   ],
 };
+
+/** The guide, with each entry's picture description. */
+export const FOOLISH_GAME: Guide = { ...GUIDE, entries: GUIDE.entries.map((e) => ({ ...e, look: e.look ?? FOOLISH_GAME_LOOKS[e.english] })) };
