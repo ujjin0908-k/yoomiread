@@ -1,3 +1,4 @@
+import { LookBox } from './GlossaryCard';
 import { cameFromChapter, chapterBefore } from '../trail';
 import { ImagePlus, ShieldCheck, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -226,6 +227,8 @@ export function CharacterPage({ id }: { id: string }) {
             </div>
           </section>
         ) : null}
+
+        {entry.look && <LookBox entry={entry} />}
 
         {!p && (
           <p className="muted center small">
