@@ -80,6 +80,14 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 - Looking up a word (2026-11-12): select it (press and hold, as on any iPhone page); the selection bar then shows
   "Look up" next to "Highlight" when the selection is a word or short phrase (`lookable` in `ChapterPage.tsx`). The old
   press-and-hold shortcut was removed: it fired before iPhone's own selection, so text could not be highlighted.
+- Picture book (2026-11-15, owner's ask). Places, gods and groups can have a picture (saved up to 1600 px) and a
+  "How it looks" description (`GlossaryEntry.look`). "Copy picture prompt" (entry editor and glossary card) copies
+  what it is + the description + the book's art style (`Book.artStyle`, set by a guide; `src/art.ts`) + wide format, to
+  paste into ChatGPT. The Foolish Game guide has a description for every place, god and group
+  (`src/guides/foolish-game-looks.ts`) and a dark-fantasy style in the spirit of Elden Ring. In the reader, a place,
+  god or group with a picture shows big after the paragraph that first names it, once per chapter (`scenesFor` in
+  `src/scenes.ts`); a one-word name counts only in brackets or capitalised mid-sentence, so "at that time" is not the
+  god Time. Switch: "Pictures in the story" in the reader's look settings. Other names now save for every kind.
 - Glossary from the reader (2026-11-14): select a word; when it is a glossary name ("[Fate]", "Deceit's", "the Sea of
   Desire", or a whole word of one name like "Sansui"), the selection bar shows "Glossary" instead of "Look up", and opens
   a short card (`src/pages/GlossaryCard.tsx`): kind, note, the lines with Ch./guide tags, and for people a link to
@@ -162,7 +170,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 176 unit tests
+npm test          # 181 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```

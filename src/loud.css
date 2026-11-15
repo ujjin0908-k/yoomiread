@@ -2189,3 +2189,15 @@ body[data-reader='night'] {
 .guide-box .link {
   align-self: flex-start;
 }
+.world-art {
+  width: calc(100% + 28px);
+  margin: -12px -14px 8px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 18px 18px 0 0;
+}
+.world-hint {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6b4bd8;
+}

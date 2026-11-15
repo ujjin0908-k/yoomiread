@@ -1,11 +1,12 @@
 import { AlertTriangle, BookOpen, Bookmark, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
 import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakerOf, type Speaker } from '../logic';
 import { WordSheet } from './WordSheet';
-import { GlossaryCard } from './GlossaryCard';
+import { GlossaryCard, StoryPicture } from './GlossaryCard';
+import { scenesFor } from '../scenes';
 import { glossaryFor } from '../glossaryMatch';
 import { Mascot } from '../mascot/Mascot';
 import { CENSORED } from '../translate/prompt';
@@ -108,6 +109,8 @@ export function ChapterPage({ id }: { id: string }) {
   // Everyone in the cast is a possible speaker, so a line by someone without a picture never gets someone else's face.
   const people = (glossary ?? []).filter((g) => g.kind === 'person' && g.status === 'ok');
   const speakers: Speaker[] = people.map((g) => ({ id: g.id, names: [english ? g.english : g.original, ...(g.aliases ?? [])].filter(Boolean) }));
+  // The picture book: a place, god or group with a picture is shown big after the paragraph that first names it.
+  const scenes = shown && prefs.storyPictures ? scenesFor(paragraphs(shown).map((x) => x.text), glossary ?? []) : [];
   const faceFor = (paragraph: string) => {
     const id = speakerOf(paragraph, speakers);
     return people.find((g) => g.id === id && g.picture);
@@ -203,7 +206,9 @@ export function ChapterPage({ id }: { id: string }) {
               setBarsAway((away) => !away);
             }}
           >
-            {withFaces(paragraphs(shown), faceFor).map(({ p, face }) =>
+            {withFaces(paragraphs(shown), faceFor).map(({ p, face }, i) => (
+              <Fragment key={`${view}-${p.start}`}>
+              {
               p.text === CENSORED ? (
                 <p key={`${view}-${p.start}`} data-start={p.start} className="censored">
                   Censored and skipped
@@ -225,8 +230,10 @@ export function ChapterPage({ id }: { id: string }) {
                   ),
                 )}
               </p>
-              ),
-            )}
+              )}
+              {scenes[i] && <StoryPicture entry={scenes[i]!} onOpen={() => setCard(scenes[i])} />}
+              </Fragment>
+            ))}
           </div>
         ) : (
           <div className="card">
@@ -622,6 +629,15 @@ function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs:
             className="switch"
             checked={prefs.dropCap}
             onChange={(e) => setPrefs({ dropCap: e.target.checked })}
+          />
+        </label>
+        <label className="look-row">
+          <span>Pictures in the story</span>
+          <input
+            type="checkbox"
+            className="switch"
+            checked={prefs.storyPictures}
+            onChange={(e) => setPrefs({ storyPictures: e.target.checked })}
           />
         </label>
       </div>

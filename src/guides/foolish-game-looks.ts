@@ -1,0 +1,136 @@
+/**
+ * How the places, gods and groups of "Foolish Game of the Gods" could look, as picture descriptions to paste into an
+ * image tool. Built on what the encyclopedia sources say (Death's skull, War's eyes, Decay's rotting giant…); the rest
+ * is an interpretation, written for this app on 2026-11-15. The shared art style is added when a prompt is copied.
+ */
+export const FOOLISH_GAME_LOOKS: Record<string, string> = {
+  // The sixteen gods.
+  Deceit:
+    'A towering goddess half-turned away, wrapped in layered veils of shifting silk that never show the same face twice. Her eyes are warm and almost human, with slow spirals in the whites and tiny stars in the pupils; a sly smile under jade-pale hands raised to her lips as if keeping a secret. Behind her, a hall of broken mirrors reflects a dozen versions of her, none matching. Masks of comedy hang from silver threads around her. Violet and gold light.',
+  Fate:
+    'A colossal, still goddess seated among the stars, twin of Deceit but colder: the same face without warmth. Her eyes are blank and spiral, flecked with star-points, and looking into them pulls the soul toward nothing. A great die of pale bone and gold turns slowly above her open palm, its faces showing constellations. Thousands of glowing threads fan out from her fingers into the dark, each one a possible future. Deep indigo night, cold silver light.',
+  Memory:
+    'An ancient, serene god made of stacked pages and carved stone, eyes like weathered tablets inscribed with the history of ages. Around it drift countless floating fragments: faces, rooms, moments, frozen in amber light. Some fragments are subtly wrong, recorded faithfully but not truthfully. A vast library with no ceiling stretches behind it into dusk. Sepia, amber and dust motes.',
+  Time:
+    'A vast, motionless figure made of brass gears and hourglass sand, its face calm and unchanging, its eyes two black holes that swallow light. A crack runs through the sky behind it like a split in glass, and wind pours through it. Clock hands the size of bridges hang around it, every one perfectly on time. Cold bronze, grey light, sand frozen mid-fall.',
+  Order:
+    'A colossal armoured sovereign of white stone and gold, standing at the head of a city of perfect geometric walls, holding a great torch whose flame lights the whole civilisation below. Its face is a calm, featureless helm. Chains of light run from it down to every gate and street, binding everything in rule. In the far shadows, the faint cracks of a great split run down its armour. Pale gold, marble white, harsh noon light.',
+  Truth:
+    'A towering figure of pure law: a body made of interlocking diagrams, equations and turning astrolabes, its eyes blazing with the light of knowledge and endless intricate patterns. Books open and close by themselves in orbit around it. Below, scholars kneel in a vast domed observatory. Cool white and electric blue light, fine golden linework.',
+  War:
+    'A titanic warrior god in blackened, battle-scarred armour, standing on a hill of broken banners. Its left eye is a burning flame, its right a flowing stream of fresh blood. When its eyes open, the air itself seems to sound a march: war drums and horns rising out of the smoke. Armies clash in the red haze below. Crimson, ember orange and black smoke.',
+  Chaos:
+    'A shapeless god of unbound madness: a storm of shattered rules, torn law-books, broken chains and laughing faces, constantly rearranging itself. Elemental judges of fire, ice and lightning circle it like moons. Where it passes, straight lines bend and buildings melt into impossible angles. Clashing purple, sickly green and flame orange.',
+  Folly:
+    'A tall, lofty god lounging on a throne of discarded books, looking down at the viewer with pale eyes full of scorn. It wears the robes of a scholar, torn and worn with pride, and holds a cracked crown of knowledge askew. Tiny kneeling figures below are drawn as fools in caps. Sickly ivory and faded gold, a mocking cold light.',
+  Silence:
+    'A hooded monk-like god of immense size, sitting cross-legged in a hall of ashes, a finger never quite touching its closed lips. It has no visible mouth. Around it, sound itself seems frozen: falling leaves hang still, bells hang without ringing. Its many hidden eyes, half closed, see every secret. Muted grey, soft white fog, absolute stillness.',
+  Birth:
+    'A vast, serene mother goddess at the dawn of the world, cradled in a great blooming womb-flower of pearl and rose, with countless newborn lights rising from her open hands like seeds on the wind. She records each birth and each departure on a ribbon of light that spirals around her. Both gentle and indifferent. Dawn pink, cream and warm gold.',
+  Prosperity:
+    'The Mother of Prosperity: a colossal goddess overgrown with endless blossoms, fruit and vines, her body merging into a forest that keeps growing even as you look. Under her branches lies the Divine Shade, a green twilight full of bloom. Some of the vines hold the faces of her absorbed children. Beautiful and suffocating, too much life. Deep emerald, gold pollen light, heavy fragrance-haze.',
+  Death:
+    'A giant skull the size of a mountain, its eye sockets black holes that hold cold flames deep inside. It speaks in a voice like cold fire from the abyss, yet it is the kindest of the gods. Behind it rises the Fishbone Hall, a cathedral built from the spine and ribs of a colossal fish. Souls drift past it like pale lanterns. Bone white, deep blue-black, cold teal flames.',
+  Corruption:
+    'Something half-hidden beneath a dark rose-coloured sea: only the suggestion of a gigantic, beautiful, many-armed shape under the surface, beckoning. Chains break and fall into the water all around. Figures on the shore wade in, smiling, to answer their deepest desires. Wine red, rose pink and black water, heavy perfumed mist.',
+  Decay:
+    'A rotting corpse-giant of unimaginable age, seated on the shores of the end of the universe like the final tomb itself. Its flesh is grey stone and fungus, ribs open like the doors of a crypt, moss and moths spilling out. Pilgrims around it harm themselves to decay faster. Its home, the Mausoleum, spreads behind it. Ash grey, sickly yellow, rust and mould green.',
+  Annihilation:
+    'A god of ending: a tall, thin silhouette of absolute black, eyes like empty voids, standing at the edge of the world as everything around it crumbles to dust and drifts upward. Its followers kneel in rows, waiting for the final judgment, already turning to ash. Black, ash grey, and a thin white rim of dying light.',
+  'Primordial Origin':
+    'An unseen power beyond the sixteen gods: a vast spiral of countless sliced universes, like stacked panes of glass, each holding a slightly different world, all turning around a single blinding point of white light at the bottom of a sea of desire. Tiny divine figures look up at it in fear. Cosmic scale, black, white and faint gold.',
+
+  // Heralds.
+  Garuda:
+    "The Bone Butcher: a tall, gaunt herald of Death in a butcher's leather apron over armour of fitted bones, carrying a great cleaver of bone. Its face is a bird-like skull. Loyal and grim, with a grief it hides. Fishbone Hall behind it. Bone white, dark leather, cold blue light.",
+  Leleer:
+    'The Mother Tree of Fear: once the youngest flower-daughter of Prosperity, now a vast black tree rising from the Sea of Desire, its branches hung with trembling blossoms shaped like frightened faces. She still looks young and curious at its heart. Guards the gate of the Sea of Desire. Black bark, pale pink blossoms, red water.',
+  Dizell:
+    "The Unshadowed Crown: a proud, handsome divine prince with a radiant crown that casts no shadow, half his body flourishing with Prosperity's blossoms and half withered by Decay. A traitor's cold smile. Gold, green and grey, strong rim light.",
+  Epuska:
+    'The Wasteland Walker: a hollow, wandering giant body of the fallen prince Dizell, half-dead, half-overgrown, trudging forever through the grey Forest of Sighs, trailing dust and dry leaves. Mist, grey-green, melancholy.',
+  Fulazhuoer:
+    "Prosperity's eldest daughter: a radiant young goddess in a gown of living petals, half merged into her mother's endless vines, her face calm as she is absorbed. Emerald and gold.",
+  Helazuer:
+    "Prosperity's eldest son: a strong, noble young god with antlers of flowering branches, sinking into a great wall of vines and blossoms that is his mother's body. Green, bark brown, gold light.",
+  Gelisi:
+    "The Broodmother of Sin, Birth's first child and 'her whip': a terrible maternal figure seated on a nest of eggs and cradles, with a long whip of braided umbilical cords. One face of a two-faced being. Pink flesh tones, pearl and dark red.",
+  Afuluosi:
+    "The Gate of Joyous Desire, herald of Corruption: a towering arched gateway of flesh, roses and gold, with a seductive face carved into its keystone, opening onto a red sea. The other face of the Broodmother of Sin. Rose, wine red and gold.",
+  'Wrath of Abomination':
+    "A giant burning sun with a face of pure fury, chained inside a vast prison of stone and law-runes built by Order. When the prison opens for a moment, a pillar of fire pours down onto the land. Blinding orange and white, black chains.",
+  Thunderclap:
+    'A herald of Order: a knight of storm clouds and lightning with a war-horn, shown falling in the First Divine War, its thunder breaking apart across a sky of gold. Storm grey, white lightning, gold.',
+
+  // Places.
+  'Faith Game world':
+    'A modern city after the gods came: the world cut into floating shards by invisible air walls that shimmer like heat, rooftops and streets ending in sheer edges over a void, broken skyscrapers drifting at different heights. A lone survivor stands on a rooftop shard at dusk, a giant divine eye watching through the clouds. Overgrown concrete, red dusk, a strange golden sky.',
+  'Continent of Hope':
+    'A vast western-fantasy continent seen from a cliff: above ground, white towers of reason and great tribunal halls under a clear sky; below, through a gaping volcanic chasm, a glowing underworld of desire and disorder lit by lava. The Abyssal Volcano joins the two. Epic scale, golden light above, red glow below.',
+  'Sea of Desire':
+    'A still, endless sea of dark rose-red water under a low sky, warm mist rising from it. Shapes of drowned beauty move under the surface; a black tree of fear stands at its gate. Figures walk into it smiling. Wine red, rose and black.',
+  'Divine Shade':
+    "Prosperity's divine kingdom: an endless forest canopy so thick the light comes through green and gold, flowers the size of houses, roots like cathedrals, everything growing and choking at once. Beautiful and overwhelming. Emerald, gold pollen haze.",
+  'Fishbone Hall':
+    "Death's divine kingdom: a vast cathedral built from the spine and ribs of an impossibly large fish, its bones arching into a dark sky, pale soul-lanterns floating down the nave toward a Throne of Bones. Quiet and solemn. Bone white, deep blue, cold teal light.",
+  Mausoleum:
+    "Decay's divine kingdom: an endless necropolis of crumbling tombs and sarcophagi stretching to the horizon, moss and fungus over everything, a rotting giant's silhouette at the centre like a mountain. Dust, ash grey, sickly yellow light.",
+  'Forest of Sighs':
+    'A grey, leafless forest under constant fog, trees bent like weeping figures, a soft moaning wind; a hollow giant wanders far off between the trunks. Muted greens and greys, cold mist.',
+  'Far Dusk Town':
+    'A small fantasy town of crooked timber and stone houses at the edge of the world, lit by an endless sunset that never ends, long shadows on the cobbles, a quiet watchful air. Amber and violet dusk.',
+  Montelani:
+    'A colossal stone deathmatch arena and execution ground, tiers of jeering spectators, blood-stained sand, iron gallows and giant gates, banners snapping in the wind. Dust gold, iron grey, dried red.',
+  'Tomb of Tainted Blood':
+    'The final tomb of decayed blood: a sunken crypt flooded with black, half-dried blood, rotting coffins floating, red mould glowing faintly on the walls. Dark red, black and bone.',
+  'Fog Gate':
+    'A monumental ancient stone gate standing alone on a plain, its archway filled with a wall of thick, slowly swirling white fog that hides what lies beyond. Grey stone, white fog, faint blue light.',
+  Rosna:
+    'A nation of Decay: grand gothic cities slowly crumbling by choice, citizens proudly wearing rot and rust, cathedrals sinking into marsh, moths filling the sky. Rust, grey, faded purple.',
+  'Sliced universes':
+    'Countless versions of the same world stacked like panes of glass in an endless void, each pane showing a slightly different outcome of the same moment. Cosmic, cool blue and silver.',
+
+  // Groups.
+  Torchbearers:
+    'A band of grim travellers in worn cloaks, each carrying a burning torch through a dark, ruined land, the last fires of civilisation. Firewood bundles on their backs, soot on their faces, determination in their eyes. Warm firelight against blue-black darkness.',
+  'Society of the Mediocre':
+    'A secret gathering of Clowns in a candlelit underground theatre: members in identical plain masks and dull grey coats, each with a small painted number, seated in a circle around an empty stage; one figure, No. 15, smiling under his mask. Sepia, candle gold, deep shadow.',
+  'The Fated':
+    "A small group of companions standing on a hill under a sky of fate-threads, a great die of light above them, their shadows tangled with glowing strings. Indigo night, silver and gold threads.",
+  'Tower of Logic':
+    'A colossal white tower of reason rising above a western-fantasy city, its sides covered in carved formulas and turning brass instruments, a crown of observatories at the top lit by cold blue light. Scholars in robes stream through its gates. Marble white, brass, clear sky.',
+  'Council of Scholars':
+    'A round chamber at the top of a white tower: learned chairs in high-backed seats around a glowing table of floating diagrams, ancient books and astrolabes, cold daylight through tall windows. Ivory, brass, blue.',
+  'Grand Tribunal':
+    'A gigantic courthouse cathedral of black and white stone, a vast set of scales hanging from its central dome, robed judges in tall seats looking down on a tiny accused figure; chains and law-runes carved on every pillar. Stark black, white and gold, shafts of hard light.',
+  'Natural Alliance':
+    'A loose gathering of forest villages and wild settlements linked by rope bridges and living trees, banners of many different clans side by side. Green, wood brown, soft light.',
+  'Nature Cult':
+    'A hidden grove where robed cultists with flower crowns dance barefoot around a great twisted tree; half the blossoms are healthy, half are rotting into something darker and more tempting. Smiling, too-serene faces. Deep green fading into wine red and shadow.',
+  'Logic Association':
+    'Ambitious scholars and players in sharp formal coats gathered openly under a great banner of a geometric eye, building a staircase of books and machines toward a god-shaped silhouette in the sky. Cold white light, black and silver.',
+  'Afterglow Church':
+    'A chaotic underground crowd in mismatched robes, gathering suddenly in a ruined plaza at sunset, smashing statues of order and scattering into the shadows before anyone can stop them. Fading orange afterglow, purple shadows.',
+  'Extreme Desire Brotherhood':
+    'An underground brotherhood in dark leather and rose-red masks, running glowing metal foundries deep below the earth, molten ore and red smoke, a sense of indulgence and greed. Red, copper and black.',
+  'Agency Hand':
+    'Hard-faced crews with picks, lanterns and wagons, plundering a vast underground cavern of glowing ores and crystals, hauling them up rope lifts to the surface. Lantern gold, cave blue, dark rock.',
+  'Sanwu Tribe':
+    'An ancient tribe in a primordial landscape, people in hides and bone ornaments gathered around a fertility totem at dawn; three paths lead away north, into a valley, and into a red ritual ground. Earth tones, dawn pink.',
+  'Undead Salvation Society':
+    'A solemn order in grey robes tending rows of the restless dead in a candlelit crypt, offering them comfort and rest. Grey, candle gold, pale blue spirits.',
+  'Historical School':
+    'Archivists and record-keepers in a vast hall of scrolls and stone tablets, carefully writing history while their own reflections in the ink look different. Sepia and amber.',
+  'Worship-the-Gods Society':
+    'A crowd of zealous players in white robes kneeling before sixteen colossal divine statues in a ruined modern square, offerings piled at their feet. White, gold, overcast light.',
+  'Advent Faction':
+    'Prophets and followers on a hilltop raising their arms toward a crack in the sky through which divine light and giant eyes are breaking through, welcoming the descent of the gods. Gold light, dark clouds.',
+  'Tribunal of Evil Infants':
+    'A disturbing dark courtroom where the judges are pale, cherub-faced infants in black robes and tiny gold crowns, seated high above the accused, their eyes old and cruel. Black, ivory and gold, candlelight.',
+  Scavengers:
+    'Masked raiders in scrap armour and gas masks, moving through a ruined city with hooks and blades, picking clean what others left behind. Rust, grey, dirty orange.',
+};
+
+/** The art style added to every picture prompt for this book. */
+export const FOOLISH_GAME_STYLE =
+  'Dark high-fantasy painting in the spirit of Elden Ring: vast ruined grandeur, colossal scale with tiny figures for size, painterly brushwork, hazy golden and ashen light, muted earthy colours with one strong accent, melancholy and awe, highly detailed, cinematic wide composition, no text.';

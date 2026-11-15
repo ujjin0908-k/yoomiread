@@ -19,6 +19,8 @@ export interface Book {
   id: string;
   /** The cast has been searched for new characters up to and including this chapter number. */
   /** The story has been searched for new people, places, gods, groups and terms up to and including this chapter number. */
+  /** The art style added to every picture prompt for this book (a book guide can set it). */
+  artStyle?: string;
   worldUpTo?: number;
   castUpTo?: number;
   /** The style for this book's translations (optional). */
@@ -153,6 +155,8 @@ export interface GlossaryEntry {
   /** Other names the same character goes by ("Little Song", "the boss"), used to find their scenes. */
   aliases?: string[];
   /** People only: the character profile. */
+  /** How it looks, as a picture description to paste into an image app (see `picturePrompt` in src/art.ts). */
+  look?: string;
   profile?: CharacterProfile;
   createdAt: number;
   updatedAt: number;
