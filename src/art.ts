@@ -9,13 +9,13 @@ const SUBJECT: Record<GlossaryKind, string> = {
   place: 'A landscape illustration of a place',
   god: 'An illustration of a god',
   group: 'An illustration of a faction',
-  term: 'An illustration',
+  term: 'An illustration of',
 };
 
 /** The text to paste into an image app: what it is, how it looks, and the book's art style. Wide, for the reader. */
 export function picturePrompt(entry: Pick<GlossaryEntry, 'english' | 'kind' | 'look'>, style?: string): string {
   return [
-    `${SUBJECT[entry.kind]}: ${entry.english}.`,
+    entry.kind === 'term' ? `An illustration of ${entry.english}.` : `${SUBJECT[entry.kind]}: ${entry.english}.`,
     entry.look?.trim() ?? '',
     `Style: ${style?.trim() || DEFAULT_ART_STYLE}`,
     entry.kind === 'person' ? 'Portrait format.' : 'Wide landscape format (3:2).',

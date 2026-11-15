@@ -4,6 +4,20 @@
  * is an interpretation, written for this app on 2026-11-15. The shared art style is added when a prompt is copied.
  */
 export const FOOLISH_GAME_LOOKS: Record<string, string> = {
+  // The six paths.
+  'Path of the Void':
+    'The Void: an endless dark beyond the edge of everything, not black but a deep shifting indigo, full of slow spirals like the whites of divine eyes and scattered with tiny cold stars. Broken fragments of the world drift into it and quietly dissolve. Two vast twin silhouettes face away from each other at its heart, one veiled and smiling (Deceit), one cold and still (Fate), joined by a single glowing thread and a turning die of light. A tiny lone figure stands at the edge on a floating shard, looking in. Indigo, violet, silver starlight, a faint gold thread.',
+  'Path of Existence':
+    'Existence: an infinite archive under a frozen sky, where every moment that ever happened hangs in the air as a glass pane of amber light, and between them stand colossal clock mechanisms stopped mid-tick. Two twin figures, one made of inscribed stone (Memory) and one of brass and sand with black-hole eyes (Time), watch over it. Sepia, amber and bronze, perfectly still.',
+  'Path of Civilization':
+    'Civilization: a single mountain of human history seen from below, from the first torch at its foot, through white cities of law and towers of knowledge, to a summit wreathed in war smoke and banners. Three colossal figures stand along it: an armoured sovereign with a torch (Order), a being of diagrams and light (Truth), a scarred warrior with eyes of flame and blood (War). Gold, marble white and ember red.',
+  'Path of Chaos':
+    'Chaos: a world turned inside out, staircases leading into the sky, cities folding over themselves, broken law-books and chains swirling in a storm. Three gods stand within it: a shapeless laughing storm (Chaos), a scornful scholar on a throne of books (Folly), and a silent hooded monk who sees everything (Silence). Clashing purple, sickly green, ash grey.',
+  'Path of Life':
+    'Life: a single colossal tree of all living things rising from a dawn sea, its roots a womb of pearl light where new life begins (Birth), its crown an overwhelming eruption of blossoms and fruit (Prosperity), and its far side bare branches ending in a giant calm skull that receives the falling souls (Death). Dawn pink, emerald and bone white.',
+  'Path of Descent':
+    'Descent: a vast downward spiral into the earth, beginning at a red sea of desire where chains break (Corruption), sinking through an endless necropolis of rot and moths around a corpse-giant (Decay), and ending in a black nothing where everything crumbles to ash (Annihilation). Wine red, rot grey and black.',
+
   // The sixteen gods.
   Deceit:
     'A towering goddess half-turned away, wrapped in layered veils of shifting silk that never show the same face twice. Her eyes are warm and almost human, with slow spirals in the whites and tiny stars in the pupils; a sly smile under jade-pale hands raised to her lips as if keeping a secret. Behind her, a hall of broken mirrors reflects a dozen versions of her, none matching. Masks of comedy hang from silver threads around her. Violet and gold light.',

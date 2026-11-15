@@ -20,11 +20,12 @@ describe('the picture book', () => {
     const tribunal = e('t', 'Grand Tribunal', 'place');
     const time = e('time', 'Time');
     const noPicture = e('x', 'Sea of Desire', 'place', { picture: undefined });
+    // A term with a picture (a path, an item) shows too.
     const term = e('l', 'Ladder of Ascent', 'term');
     const out = scenesFor(
       ['They walked for a long time.', 'The Grand Tribunal rose ahead, and [Time] watched.', 'Inside the Grand Tribunal it was cold.', 'The Sea of Desire and the Ladder of Ascent.', 'He prayed to [Time].'],
       [tribunal, time, noPicture, term],
     );
-    expect(out.map((g) => g?.id)).toEqual([undefined, 't', undefined, undefined, 'time']);
+    expect(out.map((g) => g?.id)).toEqual([undefined, 't', undefined, 'l', 'time']);
   });
 });
