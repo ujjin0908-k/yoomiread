@@ -4,8 +4,8 @@ import { FOOLISH_GAME } from './guides/foolish-game';
 import { FOOLISH_GAME_LOOKS } from './guides/foolish-game-looks';
 
 describe('pictures', () => {
-  it('gives every place, god and group of the guide a picture description, and no description goes unused', () => {
-    const world = FOOLISH_GAME.entries.filter((e) => e.kind === 'place' || e.kind === 'god' || e.kind === 'group' || e.english.startsWith('Path of'));
+  it('gives every person, place, god, group and path of the guide a picture description, and no description goes unused', () => {
+    const world = FOOLISH_GAME.entries.filter((e) => e.kind !== 'term' || e.english.startsWith('Path of'));
     expect(world.filter((e) => !e.look).map((e) => e.english)).toEqual([]);
     const names = new Set(FOOLISH_GAME.entries.map((e) => e.english));
     expect(Object.keys(FOOLISH_GAME_LOOKS).filter((n) => !names.has(n))).toEqual([]);

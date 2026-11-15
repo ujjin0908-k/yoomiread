@@ -76,6 +76,19 @@ export const FOOLISH_GAME_LOOKS: Record<string, string> = {
   Thunderclap:
     'A herald of Order: a knight of storm clouds and lightning with a war-horn, shown falling in the First Divine War, its thunder breaking apart across a sky of gold. Storm grey, white lightning, gold.',
 
+  Herobos:
+    "The Hand of the Purifying Worm: a gaunt, armoured destroyer in pale bone plate, one enormous gauntleted hand raised, worms of white light pouring from its palm to devour a ruined world below. Contempt in its hollow eyes. Ash white, black, sickly green.",
+  Yogg:
+    'The Last King of Vultures: a decaying monarch on a throne of carrion and gold, a crown of black feathers, vultures perched on his shoulders and the broken spires of the Rosna Empire behind him. Rust, faded gold, grey sky.',
+  Teliya:
+    "The Lord of Compassion: a serene woman rising from a pyre, her body made of soft rose-red flame, arms open in an embrace that is both kind and consuming; robed priests kneel around the fire. Rose, ember orange, wine red.",
+  Delaxierke:
+    'The Sin of Desirelessness: a tall hunter in tattered crimson, faceless under a hood, stalking through a monastery of ascetics with a hook-bladed spear, the candles going out where he passes. Crimson, black, cold stone grey.',
+  Lucia:
+    "The Holy Voice of Birth: a gentle young midwife-saint in white and rose robes, a halo of soft dawn light, cradling a newborn glow in her hands; behind her, a white tower's hospital hall. Pearl white, dawn pink, warm gold.",
+  'Fire of Hope':
+    'The Fire of Hope: a small, steady flame held in cupped invisible hands, floating in an endless indigo dark, its warm light falling on a group of weary torchbearers below. Gold flame, deep indigo, soft warm glow.',
+
   // Places.
   'Faith Game world':
     'A modern city after the gods came: the world cut into floating shards by invisible air walls that shimmer like heat, rooftops and streets ending in sheer edges over a void, broken skyscrapers drifting at different heights. A lone survivor stands on a rooftop shard at dusk, a giant divine eye watching through the clouds. Overgrown concrete, red dusk, a strange golden sky.',
@@ -143,6 +156,73 @@ export const FOOLISH_GAME_LOOKS: Record<string, string> = {
     'A disturbing dark courtroom where the judges are pale, cherub-faced infants in black robes and tiny gold crowns, seated high above the accused, their eyes old and cruel. Black, ivory and gold, candlelight.',
   Scavengers:
     'Masked raiders in scrap armour and gas masks, moving through a ruined city with hooks and blades, picking clean what others left behind. Rust, grey, dirty orange.',
+  // People. Very little in the sources says how anyone looks: these are portraits imagined from each character's
+  // role, path and class. Change any of them freely.
+  'Cheng Shi':
+    'A slender young man in a sharp black suit and waistcoat, dark hair swept back, pale elegant hands with silver rings pulling the strings of a puppet theatre of chess pieces, dice and masks. A charming, knowing half-smile; eyes that never quite tell the truth. A comedy mask and a die of fate float near him. Black, deep red and gold.',
+  'Chen Chong': 'A broad-shouldered warrior of Order in battered white-and-steel plate, carrying a massive tower shield with a glowing surface, jaw set, standing in front of his team like a wall. Steel grey, white, gold light.',
+  'Song Yawen': 'A lean young assassin of Death in a dark hooded jacket and light leathers, twin short blades, pale and alert, half-stepping into shadow and smoke as if about to vanish. Black, bone white, cold teal.',
+  'Xia Wan': 'A focused hunter of Birth with a longbow, practical green-and-cream gear, hair tied back, a calm and protective gaze, small blossoms woven into the bowstring. Green, cream, soft gold.',
+  'Cao Sansui': 'A thin, nervous-looking mage of Time in a long brown coat covered in pockets, a brass pocket watch on a chain, faint clock hands and sand glowing around his fingers. Bronze, grey, amber.',
+  Nangong: 'A quiet priest with a dark high-collared shirt, a faint aura of decay turning into starlight around him, a torch on his back like the Torchbearers. Grey, indigo, ember light.',
+  'Zhang Jizu': 'A cemetery keeper turned priest of Death: a lanky young man with permanently squinting, smiling eyes, a black mourning coat, a lantern and grave keys at his belt, a clown’s secret tucked behind his grin. Black, bone white, cold blue lanterns.',
+  'Zhen Xin': 'A Bard of Deceit with a gentle, earnest face that hides another self, a worn coat dusted with snow, a lute held close; half their shadow wears a different expression. Snow white, violet, grey.',
+  'Zhen Yi': 'The second self of Zhen Xin: the same face with a wild, mocking grin, a mage’s coat torn and chaotic, sparks of violet and green madness around the hands. Violet, sickly green, black.',
+  'Hong Lin': 'A big, bald, good-natured warrior called Big Cat, broad as a door, a heavy blade on his shoulder, blossoms of Prosperity growing along his armour and fate-threads around his wrists. Emerald, gold, warm light.',
+  'Hu Xuan': 'A warm, radiant mage of Birth, the Eternal Sun: a gentle smile, robes of cream and rose, a halo like a rising sun behind her, life-lights drifting from her open hands. Dawn gold, pearl, rose.',
+  'An Mingyu': 'The Blind One: a young seer of Fate with a dark cloth bound over the eyes, star-points glowing faintly through it, a calm head tilted as if seeing everything. Indigo, silver stars.',
+  'Li Jingming': 'A scholarly young man of Memory who broke his oath for Deceit: neat clothes, a cracked notebook, one half of his face lit by amber memory light and the other by violet. Sepia, violet.',
+  'Hu Wei': 'The Grand Marshal: a commanding warrior in a black military greatcoat with red trim, medals and war banners behind him, eyes like embers. Black, crimson, smoke.',
+  'Mo Li': 'The Chief Minister of Order: a composed figure in formal white-and-gold robes, a ledger of laws and a seal in hand, every hair in place. White, gold, marble.',
+  'Chen Shu': 'A silent follower of Silence in plain grey monk-like clothes, hood up, finger near closed lips, watchful eyes. Grey, white fog.',
+  'Lin Xi': 'A follower of Decay with a pale, tired beauty, grey hair, moths resting on her shoulders, her clothes slowly weathering like old wood. Ash grey, faded violet.',
+  'Lao Deng': 'A young man of Time who goes by “old fogey”: a sly grin, an old-fashioned coat too big for him, a pocket watch and a cane he doesn’t need. Bronze, grey.',
+  Duyao: 'Poison, Chosen of Corruption: a seductive, dangerous figure in dark red silk, a vial of glowing poison between the fingers, eyes half-lidded. Wine red, black, rose.',
+  'Mo Shu': 'A pale, deathly calm follower of Annihilation in black, ash drifting off the edges of his coat, eyes empty like the void, who later becomes its god. Black, ash grey.',
+  '0221': 'A Mage of Truth who is a slice that devoured its master: a cold, clinical figure in a lab coat over mage robes, a number tag 0221, eyes glowing with formulae, faint copies of itself behind it. White, cold blue.',
+  'Cures Infertility': 'A former top Chosen of Birth hidden behind a ridiculous ID: a confident figure in rose and white robes, a mischievous smile, a halo of tiny cradles. Rose, cream.',
+  'Fang Shiqing': 'A Bard of Truth and Torchbearer: a young woman with a determined gaze, a lute on her back, a bundle of firewood and a torch, a city wall behind her. Warm firelight, blue.',
+  'Huang Bo': 'A Bard of Chaos with a wild grin and messy hair, a battered guitar, sparks of disorder around him. Purple, orange.',
+  'Gou Feng': 'A Warrior of Birth, sturdy and earnest, a simple greatsword, cream-and-green armour.',
+  'A Ming': 'An Assassin of Order in neat dark clothes with white trim, a slim blade held perfectly straight, disciplined and watchful.',
+  Bailing: 'A beast-tamer Hunter of Deceit, with a pack of shadowy beasts at their side, by the shore of a red sea. Red, black, grey.',
+  'Xu Lu': 'A Bard of Fate with a star-patterned cloak and a harp whose strings glow like fate-threads. Indigo, silver.',
+  'Tao Yi': 'A Mage of Prosperity fused with Fate, robes overgrown with blossoms and threaded with silver fate-strings, a gentle, steady face. Emerald, silver.',
+  'Su Yida': 'A Mage of Deceit with a sly smile and a mask held half over the face, violet mist around the hands.',
+  'Cui Dingtian': 'A grizzled Warrior of Decay and Torchbearer, a scarred father with a rusted greatsword and a torch, steadfast. Rust, ember, grey.',
+  'Cui Qiushi': 'A young Warrior of Order and city guardian, clean white armour and a spear, a serious face like their father’s. White, steel, gold.',
+  'Gao Yu': 'A Mage of Truth of the Historical School, spectacles, armfuls of scrolls, ink-stained fingers. Sepia, white.',
+  'Zhao Qian': 'A Warrior of War, loyal to the end, standing in front of Cheng Shi with a broken sword in a field of fire. Crimson, ember.',
+  'Qin Chaoge': 'A Bard of War who fights like a warrior: a war-drum on the back, a spear in hand, a fierce singing grin. Crimson, gold.',
+  'Ji Yue': 'A Mage of Truth turned to War, founder of the Undead Salvation Society: grey robes, a candle and a war-scarred hand. Grey, candle gold, red.',
+  'Li Bola': 'A Hunter of Time with a crossbow and a brass scope, a precise, punctual manner. Bronze, grey.',
+  'He Lu': 'A silent Warrior of Silence in grey armour, a two-handed sword, never speaking. Grey, white.',
+  'Du Xiguang': 'A Mage of Memory with amber glowing fragments of memory orbiting an old book. Sepia, amber.',
+  'Yun Ni': 'An Assassin of Annihilation, slim and dark, blades trailing ash. Black, ash grey.',
+  'Wei Guan': 'A Hunter of Folly with a scornful look, an elegant bow, the air of someone sure everyone else is a fool. Ivory, faded gold.',
+  'President Gong': 'The leader of the Society of the Mediocre: an unremarkable middle-aged man in a grey suit and a plain mask, seated at the head of a candlelit table of Clowns. Grey, candle gold.',
+  'Qin Xin': 'A Hunter of Memory and founder of the Torchbearers, a quiet, resolute gaze, a bow and a torch; beside him a second self in War’s armour, cheerful and blazing. Amber, ember red.',
+  'Long Jing': 'A show-off acrobat of Deceit and Time, balancing on a tightrope over a void, coat-tails flying, a clown’s grin, clock hands spinning around them. Violet, bronze.',
+  'Wang Weijin': 'An Assassin of Truth fused with Deceit, a scientist’s coat over dark gear, a scalpel-like blade, a wry smile under a clown’s secret. White, violet.',
+  'Xiao Qi': 'Cheng Shi’s childhood friend from the orphanage: a clever boy grown up, a hunter with a sly grin and a well-worn disguise kit, red of Corruption fading into Deceit’s violet. Red, violet.',
+  'Wei Mu': 'The Chosen of Folly: a figure that has turned itself into a puppet, porcelain skin with joints, strings running up into a cloud of thoughts, scornful pale eyes. Ivory, faded gold.',
+  Zayinjier: 'A mad scholar of the Tower of Logic: wild hair, cracked spectacles, robes covered in diagrams, holding a glowing star-dagger over an experiment. White, cold blue, gold.',
+  'Lao Jia': 'A lucky gambler of the Fated: a rumpled jacket, a lottery ticket between two fingers, dice in the other hand, a crooked confident grin. Green felt, gold.',
+  'Li Wufang': 'A Hunter of Order who becomes its god: plain clothes, a bow, an honest face, with a pillar of golden order rising behind. White, gold.',
+  Chun: 'A quiet assassin and woodcarver, a small exquisite wooden figure in his hands, grief in his eyes, blossoms and rot both on his sleeves. Wood brown, green, grey.',
+  'Meng Youfang': 'A Bard of Time who believes he is a forgotten god: a theatrical man speaking to his own reflection in a tall mirror, a crown he made himself. Bronze, mirror silver.',
+  'Xie Yang': 'An Assassin of War and Torchbearer, Cheng Shi’s neighbour: a lean figure in a hoodie with molten-gold glowing blades. Gold, ember.',
+  'An Jing': 'A quiet orphanage teacher of Silence and a Puppet Master: neat grey clothes, gentle eyes, fine strings from her fingers to silent puppets. Grey, soft white.',
+  'Yan Chun': 'A Warrior of Folly with a blank, used stare, a test subject’s tag on the wrist, heavy armour. Ivory, grey.',
+  'Bai Fei': 'A Hunter of Annihilation, called Little White Stripe, with a single white streak through dark hair, a bow of black wood. Black, white.',
+  'Zhang Ruyu': 'A Bard of Corruption who loves pain: a flamboyant outfit, bandages worn like fashion, a lute, a blissful grin. Rose, wine red.',
+  'Gongyang Jiao': 'A Warrior of Corruption in a disguise that hides what they really are, a cloak over hidden armour. Red, black.',
+  'Da Yi': 'An Assassin of Chaos with a frustrated grimace, mismatched gear, mid “Darn it!”. Purple, orange.',
+  'Qu Yan': 'A Hunter of Silence and Decay who sticks close behind Cheng Shi, half-hidden, a bow and grey moth-dusted cloak. Grey, yellow.',
+  'Yu Mu': 'A follower of Decay, second on its ranking, weathered and patient, moss on the shoulders. Grey, moss green.',
+  'Li Zhi': 'A Priest of Truth with a gentle face, white robes marked with experiment tags, a book of light. White, blue.',
+  'Fang Yuan': 'A Mage of Order and founder of the Order Alliance, a formal white coat, a staff topped with a golden torch. White, gold.',
+  'Ji Ran': 'A Warrior of Fate with a star-marked blade and a calm, doomed look. Indigo, silver.',
 };
 
 /** The art style added to every picture prompt for this book. */
