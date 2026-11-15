@@ -1,3 +1,5 @@
+import { useBackdrop } from '../backdrop';
+import { usePictureUrl } from '../picture';
 import { AlertTriangle, BookOpen, Bookmark, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { ProgressBar, Sheet, TopBar, Working } from '../components';
@@ -66,6 +68,8 @@ export function ChapterPage({ id }: { id: string }) {
   useReadingSession(chapter, book);
   const aheadStatus = useTranslateAhead(chapter, book);
   useScrollMemory(chapter, text !== undefined && translation !== undefined, setScroll);
+  const backdrop = useBackdrop();
+  const backdropUrl = usePictureUrl(backdrop?.picture, 'backdrop');
   const [barsAway, setBarsAway] = useState(false);
   useAutoHideBars(setBarsAway);
   const zhNow = book?.language === 'zh';
@@ -133,7 +137,12 @@ export function ChapterPage({ id }: { id: string }) {
   }
 
   return (
-    <div className={`reader-page font-${prefs.font} spacing-${prefs.spacing}`}>
+    <div className={`reader-page font-${prefs.font} spacing-${prefs.spacing}${backdropUrl ? ' has-backdrop' : ''}`}>
+      {backdropUrl && (
+        <div className="reader-backdrop" aria-hidden="true" style={{ backgroundImage: `url(${backdropUrl})` }}>
+          <span style={{ background: READER_COLORS[prefs.theme], opacity: backdrop!.cover }} />
+        </div>
+      )}
       <TopBar
         away={barsAway}
         back={`book/${chapter.bookId}`}

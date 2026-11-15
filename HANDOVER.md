@@ -80,6 +80,13 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 - Looking up a word (2026-11-12): select it (press and hold, as on any iPhone page); the selection bar then shows
   "Look up" next to "Highlight" when the selection is a word or short phrase (`lookable` in `ChapterPage.tsx`). The old
   press-and-hold shortcut was removed: it fired before iPhone's own selection, so text could not be highlighted.
+- Guide, 2026-11-15 additions: ~25 more characters (Qin Xin, Long Jing, Wang Weijin, 0221, Xiao Qi, Wei Mu,
+  Zayinjier, Lao Jia, Li Wufang, Chun, Meng Youfang, An Jing…), six more heralds, new facts on existing people, and a
+  picture description for every person (imagined from role, path and class: the sources barely describe looks).
+  Character cards show "How it looks" with Copy picture prompt (portrait format for people).
+- Reading background (2026-11-15): Settings → "Reading background" puts the owner's own picture behind the reader
+  (`src/backdrop.ts`, settings key `readerBackdrop`), under the reader theme's page colour at "Picture strength", so
+  text stays readable in every theme. Kept on the phone only, not in backups (like stickers).
 - Picture book (2026-11-15, owner's ask). Places, gods, groups and terms (paths, items) can have a picture (saved up to 1600 px) and a
   "How it looks" description (`GlossaryEntry.look`). "Copy picture prompt" (entry editor and glossary card) copies
   what it is + the description + the book's art style (`Book.artStyle`, set by a guide; `src/art.ts`) + wide format, to
