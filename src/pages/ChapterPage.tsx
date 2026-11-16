@@ -1,6 +1,6 @@
 import { inOrder, useChapterOrder } from '../chapterOrder';
-import { useBackdrop } from '../backdrop';
-import { usePictureUrl } from '../picture';
+import { mix, topColour, useBackdrop } from '../backdrop';
+import { pictureBlob, usePictureUrl } from '../picture';
 import { AlertTriangle, BookOpen, Bookmark, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { OrderToggle, ProgressBar, Sheet, TopBar, Working } from '../components';
@@ -86,12 +86,22 @@ export function ChapterPage({ id }: { id: string }) {
     document.body.dataset.reader = prefs.theme;
     root.dataset.reader = prefs.theme;
     meta.forEach((m) => (m.content = READER_COLORS[prefs.theme]));
+    // With a reading background, the status bar takes the colour of the top of the picture, under the page colour
+    // just like the page, so it does not stand out as a plain band.
+    let live = true;
+    const blob = pictureBlob(backdrop?.picture);
+    if (blob && backdrop) {
+      void topColour(blob, window.innerWidth, window.innerHeight).then((rgb) => {
+        if (live && rgb) meta.forEach((m) => (m.content = mix(READER_COLORS[prefs.theme], rgb, 1 - backdrop.cover)));
+      });
+    }
     return () => {
+      live = false;
       delete document.body.dataset.reader;
       delete root.dataset.reader;
       meta.forEach((m, i) => (m.content = before[i]));
     };
-  }, [prefs.theme]);
+  }, [prefs.theme, backdrop]);
 
   // Shows the "Highlight" bar while text in the chapter is selected.
   useEffect(() => {
