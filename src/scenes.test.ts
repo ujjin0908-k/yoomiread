@@ -11,9 +11,19 @@ describe('the picture book', () => {
     expect(namedAt('Time passed slowly.', 'Time')).toBe(-1);
     expect(namedAt('He prayed to [Time] at dawn.', 'Time')).toBe(14);
     expect(namedAt('the chosen of Time smiled', 'Time')).toBe(14);
+    expect(namedAt('the chosen of Time smiled', 'Time', true)).toBe(-1);
     expect(namedAt('Order was restored.', 'Order')).toBe(-1);
     expect(namedAt('they reached the Grand Tribunal at noon', 'Grand Tribunal')).toBe(17);
     expect(namedAt('他们来到欲海。', '欲海')).toBe(4);
+  });
+
+  it('does not call up a god for an item named after it', () => {
+    const fate = e('fate', 'Fate');
+    const die = e('die', 'Die of Fate', 'term', { picture: undefined });
+    const voidPath = e('void', 'Path of the Void', 'term', { picture: undefined });
+    const theVoid = e('v', 'Void', 'place');
+    const paragraphs = ['The body that even the Die of Fate couldn’t hit was struck by a mask!', 'He walked the Path of the Void.', 'The chosen of Fate bowed.', 'Praise the great [Fate]!'];
+    expect(scenesFor(paragraphs, [fate, die, voidPath, theVoid]).map((g) => g?.id)).toEqual([undefined, undefined, undefined, 'fate']);
   });
 
   it('shows each picture once per chapter, after the paragraph that first names it', () => {

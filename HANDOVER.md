@@ -97,7 +97,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   (`src/guides/foolish-game-looks.ts`) and a dark-fantasy style in the spirit of Elden Ring. In the reader, a place,
   god or group with a picture shows big after the paragraph that first names it, once per chapter (`scenesFor` in
   `src/scenes.ts`); a one-word name counts only in brackets or capitalised mid-sentence, so "at that time" is not the
-  god Time. Switch: "Pictures in the story" in the reader's look settings. Other names now save for every kind.
+  god Time. Since 2026-11-16 a one-word god counts only in brackets ("[Fate]"), and a name inside a longer glossary name ("Die of Fate") never counts. Switch: "Pictures in the story" in the reader's look settings. Other names now save for every kind.
 - Glossary from the reader (2026-11-14): select a word; when it is a glossary name ("[Fate]", "Deceit's", "the Sea of
   Desire", or a whole word of one name like "Sansui"), the selection bar shows "Glossary" instead of "Look up", and opens
   a short card (`src/pages/GlossaryCard.tsx`): kind, note, the lines with Ch./guide tags, and for people a link to
