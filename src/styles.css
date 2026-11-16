@@ -2694,3 +2694,10 @@ html[data-reader='night'] { background: #161614; }
   font-family: var(--serif);
   font-size: 1.05rem;
 }
+.order-toggle {
+  white-space: nowrap;
+}
+.sheet .order-toggle {
+  margin: 0 0 8px auto;
+  display: block;
+}

@@ -1,6 +1,7 @@
+import { inOrder, useChapterOrder } from '../chapterOrder';
 import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, PenLine, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Book3D, Cover, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
+import { Book3D, Cover, OrderToggle, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
 import { toPicture } from '../picture';
 import { coverFromLink } from '../import/cover';
 import { ChapterLinks } from './ChapterLinks';
@@ -31,6 +32,7 @@ import { parseSources, sourcesText, webLink } from '../sources';
 export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const book = useLive(async () => (await db.books.get(id)) ?? null, [id], 'book');
   const chapters = useLive(() => db.chapters.where('bookId').equals(id).sortBy('number'), [id], 'book-chapters');
+  const [order, setOrder] = useChapterOrder(id);
   const notes = useLive(() => db.notes.where('bookId').equals(id).toArray(), [id], 'book-notes');
   const translated = useLive(async () => new Set(await db.translations.where('bookId').equals(id).primaryKeys()), [id], 'book-translated');
   const chapterCosts = useLive(
@@ -292,6 +294,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
           <div className="section-head">
             <h2>Chapters</h2>
             <div className="row">
+              {list.length > 1 && <OrderToggle order={order} onChange={setOrder} />}
               <button type="button" className="link" onClick={() => setAddingMany(true)}>
                 Many from a link
               </button>
@@ -304,7 +307,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
             <p className="muted">Add chapters one by one, or paste a novel's contents page link to add many at once.</p>
           )}
           <ul className="chapter-list">
-            {list.map((c) => (
+            {inOrder(list, order).map((c) => (
               <li key={c.id}>
                 <button
                   type="button"

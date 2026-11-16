@@ -80,6 +80,9 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 - Looking up a word (2026-11-12): select it (press and hold, as on any iPhone page); the selection bar then shows
   "Look up" next to "Highlight" when the selection is a word or short phrase (`lookable` in `ChapterPage.tsx`). The old
   press-and-hold shortcut was removed: it fired before iPhone's own selection, so text could not be highlighted.
+- Chapter order (2026-11-16): "First to last / Last to first" on the book page's chapter list and in the reader's
+  chapter list (`src/chapterOrder.ts`), remembered per book on the phone. The reader's list opens scrolled to the
+  chapter being read. Hooks must stay above BookPage's early returns (a misplaced one crashed the page in testing).
 - Guide, 2026-11-15 additions: ~25 more characters (Qin Xin, Long Jing, Wang Weijin, 0221, Xiao Qi, Wei Mu,
   Zayinjier, Lao Jia, Li Wufang, Chun, Meng Youfang, An Jing…), six more heralds, new facts on existing people, and a
   picture description for every person (imagined from role, path and class: the sources barely describe looks).
@@ -177,7 +180,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 181 unit tests
+npm test          # 182 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```
