@@ -1,8 +1,9 @@
+import { inOrder, useChapterOrder } from '../chapterOrder';
 import { useBackdrop } from '../backdrop';
 import { usePictureUrl } from '../picture';
 import { AlertTriangle, BookOpen, Bookmark, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
-import { Fragment, useEffect, useRef, useState } from 'react';
-import { ProgressBar, Sheet, TopBar, Working } from '../components';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { OrderToggle, ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
 import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakerOf, type Speaker } from '../logic';
@@ -69,6 +70,9 @@ export function ChapterPage({ id }: { id: string }) {
   const aheadStatus = useTranslateAhead(chapter, book);
   useScrollMemory(chapter, text !== undefined && translation !== undefined, setScroll);
   const backdrop = useBackdrop();
+  const [order, setOrder] = useChapterOrder(chapter?.bookId);
+  // Scrolls the chapter being read into view when the chapter list opens (a stable function, so only once).
+  const showCurrent = useCallback((el: HTMLElement | null) => el?.scrollIntoView({ block: 'center' }), []);
   const backdropUrl = usePictureUrl(backdrop?.picture, 'backdrop');
   const [barsAway, setBarsAway] = useState(false);
   useAutoHideBars(setBarsAway);
@@ -368,10 +372,17 @@ export function ChapterPage({ id }: { id: string }) {
       {sheet === 'look' && <LookSheet prefs={prefs} setPrefs={setPrefs} onClose={() => setSheet(undefined)} />}
       {sheet === 'chapters' && (
         <Sheet title="Chapters" onClose={() => setSheet(undefined)}>
+          {list.length > 1 && <OrderToggle order={order} onChange={setOrder} />}
           <ul className="toc">
-            {list.map((c) => (
+            {inOrder(list, order).map((c) => (
               <li key={c.id}>
-                <a href={`#/chapter/${c.id}`} className={c.id === id ? 'on' : ''} onClick={() => setSheet(undefined)}>
+                <a
+                  href={`#/chapter/${c.id}`}
+                  className={c.id === id ? 'on' : ''}
+                  // The chapter being read is scrolled into view when the list opens.
+                  ref={c.id === id ? showCurrent : undefined}
+                  onClick={() => setSheet(undefined)}
+                >
                   <span className="muted">{c.number}</span>
                   <span lang={zh ? 'zh' : undefined}>{c.title}</span>
                   {c.bookmarked && <Bookmark size={14} aria-label="Bookmarked" />}

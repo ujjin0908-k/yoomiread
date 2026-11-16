@@ -314,3 +314,17 @@ export function Pocket({
     </button>
   );
 }
+
+/** "Start → end" or "End → start" for a chapter list. */
+export function OrderToggle({ order, onChange }: { order: 'start' | 'end'; onChange: (o: 'start' | 'end') => void }) {
+  return (
+    <button
+      type="button"
+      className="link order-toggle"
+      aria-label={order === 'start' ? 'Chapters from the start. Tap to show the newest first.' : 'Newest chapters first. Tap to show from the start.'}
+      onClick={() => onChange(order === 'start' ? 'end' : 'start')}
+    >
+      {order === 'start' ? '↓ First to last' : '↑ Last to first'}
+    </button>
+  );
+}
