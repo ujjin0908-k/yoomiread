@@ -89,7 +89,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   Character cards show "How it looks" with Copy picture prompt (portrait format for people).
 - Reading background (2026-11-15): Settings → "Reading background" puts the owner's own picture behind the reader
   (`src/backdrop.ts`, settings key `readerBackdrop`), under the reader theme's page colour at "Picture strength", so
-  text stays readable in every theme. Kept on the phone only, not in backups (like stickers).
+  text stays readable in every theme. Kept on the phone only, not in backups (like stickers). The iPhone status bar is painted by iOS in the theme colour, so with a background the reader sets that colour from the top of the picture (`topColour`, `mix`) to blend in.
 - Picture book (2026-11-15, owner's ask). Places, gods, groups and terms (paths, items) can have a picture (saved up to 1600 px) and a
   "How it looks" description (`GlossaryEntry.look`). "Copy picture prompt" (entry editor and glossary card) copies
   what it is + the description + the book's art style (`Book.artStyle`, set by a guide; `src/art.ts`) + wide format, to
