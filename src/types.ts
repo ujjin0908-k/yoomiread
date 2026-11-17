@@ -25,6 +25,8 @@ export interface Book {
   artStyle?: string;
   worldUpTo?: number;
   castUpTo?: number;
+  /** The Living Book: the story has been read for links and events up to and including this chapter number. */
+  linksUpTo?: number;
   /** The Living Book: also show guide facts, links and events that have no chapter (they may be spoilers). Off by default. */
   worldSpoilers?: boolean;
   /** The style for this book's translations (optional). */

@@ -78,7 +78,7 @@ function depth(parts: string[]): number {
   const page = parts[0] ?? '';
   if (TABS.includes(page)) return 0;
   if (page === 'character') return 3;
-  return page === 'chapter' || page === 'glossary' || page === 'quote' ? 2 : 1;
+  return page === 'chapter' || page === 'glossary' || page === 'quote' || page === 'world' ? 2 : 1;
 }
 
 /** Which way the new page should arrive, from where it sits compared with the old one. */

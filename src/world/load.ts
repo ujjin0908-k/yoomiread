@@ -1,5 +1,5 @@
 import { db } from '../db';
-import type { GlossaryEntry } from '../types';
+import type { Book, Chapter, GlossaryEntry, Note, WorldEvent, WorldLink } from '../types';
 import { firstSeen } from './seen';
 import { readingLine, worldAt, type WorldAt } from './visible';
 
@@ -48,12 +48,25 @@ export async function loadFirstSeen(bookId: string): Promise<Map<string, number>
     if (texts.length >= 50) merge(firstSeen(entries, texts.splice(0)));
   });
   merge(firstSeen(entries, texts));
-  await db.settings.put({ key, value: { sig, seen: [...seen] } });
+  // Saved a moment later, on its own: this function is also run inside a live query, which may only read.
+  setTimeout(() => void db.settings.put({ key, value: { sig, seen: [...seen] } }).catch(() => {}), 0);
   return seen;
 }
 
-/** The book's world at my reading line (or at `line` when given, for the chapter slider). */
-export async function loadWorld(bookId: string, line?: number): Promise<WorldAt | undefined> {
+/** Everything the world is built from, read once. `worldAt` then answers any line at or before `reached` in memory. */
+export interface WorldData {
+  book: Book;
+  entries: GlossaryEntry[];
+  links: WorldLink[];
+  events: WorldEvent[];
+  notes: Note[];
+  chapters: Chapter[];
+  firstSeen: Map<string, number>;
+  /** My reading line: nothing past it may be asked for. */
+  reached: number;
+}
+
+export async function loadWorldData(bookId: string): Promise<WorldData | undefined> {
   const book = await db.books.get(bookId);
   if (!book) return undefined;
   const [entries, links, events, notes, chapters, seen] = await Promise.all([
@@ -64,8 +77,24 @@ export async function loadWorld(bookId: string, line?: number): Promise<WorldAt 
     db.chapters.where('bookId').equals(bookId).toArray(),
     loadFirstSeen(bookId),
   ]);
-  const reached = readingLine(book, chapters);
-  // The slider may go back in time, never past what I have reached.
-  const at = line === undefined ? reached : Math.min(line, reached);
-  return worldAt({ entries, links, events, notes, chapters, firstSeen: seen }, { line: at, spoilers: !!book.worldSpoilers });
+  chapters.sort((a, b) => a.number - b.number);
+  return { book, entries, links, events, notes, chapters, firstSeen: seen, reached: readingLine(book, chapters) };
+}
+
+/** Changes only when something the world shows has changed, so a redraw is not started by an unrelated save. */
+export function worldSignature(d: WorldData): string {
+  const newest = (list: { updatedAt?: number; createdAt: number }[]) => list.reduce((m, x) => Math.max(m, x.updatedAt ?? x.createdAt), 0);
+  return [d.book.id, d.reached, !!d.book.worldSpoilers, d.book.title, d.entries.length, newest(d.entries), d.links.length, newest(d.links), d.events.length, newest(d.events), d.notes.length, newest(d.notes), d.chapters.length, d.firstSeen.size].join('|');
+}
+
+/** The world at `line` (for the chapter slider), never past my reading line. */
+export function worldOf(data: WorldData, line?: number): WorldAt {
+  const at = line === undefined ? data.reached : Math.max(0, Math.min(line, data.reached));
+  return worldAt(data, { line: at, spoilers: !!data.book.worldSpoilers });
+}
+
+/** The book's world at my reading line (or at `line` when given, for the chapter slider). */
+export async function loadWorld(bookId: string, line?: number): Promise<WorldAt | undefined> {
+  const data = await loadWorldData(bookId);
+  return data && worldOf(data, line);
 }

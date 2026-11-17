@@ -9,6 +9,7 @@ import { QuoteCard, Quotes } from './pages/Quotes';
 import { Settings } from './pages/Settings';
 import { Stats } from './pages/Stats';
 import { Welcome } from './pages/Welcome';
+import { WorldPage } from './pages/World';
 import { useEffect, useState } from 'react';
 import { rememberAhead } from './hooks';
 import { aiSpent, allBooks, allChapters, allQuotes, readingStats } from './queries';
@@ -39,6 +40,7 @@ export function App() {
   if (page === 'quote' && id) return <QuoteCard id={id} />;
   if (page === 'glossary' && id) return <GlossaryPage key={id} bookId={id} />;
   if (page === 'character' && id) return <CharacterPage key={id} id={id} />;
+  if (page === 'world' && id) return <WorldPage key={id} bookId={id} tab={sub} />;
   if (page === 'library') return <Library />;
   if (page === 'quotes') return <Quotes />;
   if (page === 'stats') return <Stats />;

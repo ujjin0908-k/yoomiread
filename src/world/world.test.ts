@@ -195,6 +195,7 @@ describe('the world from the database', () => {
 
   it('keeps the scan and redoes it when a chapter changes', async () => {
     await loadWorld('b');
+    await new Promise((r) => setTimeout(r, 20));
     const saved = await db.settings.get('world-seen:b');
     expect(saved).toBeDefined();
     await db.setText(chapter(2), 'Cheng Shi lied to Xiao Qi, at length.');
