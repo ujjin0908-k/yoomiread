@@ -493,6 +493,7 @@ export function NewPeopleSearch({ book, chapters, known }: { book: Book; chapter
         parts.push(`Found ${by.join(', ')}: check them under "To check" at the top.`);
       }
       if (done.updated) parts.push(`Added details to ${done.updated} ${done.updated === 1 ? 'entry' : 'entries'}.`);
+      if (done.links || done.events) parts.push(`The world gained ${done.links} ${done.links === 1 ? 'link' : 'links'} and ${done.events} ${done.events === 1 ? 'event' : 'events'}.`);
       if (!parts.length) parts.push(`Nothing new in ${span(todo)}.`);
       if (done.cost) parts.push(`Cost ${formatCost(done.cost)}.`);
       if (done.stopped) parts.push(done.stopped === 'Stopped.' ? 'Stopped; what was read is kept.' : `Stopped: ${done.stopped}`);
@@ -523,7 +524,7 @@ export function NewPeopleSearch({ book, chapters, known }: { book: Book; chapter
         <button type="button" className="update-btn" disabled={!ready} onClick={() => void run()}>
           <span>
             Look for new names and places
-            <small>people, places, gods, groups and terms in {span(todo)}</small>
+            <small>people, places, gods, groups, terms, links and events in {span(todo)}</small>
           </span>
           <em>{ready ? `about ${formatCost(cost)}` : '…'}</em>
         </button>

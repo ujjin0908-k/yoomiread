@@ -9,6 +9,7 @@ import { useMood } from '../mascot/useMood';
 import { Wizard } from '../mascot/Wizard';
 import type { Book, Chapter } from '../types';
 import { AddBook } from './AddBook';
+import '../world/world.css';
 
 export function Home() {
   const data = useLive(async () => {
@@ -45,6 +46,9 @@ export function Home() {
   // A weekly nudge to save a backup file: everything lives on this phone only.
   const firstBookAt = books.length ? Math.min(...books.map((b) => b.createdAt)) : undefined;
   const backupDays = data ? backupDue(data.backup, firstBookAt, Date.now()) : undefined;
+
+  // Back after a few days away: an offer to be reminded where the story stood.
+  const daysAway = current?.lastReadAt ? Math.floor((Date.now() - current.lastReadAt) / 86_400_000) : undefined;
 
   return (
     <>
@@ -98,6 +102,19 @@ export function Home() {
               </button>
             </div>
           </div>
+        )}
+
+        {daysAway !== undefined && daysAway >= 3 && current && (
+          <a className="recap-note glass" href={`#/world/${current.id}/recap`}>
+            <img src="/mascot/cat-idle.png" alt="" width={44} height={44} />
+            <span>
+              <b>Previously on…</b>
+              <small>
+                {daysAway} days since {current.title}. See where you were.
+              </small>
+            </span>
+            <ChevronRight size={18} />
+          </a>
         )}
 
         {data && !books.length && (

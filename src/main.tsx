@@ -11,6 +11,11 @@ initMotion();
 void import('./db').then(({ storePicturesAsBytes }) => storePicturesAsBytes()).catch((e) => console.warn('Pictures were not converted:', e));
 void import('./backdrop').then(({ movePhoneBackdropToBook }) => movePhoneBackdropToBook()).catch((e) => console.warn('The background was not moved:', e));
 
+// Development only: `?seed=world` adds a full-size test book for the Living Book (src/dev/seedWorld.ts).
+if (import.meta.env.DEV && new URLSearchParams(location.search).has('seed')) {
+  void import('./dev/seedWorld').then(({ seedWorld }) => seedWorld()).then((id) => console.info('Test book added:', id));
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

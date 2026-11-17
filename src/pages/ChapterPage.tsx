@@ -2,7 +2,8 @@ import { inOrder, useChapterOrder } from '../chapterOrder';
 import { mix, topColour } from '../backdrop';
 import { BackdropPicker } from './BackdropPicker';
 import { pictureBlob, usePictureUrl } from '../picture';
-import { AlertTriangle, BookOpen, Bookmark, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
+import { AlertTriangle, BookOpen, Bookmark, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, Orbit, PenLine, Trash2, Type } from 'lucide-react';
+import '../world/world.css';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { OrderToggle, ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
@@ -383,6 +384,14 @@ export function ChapterPage({ id }: { id: string }) {
       {sheet === 'look' && <LookSheet book={book} prefs={prefs} setPrefs={setPrefs} onClose={() => setSheet(undefined)} />}
       {sheet === 'chapters' && (
         <Sheet title="Chapters" onClose={() => setSheet(undefined)}>
+          <a className="world-enter" href={`#/world/${chapter.bookId}`}>
+            <Orbit size={18} />
+            <span>
+              <b>The world</b>
+              <small>People, places, timeline and a recap, up to this chapter</small>
+            </span>
+            <ChevronRight size={18} />
+          </a>
           {list.length > 1 && <OrderToggle order={order} onChange={setOrder} />}
           <ul className="toc">
             {inOrder(list, order).map((c) => (

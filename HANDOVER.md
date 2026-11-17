@@ -138,6 +138,56 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   scan). Old Blobs are converted at start-up (`storePicturesAsBytes` in `src/db.ts`); one Safari can no longer read is
   dropped so the record works again. Never store a Blob in the database again.
 
+- The Living Book, groundwork (2026-11-17; spec in the vault, "Plan - The Living Book"). Data and rules only, no screens
+  yet. `src/world/`: `readingLine` (furthest chapter read, or the one I am in), `worldAt` (the one place the no-spoiler
+  rule lives: facts, links, events and notes past the line are dropped; my own items always show; guide items with no
+  chapter show only with `Book.worldSpoilers`; a guide link marked `safe` (a setup fact, not a twist) shows once both ends
+  are met; an entry's note, other names and look are hidden without spoilers), `firstSeen` (the chapter each name is first
+  named in, found on the phone with the reader's name rules, one pass per chapter) and `loadWorld(bookId, line?)` (the
+  scan is cached in settings as `world-seen:<bookId>` and redone when names or chapters change). New tables
+  `worldLinks` and `worldEvents` (database v5, backup v4), place nesting `GlossaryEntry.within`. Guides can carry
+  `links`, `events` and `within`; the Foolish Game guide has ~150 links in `src/guides/foolish-game-world.ts`, each one
+  restating a line of the guide. Dev only: `?seed=world` on the dev server adds a 300-chapter test book
+  (`src/dev/seedWorld.ts`, filler text marked "(test)", read to chapter 120). Tests: `src/world/world.test.ts`.
+
+- The Living Book, screens (2026-11-17, built on the groundwork above; screenshots in `shots/living-book/`). One page
+  per book, "The world" (`#/world/<bookId>[/people|places|timeline|recap]`, `src/pages/World.tsx`), opened from the
+  book page (the dark "The world" tool), the top of the reader's chapter list, and a "Previously on…" note on Home when
+  the book being read was last opened 3 or more days ago. Back goes to the chapter it was opened from.
+  - **People** (`src/world/PeopleWeb.tsx`, logic in `graph.ts`): faces joined by lines on a canvas. Every person, plus
+    gods, groups, terms and places that have a link. The layout is worked out once for the reading line (`layoutWeb`:
+    same world, same picture), and earlier chapters show part of it, so nothing jumps when the slider moves. Lines are
+    coloured by `toneOf` the label: bonds (gold), faith (violet), conflict (red); the three chips switch each on and
+    off. Tap a face: the rest dim, its lines show their labels with an arrow (the label reads from → to), and a card
+    lists its links (tap one to hop). Main cast have a red ring, gods a gold ring with rays, groups are squares with a
+    soft cloud over their members. The search button finds a name; the arrows button shows everything again.
+  - **Places** (`PlacesMap.tsx`, `map.ts`): the books give no geography, so each top-level place is an island on a
+    chart, places inside it (`GlossaryEntry.within`) are marked on it, and a dotted route joins places in the order
+    the story first reached them; the newest has rings round it. A place with a picture shows it in a medallion.
+  - **The chapter slider** (People and Places): drag back to any earlier chapter, or press play to watch the world
+    grow from chapter 1. It cannot pass the reading line.
+  - **Timeline** (`Timeline.tsx`, `timeline.ts`): events, first appearances (free, from the first-seen scan, so it is
+    never empty) and my highlights and comments, by chapter, under arcs (or runs of 25 chapters when no event names
+    an arc). Tap a chapter number to open it, a name to see it on the web or map.
+  - **Recap** (`Recap.tsx`, `recap.ts`): free part made on the phone (where I stopped, the saved story-so-far summary
+    of the latest translated chapter at or before the line, last events, who was on the page in the last 3 chapters,
+    new faces, my last marks). "Ask the cat" sends the last 3 chapters at or before the line (and only names already
+    met) for a ~150-word telling, or ~350 with "Longer"; kept as `recap:<bookId>:<line>:<short|long>` in settings, so
+    each reading line is paid for once, and added to the book's spend.
+  - **The eye button** opens "This world": the spoilers switch (`Book.worldSpoilers`, off by default) and "Links and
+    events from the story", which reads finished chapters for dated links and events (`searchStory` with
+    `linksOnly`, from `Book.linksUpTo`; price shown first). The cast's "New in the story" now asks for links and events
+    in the same request. Rules (`parseWorldReply`, `addWorldLinks`): an item must name a chapter that was sent; a link
+    label is at most 5 words; at most 2 events a chapter; names must be in the glossary; nothing is added twice.
+  - Drawing: `Stage.tsx` is the shared canvas (drag, pinch, fling, tap, glide-to). It draws only when something
+    changed. While moving it draws at 2× instead of 3× sharpness, then once more at full. Controls over the canvases
+    are not frosted (a blur over a moving canvas is redone every frame). Not yet measured on a real iPhone.
+  - The class names `world-card`, `world-list`, `world-note`, `world-art`, `world-hint` belong to the glossary's world
+    cards in `loud.css`; the Living Book's card is `lb-card`.
+  - A live query may only read: `loadFirstSeen` saves its scan a moment later, outside the query.
+  - "Full card" on a person leads to the cast's character page, which shows everything known (guide lines included),
+    as it always has. The world's own cards stay inside the reading line.
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless
@@ -183,7 +233,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 187 unit tests
+npm test          # 215 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```

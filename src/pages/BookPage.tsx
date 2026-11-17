@@ -1,6 +1,7 @@
 import { BackdropPicker } from './BackdropPicker';
 import { inOrder, useChapterOrder } from '../chapterOrder';
-import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, PenLine, Plus, Trash2 } from 'lucide-react';
+import '../world/world.css';
+import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, Orbit, PenLine, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Book3D, Cover, OrderToggle, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
 import { toPicture } from '../picture';
@@ -269,6 +270,11 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
               <span className="muted small">Nothing to translate</span>
             </div>
           )}
+          <button type="button" className="tool tool-world" onClick={() => go(`world/${id}`)}>
+            <Orbit size={20} />
+            <span>The world</span>
+            <span className="muted small">Who is who, the map, the timeline and a recap, up to where you are</span>
+          </button>
         </div>
 
         {book.shelf === 'finished' || book.shelf === 'dropped' ? (

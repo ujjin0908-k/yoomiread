@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { isRead, needsTranslation, newId } from '../logic';
-import type { Book, Chapter, CharacterProfile, GlossaryEntry, GlossaryKind, ProfileFact, TranslateSettings } from '../types';
+import type { Book, Chapter, CharacterProfile, GlossaryEntry, GlossaryKind, ProfileFact, TranslateSettings, WorldEvent, WorldLink } from '../types';
 import { chat } from './api';
 import { costOf, estimateTokens, isRefusal, type ChatMessage } from './prompt';
 import { addSpend, callCost, modelFor } from './run';
@@ -398,8 +398,28 @@ export function chaptersToSearch(chapters: Chapter[], upTo = 0): Chapter[] {
 /** Where the story search starts: the world search, or for a book searched before it existed, nowhere yet. */
 export const searchedTo = (book: Book) => book.worldUpTo ?? 0;
 
-export function worldMessages(input: { book: Book; chunk: ReadingPlan['parts']; known: GlossaryEntry[] }): ChatMessage[] {
-  const system = [
+export function worldMessages(input: { book: Book; chunk: ReadingPlan['parts']; known: GlossaryEntry[]; linksOnly?: boolean; knownLinks?: string[] }): ChatMessage[] {
+  const links = [
+    `${input.linksOnly ? '1' : '3'}. For each relationship between two NAMED people, gods, groups or places that these chapters establish or change, one line:`,
+    '{"link": "<name>", "to": "<name>", "label": "<how the first stands to the second>", "ch": 3}',
+    '   The label is 1 to 4 words and reads from the first name to the second: "master of", "sister of", "enemy of", "member of",',
+    '   "follows", "betrayed", "in love with", "leader of". Use names exactly as listed in the guide' + (input.linksOnly ? '.' : ', or as given in a "new" line.'),
+    '   Only lasting relationships the text states or plainly shows. Not "talked to", "met" or "fought beside once". Skip any already listed under Links.',
+    `${input.linksOnly ? '2' : '4'}. For the events a reader would want to be reminded of later (a death, a betrayal, a reveal, a battle won or lost, a journey,`,
+    '   a new power, a vow), at most 2 per chapter, one line:',
+    '{"event": "<what happened, under 14 words, past tense>", "who": ["<name>"], "where": "<place name>", "ch": 3}',
+    '   "who" and "where" use names as listed; leave them out when unsure. Skip ordinary scenes.',
+  ];
+  const system = input.linksOnly
+    ? [
+        'You keep a reader\'s guide to the people and the world of a novel. You are given chapters the reader has already read,',
+        'each marked with its chapter number, and the names the guide already holds.',
+        'Use ONLY what these chapters say. Never guess, never use outside knowledge of the story, never mention later events.',
+        'Write in English.',
+        ...links,
+        'Answer with JSON lines only. If there is nothing, answer with nothing.',
+      ].join('\n')
+    : [
     'You keep a reader\'s guide to the people and the world of a novel. You are given chapters the reader has already read,',
     'each marked with its chapter number, and what the guide already holds.',
     'Use ONLY what these chapters say. Never guess, never use outside knowledge of the story, never mention later events.',
@@ -415,6 +435,7 @@ export function worldMessages(input: { book: Book; chunk: ReadingPlan['parts']; 
     '{"about": "<name exactly as listed>", "facts": [{"text": "...", "ch": 3}]}',
     '   Facts say what it is, who rules or follows it, what it can do, and how it connects to others. Not what happened in a scene.',
     '   At most 3 new facts each. Skip anything already in the guide. Do not write lines about people already in the guide.',
+    ...links,
     'Answer with JSON lines only. If there is nothing, answer with nothing.',
   ].join('\n');
   const people = input.known.filter((g) => g.kind === 'person').flatMap((g) => namesOf(g));
@@ -425,17 +446,40 @@ export function worldMessages(input: { book: Book; chunk: ReadingPlan['parts']; 
       return `- ${g.english} (${g.kind})${g.note ? `: ${g.note}` : ''}${facts.length ? `. Known: ${facts.join('; ')}` : ''}`;
     });
   const story = input.chunk.map((p) => `[Chapter ${p.chapter}]\n${p.text}`).join('\n\n');
+  const listed = (input.knownLinks ?? []).slice(-150).join('; ');
   return [
     { role: 'system', content: system },
     {
       role: 'user',
-      content: `Book: ${input.book.title}\n\nPeople in the guide: ${[...new Set(people)].join(', ') || 'nobody'}\n\nWorld in the guide:\n${world.join('\n') || '(nothing yet)'}\n\nChapters:\n\n${story}`,
+      content:
+        `Book: ${input.book.title}\n\nPeople in the guide: ${[...new Set(people)].join(', ') || 'nobody'}\n\n` +
+        (input.linksOnly ? `World in the guide: ${input.known.filter((g) => g.kind !== 'person').map((g) => `${g.english} (${g.kind})`).join(', ') || '(nothing yet)'}` : `World in the guide:\n${world.join('\n') || '(nothing yet)'}`) +
+        `\n\nLinks: ${listed || '(none yet)'}\n\nChapters:\n\n${story}`,
     },
   ];
 }
 
 /** Reads the search's answer. Facts must name a chapter that was sent; anything else is dropped. */
-export function parseWorldReply(raw: string, chunk: ReadingPlan['parts']): { fresh: NewThing[]; facts: { name: string; facts: ProfileFact[] }[] } {
+export interface FoundLink {
+  from: string;
+  to: string;
+  label: string;
+  chapter: number;
+}
+export interface FoundEvent {
+  title: string;
+  who: string[];
+  where?: string;
+  chapter: number;
+}
+
+export function parseWorldReply(
+  raw: string,
+  chunk: ReadingPlan['parts'],
+): { fresh: NewThing[]; facts: { name: string; facts: ProfileFact[] }[]; links: FoundLink[]; events: FoundEvent[] } {
+  const links: FoundLink[] = [];
+  const events: FoundEvent[] = [];
+  const perChapter = new Map<number, number>();
   const sent = new Set(chunk.map((p) => p.chapter));
   const kinds: GlossaryKind[] = ['person', ...WORLD_KINDS];
   const fresh: NewThing[] = [];
@@ -466,9 +510,27 @@ export function parseWorldReply(raw: string, chunk: ReadingPlan['parts']): { fre
         .map((f) => ({ text: String((f as { text?: unknown })?.text ?? '').trim(), chapter: Number((f as { ch?: unknown })?.ch) }))
         .filter((f) => f.text && f.text.length <= 160 && sent.has(f.chapter));
       if (list.length) facts.push({ name: row.about.trim(), facts: list });
+    } else if (typeof row.link === 'string' && typeof row.to === 'string' && typeof row.label === 'string') {
+      const ch = Number(row.ch);
+      const label = row.label.trim();
+      // A link must name a chapter that was sent, and its label must be a short phrase, not a sentence.
+      if (sent.has(ch) && row.link.trim() && row.to.trim() && label && label.length <= 40 && label.split(/\s+/).length <= 5) {
+        links.push({ from: row.link.trim(), to: row.to.trim(), label, chapter: ch });
+      }
+    } else if (typeof row.event === 'string' && row.event.trim()) {
+      const ch = Number(row.ch);
+      const title = row.event.trim();
+      if (!sent.has(ch) || title.length > 140 || (perChapter.get(ch) ?? 0) >= 2) continue;
+      perChapter.set(ch, (perChapter.get(ch) ?? 0) + 1);
+      events.push({
+        title,
+        who: Array.isArray(row.who) ? row.who.map((w) => String(w).trim()).filter(Boolean).slice(0, 6) : [],
+        where: typeof row.where === 'string' && row.where.trim() ? row.where.trim() : undefined,
+        chapter: ch,
+      });
     }
   }
-  return { fresh, facts };
+  return { fresh, facts, links, events };
 }
 
 /** Adds new facts to places, gods, groups and terms already in the glossary. Returns how many entries changed. */
@@ -488,6 +550,47 @@ export async function addWorldFacts(found: { name: string; facts: ProfileFact[] 
   return changed;
 }
 
+/**
+ * The Living Book: keeps the links and events a search found. A name must be one the glossary holds (by any of its
+ * names), or the item is dropped. A link already there for the pair with the same label is not added again, so the
+ * newest link of a pair is always a real change. Returns how many were added.
+ */
+export async function addWorldLinks(bookId: string, found: { links: FoundLink[]; events: FoundEvent[] }, all: GlossaryEntry[], now = Date.now()): Promise<{ links: number; events: number }> {
+  const find = (name: string) => all.find((g) => namesOf(g).some((n) => squash(n) === squash(name)));
+  const have = await db.worldLinks.where('bookId').equals(bookId).toArray();
+  const seen = new Set(have.map((l) => `${l.from}|${l.to}|${squash(l.label)}`));
+  const links: WorldLink[] = [];
+  for (const l of found.links) {
+    const from = find(l.from);
+    const to = find(l.to);
+    if (!from || !to || from.id === to.id) continue;
+    const key = `${from.id}|${to.id}|${squash(l.label)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    links.push({ id: newId(), bookId, from: from.id, to: to.id, label: l.label, chapter: l.chapter, createdAt: now });
+  }
+  if (links.length) await db.worldLinks.bulkAdd(links);
+  const haveEvents = await db.worldEvents.where('bookId').equals(bookId).toArray();
+  const seenEvents = new Set(haveEvents.map((e) => `${e.chapter}|${squash(e.title)}`));
+  const events: WorldEvent[] = [];
+  for (const e of found.events) {
+    const key = `${e.chapter}|${squash(e.title)}`;
+    if (seenEvents.has(key)) continue;
+    seenEvents.add(key);
+    const who = e.who.map(find).filter((g): g is GlossaryEntry => !!g).map((g) => g.id);
+    const where = e.where ? find(e.where) : undefined;
+    events.push({ id: newId(), bookId, chapter: e.chapter, title: e.title, who: who.length ? [...new Set(who)] : undefined, where: where?.kind === 'place' ? where.id : undefined, createdAt: now });
+  }
+  if (events.length) await db.worldEvents.bulkAdd(events);
+  return { links: links.length, events: events.length };
+}
+
+/** The links already kept, as short lines for the prompt ("Cheng Shi follows Deceit"), so they are not sent back again. */
+async function knownLinkLines(bookId: string, all: GlossaryEntry[]): Promise<string[]> {
+  const name = new Map(all.map((g) => [g.id, g.english]));
+  return (await db.worldLinks.where('bookId').equals(bookId).toArray()).filter((l) => name.has(l.from) && name.has(l.to)).map((l) => `${name.get(l.from)} ${l.label} ${name.get(l.to)}`);
+}
+
 /** What a search would read, and a rough price, before anything is sent. */
 export function searchPlan(chapters: Chapter[], texts: Map<string, string>, upTo = 0): ReadingPlan['parts'] {
   return chaptersToSearch(chapters, upTo)
@@ -504,6 +607,9 @@ export function searchCost(parts: ReadingPlan['parts'], settings: TranslateSetti
 }
 
 export interface SearchResult {
+  /** The Living Book: links and events found. */
+  links: number;
+  events: number;
   added: GlossaryEntry[];
   /** Places, gods, groups and terms that got new facts. */
   updated: number;
@@ -524,32 +630,43 @@ export async function searchStory(input: {
   model: string;
   signal?: AbortSignal;
   onStatus?: (line: string) => void;
+  /** Only look for links and events (the Living Book), from where that search last stopped. Names and facts are left alone. */
+  linksOnly?: boolean;
 }): Promise<SearchResult> {
-  const { book, chapters, settings, model, signal } = input;
-  const from = searchedTo(book);
+  const { book, chapters, settings, model, signal, linksOnly } = input;
+  const from = linksOnly ? (book.linksUpTo ?? 0) : searchedTo(book);
   const todo = chaptersToSearch(chapters, from);
   const texts = await readingTexts(book, todo);
   const chunks = chunkParts(searchPlan(chapters, texts, from));
-  const out: SearchResult = { added: [], updated: 0, cost: 0, read: 0 };
+  const out: SearchResult = { added: [], updated: 0, cost: 0, read: 0, links: 0, events: 0 };
+  // A full search also covers links, but only moves that mark when it carries on from where the link search stopped.
+  const joined = (book.linksUpTo ?? 0) >= from;
   const mark = async (n: number) => {
     const now = await db.books.get(book.id);
-    await db.books.update(book.id, { worldUpTo: Math.max(n, now?.worldUpTo ?? 0), castUpTo: Math.max(n, now?.castUpTo ?? 0) });
+    const links = joined ? { linksUpTo: Math.max(n, now?.linksUpTo ?? 0) } : {};
+    await db.books.update(book.id, linksOnly ? links : { worldUpTo: Math.max(n, now?.worldUpTo ?? 0), castUpTo: Math.max(n, now?.castUpTo ?? 0), ...links });
   };
   for (let i = 0; i < chunks.length && !signal?.aborted; i++) {
     const chunk = chunks[i];
     const last = chunk[chunk.length - 1].chapter;
     input.onStatus?.(`Reading chapters ${chunk[0].chapter}${last !== chunk[0].chapter ? `–${last}` : ''} (${i + 1} of ${chunks.length})`);
     const all = await db.glossary.where('bookId').equals(book.id).toArray();
-    const messages = worldMessages({ book, chunk, known: all });
+    const messages = worldMessages({ book, chunk, known: all, linksOnly, knownLinks: await knownLinkLines(book.id, all) });
     try {
       const reply = await chat(settings, model, messages, undefined, signal);
       const spend = callCost(modelFor(settings, model), messages, reply);
       await addSpend(book.id, spend.cost, spend.estimated);
       out.cost += spend.cost ?? 0;
       if (isRefusal(reply.text)) throw new Error('The model would not read these chapters. Try the other model.');
-      const { fresh, facts } = parseWorldReply(reply.text, chunk);
-      out.updated += await addWorldFacts(facts, all);
-      out.added.push(...(await addNewThings(book.id, fresh, all)));
+      const { fresh, facts, links, events } = parseWorldReply(reply.text, chunk);
+      if (!linksOnly) {
+        out.updated += await addWorldFacts(facts, all);
+        out.added.push(...(await addNewThings(book.id, fresh, all)));
+      }
+      // After the new names are in, so a link may name someone these same chapters introduced.
+      const kept = await addWorldLinks(book.id, { links, events }, await db.glossary.where('bookId').equals(book.id).toArray());
+      out.links += kept.links;
+      out.events += kept.events;
       out.read += chunk.length;
       await mark(last);
     } catch (e) {

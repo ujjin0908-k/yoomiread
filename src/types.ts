@@ -25,6 +25,10 @@ export interface Book {
   artStyle?: string;
   worldUpTo?: number;
   castUpTo?: number;
+  /** The Living Book: the story has been read for links and events up to and including this chapter number. */
+  linksUpTo?: number;
+  /** The Living Book: also show guide facts, links and events that have no chapter (they may be spoilers). Off by default. */
+  worldSpoilers?: boolean;
   /** The style for this book's translations (optional). */
   style?: BookStyle;
   title: string;
@@ -159,9 +163,54 @@ export interface GlossaryEntry {
   /** People only: the character profile. */
   /** How it looks, as a picture description to paste into an image app (see `picturePrompt` in src/art.ts). */
   look?: string;
+  /** Places only: the id of the place this one is inside (a city in a realm). Used to nest the map. */
+  within?: string;
   profile?: CharacterProfile;
   createdAt: number;
   updatedAt: number;
+}
+
+/**
+ * The Living Book: a link between two glossary entries ("master of", "enemy", "sister", "member of"), as known from a
+ * chapter. A pair can have several links over time; the newest one up to the reading line is the current one.
+ */
+export interface WorldLink {
+  id: string;
+  bookId: string;
+  /** Glossary entry ids. The label reads from → to ("Cheng Shi" master of "Xiao Qi"). */
+  from: string;
+  to: string;
+  label: string;
+  /** The chapter it became true in. Missing on the owner's own links and on guide links that do not know one. */
+  chapter?: number;
+  note?: string;
+  /** Written by the owner: a scan never changes or removes it, and it shows at any reading line. */
+  mine?: boolean;
+  /** From a book guide (may be a spoiler when it has no chapter). */
+  guide?: boolean;
+  /** A setup fact, not a twist (a god's path, opposed gods, the god a player follows): shows once both ends are met. */
+  safe?: boolean;
+  createdAt: number;
+}
+
+/** The Living Book: one thing that happened, for the timeline. */
+export interface WorldEvent {
+  id: string;
+  bookId: string;
+  /** The chapter it happens in. Missing only on guide events that do not know one. */
+  chapter?: number;
+  /** One line: "Cheng Shi fakes his death". */
+  title: string;
+  detail?: string;
+  /** Glossary entry ids of the people (and gods, groups) involved. */
+  who?: string[];
+  /** Glossary entry id of the place it happens in. */
+  where?: string;
+  /** The arc it belongs to ("The Sea of Desire"). */
+  arc?: string;
+  mine?: boolean;
+  guide?: boolean;
+  createdAt: number;
 }
 
 /** A chapter as written in a backup file: text and translation included. */
@@ -202,13 +251,16 @@ export interface Session {
 /** Backup file. Covers are stored as data URLs so the file is plain JSON. */
 export interface Backup {
   app: 'yoomiread';
-  version: 1 | 2 | 3;
+  version: 1 | 2 | 3 | 4;
   exportedAt: number;
   books: (Omit<Book, 'cover' | 'backdrop'> & { cover?: string; backdrop?: { cover: number; picture?: string } })[];
   chapters: BackupChapter[];
   notes: Note[];
   sessions?: Session[];
   glossary?: (Omit<GlossaryEntry, 'picture'> & { picture?: string })[];
+  /** The Living Book (version 4 and later). */
+  worldLinks?: WorldLink[];
+  worldEvents?: WorldEvent[];
 }
 
 /** One model offered by the translation provider, with its prices per million tokens. */

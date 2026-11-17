@@ -1,0 +1,985 @@
+/*
+ * The Living Book ("The world" page): a full-screen stage for the people web and the map, with glass controls
+ * floating over it, and two scrolling pages (Timeline, Recap). Uses the Loud Glass colours and type from loud.css.
+ */
+
+body[data-world] {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.world {
+  --w-bond: #c77a00;
+  --w-faith: #6b4dff;
+  --w-conflict: #e8320e;
+  --w-other: #77728f;
+  --w-place: #1e7b5b;
+  --w-card: rgb(255 255 255 / 0.78);
+  --w-chip: rgb(255 255 255 / 0.82);
+  --w-solid: rgb(250 248 255 / 0.95);
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--ink);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .world {
+    --w-bond: #ffc46b;
+    --w-faith: #a58bff;
+    --w-conflict: #ff5a36;
+    --w-other: #9d98b8;
+    --w-place: #6edcaa;
+    --w-card: rgb(24 20 44 / 0.8);
+    --w-chip: rgb(38 33 66 / 0.84);
+    --w-solid: rgb(26 22 48 / 0.95);
+  }
+}
+
+.world-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.world-missing {
+  padding: calc(env(safe-area-inset-top) + 12px) 16px;
+  gap: 16px;
+}
+
+/* ---------- Top: back, title, spoilers ---------- */
+
+.world-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(env(safe-area-inset-top) + 10px) 16px 0;
+  pointer-events: none;
+}
+.world-top > * {
+  pointer-events: auto;
+}
+.world-top .round-btn {
+  flex: none;
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+}
+.world-title {
+  flex: 1;
+  min-width: 0;
+  pointer-events: none;
+}
+.world-title h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+.world-title p {
+  margin: 3px 0 0;
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Tabs ---------- */
+
+.world-tabs {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  margin: 12px 16px 0;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+  box-shadow: var(--shadow);
+}
+.world-tabs button {
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: 700 0.86rem var(--display);
+  letter-spacing: -0.01em;
+  padding: 9px 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+.world-tabs button.on {
+  background: var(--pill);
+  color: var(--pill-ink);
+}
+
+/* ---------- Tools over the stage ---------- */
+
+.world-tools {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 16px 0;
+  pointer-events: none;
+}
+.world-tools > button {
+  pointer-events: auto;
+}
+.world-tools-gap {
+  flex: 1;
+}
+.world-tone,
+.world-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-edge);
+  background: var(--surface);
+  color: var(--ink);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  font: 600 0.76rem var(--sans);
+  cursor: pointer;
+}
+.world-tone {
+  padding: 0 11px 0 9px;
+  transition: opacity 0.18s;
+}
+.world-tone:not(.on) {
+  opacity: 0.5;
+}
+.world-tone i,
+.world-links i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--w-other);
+}
+.world-tone:not(.on) i {
+  background: transparent !important;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+}
+.tone-bond i,
+i.tone-bond {
+  background: var(--w-bond);
+}
+.tone-faith i,
+i.tone-faith {
+  background: var(--w-faith);
+}
+.tone-conflict i,
+i.tone-conflict {
+  background: var(--w-conflict);
+}
+.world-tool {
+  width: 32px;
+  padding: 0;
+}
+.world-tool.wide {
+  width: auto;
+  padding: 0 12px;
+}
+.world-tool:disabled {
+  opacity: 0.5;
+}
+
+/* ---------- The card for a selected name ---------- */
+
+.lb-card {
+  position: absolute;
+  z-index: 3;
+  left: 12px;
+  right: 12px;
+  bottom: calc(env(safe-area-inset-bottom) + 92px);
+  max-width: 560px;
+  margin: 0 auto;
+  max-height: 42vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 26px;
+  background: var(--w-card);
+  border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
+  box-shadow: 0 18px 44px rgb(10 5 40 / 0.28), inset 0 1px 0 var(--glass-edge);
+  animation: world-rise 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+@keyframes world-rise {
+  from {
+    opacity: 0;
+    translate: 0 18px;
+  }
+}
+:root[data-motion='off'] .lb-card {
+  animation: none;
+}
+.lb-card > header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 10px 10px 16px;
+}
+.lb-card-name {
+  flex: 1;
+  min-width: 0;
+}
+.lb-card-name h2 {
+  margin: 0;
+  font: 800 1.35rem/1.05 var(--display);
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+.lb-card-name p {
+  margin: 5px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.world-since {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.lb-card-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 16px 14px;
+}
+.world-lead {
+  margin: 0 0 10px;
+  font: italic 400 1.14rem/1.3 var(--italic);
+  color: var(--ink);
+}
+.world-links {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+}
+.world-links li + li {
+  border-top: 1px solid var(--line);
+}
+.world-links button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: 400 0.9rem/1.3 var(--sans);
+  text-align: left;
+  cursor: pointer;
+}
+.world-links span {
+  flex: 1;
+}
+.world-links b {
+  color: var(--ink);
+  font-weight: 700;
+}
+.world-links em {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.world-links small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+.lb-card-events {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.world-face {
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-weight: 700;
+  color: #fff;
+  background: #5b4bc4;
+  box-shadow: 0 0 0 1.5px var(--glass-edge);
+}
+.world-face-god {
+  background: #14121f;
+  color: #f5c451;
+  box-shadow: 0 0 0 1.5px #f5c451;
+}
+.world-face-group {
+  background: #3d3566;
+  border-radius: 28%;
+}
+.world-face-place {
+  background: #1e5d52;
+}
+.world-face-term {
+  background: #5d5876;
+  border-radius: 22%;
+}
+
+/* ---------- The chapter slider ---------- */
+
+.world-scrub {
+  position: absolute;
+  z-index: 3;
+  left: 12px;
+  right: 12px;
+  bottom: calc(env(safe-area-inset-bottom) + 14px);
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 10px 10px;
+  border-radius: 999px;
+  background: var(--w-card);
+  border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
+  box-shadow: 0 12px 32px rgb(10 5 40 / 0.22), inset 0 1px 0 var(--glass-edge);
+}
+.world-play {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 8px 18px rgb(232 50 14 / 0.35);
+  cursor: pointer;
+}
+.world-play svg {
+  fill: currentColor;
+}
+.world-scrub-main {
+  flex: 1;
+  min-width: 0;
+}
+.world-scrub-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.world-scrub-label strong {
+  font: 800 1rem var(--display);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.world-scrub-label span {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.world-scrub-label button {
+  border: 0;
+  border-radius: 999px;
+  padding: 2px 10px;
+  background: var(--pill);
+  color: var(--pill-ink);
+  font: 700 0.7rem var(--sans);
+  cursor: pointer;
+}
+.world-scrub input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 24px;
+  margin: 2px 0 0;
+  background: transparent;
+  cursor: pointer;
+}
+.world-scrub input[type='range']::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--accent) var(--fill), var(--line) var(--fill));
+}
+.world-scrub input[type='range']::-moz-range-track {
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--accent) var(--fill), var(--line) var(--fill));
+}
+.world-scrub input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8.5px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--accent);
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.25);
+}
+.world-scrub input[type='range']::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--accent);
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.25);
+}
+
+/* ---------- Scrolling pages: Timeline and Recap ---------- */
+
+.world-scroll {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  margin-top: 10px;
+  padding: 6px 16px calc(env(safe-area-inset-bottom) + 40px);
+}
+.world-scroll > * {
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.world-empty {
+  text-align: center;
+  padding: 48px 20px;
+}
+.world-empty.floating {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  top: 38%;
+  pointer-events: none;
+}
+.world-empty h2 {
+  margin: 0 0 6px;
+  font: italic 400 1.9rem var(--italic);
+}
+.world-empty p {
+  margin: 0 auto;
+  max-width: 300px;
+  color: var(--ink-2);
+  font-size: 0.92rem;
+}
+
+.world-tl-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.world-tl-head p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--ink-2);
+}
+.world-tl-head b {
+  color: var(--ink);
+}
+
+.world-arc > header {
+  position: sticky;
+  top: -6px;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 -16px;
+  padding: 14px 16px 10px;
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-mask-image: linear-gradient(#000 78%, transparent);
+  mask-image: linear-gradient(#000 78%, transparent);
+}
+.world-arc h2 {
+  margin: 0;
+  font: 800 1.6rem/1 var(--display);
+  letter-spacing: -0.045em;
+}
+.world-arc > header span {
+  font: 700 0.72rem var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.world-arc ol {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0 8px;
+}
+.world-arc ol::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.world-tl-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 6px 0;
+}
+.world-tl-ch {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--line);
+  color: var(--ink-2);
+  font: 800 0.8rem var(--display);
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+.world-tl-event .world-tl-ch {
+  background: var(--pill);
+  border-color: var(--pill);
+  color: var(--pill-ink);
+}
+.world-tl-note .world-tl-ch {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.world-tl-card {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--shadow);
+}
+.world-tl-card h3 {
+  margin: 0;
+  font: 700 1rem/1.25 var(--display);
+  letter-spacing: -0.02em;
+}
+.world-tl-card p {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: var(--ink-2);
+}
+.world-tl-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 700 0.68rem var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.world-tl-arrivals > div {
+  padding-top: 9px;
+}
+.world-tl-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.world-tl-tags button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 3px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 0.78rem var(--sans);
+  cursor: pointer;
+}
+.world-tl-tags button.place {
+  padding-left: 8px;
+  height: 30px;
+  color: var(--w-place);
+  border-color: color-mix(in srgb, var(--w-place) 40%, transparent);
+}
+.world-tl-tags small {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+.world-tl-mine {
+  display: block;
+  padding: 10px 14px;
+  border-radius: 4px 18px 18px 4px;
+  border-left: 3px solid var(--accent);
+  background: var(--olive-soft);
+  color: var(--ink);
+  text-decoration: none;
+}
+.world-tl-mine q {
+  display: block;
+  margin-top: 4px;
+  font: italic 400 1.12rem/1.3 var(--italic);
+}
+.world-tl-mine p {
+  margin: 4px 0 0;
+  font-size: 0.86rem;
+  color: var(--ink-2);
+}
+
+/* ---------- Recap ---------- */
+
+.world-recap-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.world-recap-head .wizard-wrap {
+  flex: none;
+}
+.world-recap-head h2 {
+  margin: 2px 0 4px;
+  font: 800 2.5rem/0.92 var(--display);
+  letter-spacing: -0.055em;
+}
+.world-recap-head h2 i {
+  font: italic 400 1.04em var(--italic);
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+.world-recap-head p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+.world-recap-stop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px 12px 12px 16px;
+  border-radius: 22px;
+  background: var(--pill);
+  color: var(--pill-ink);
+  text-decoration: none;
+}
+.world-recap-stop span {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.world-recap-stop small {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+.world-recap-stop b {
+  font: 700 1rem var(--display);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.world-recap-stop em {
+  font: 700 0.8rem var(--sans);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+}
+.world-recap-told {
+  margin-top: 12px;
+  padding: 18px 18px 14px;
+  border-radius: 24px;
+  background: var(--surface);
+  border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--glass-edge);
+}
+.world-recap-told p {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+.world-recap-told p:first-child {
+  font: italic 400 1.3rem/1.32 var(--italic);
+}
+.world-recap-told p.quiet {
+  color: var(--ink-2);
+}
+.world-recap-told small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+.world-recap-ask .pill-btn {
+  width: auto;
+  flex: 1;
+}
+.world-recap-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.world-recap-block {
+  margin-top: 20px;
+}
+.world-recap-block h3 {
+  margin: 0;
+  font: 700 0.7rem var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.world-recap-block .world-tl-mine {
+  margin-top: 8px;
+}
+.world-recap-events {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.world-recap-events li {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 9px 0;
+  font: 600 0.95rem/1.3 var(--display);
+  border-top: 1px solid var(--line);
+}
+.world-recap-events li:first-child {
+  border-top: 0;
+}
+.world-recap-events span {
+  flex: none;
+  min-width: 30px;
+  font: 800 0.78rem var(--display);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Sheets: find, spoilers ---------- */
+
+.world-find {
+  width: 100%;
+  margin-bottom: 8px;
+}
+.world-find-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+.world-find-list button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 2px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 600 0.95rem var(--sans);
+  text-align: left;
+  cursor: pointer;
+}
+.world-find-list span {
+  flex: 1;
+}
+.world-find-list small {
+  color: var(--muted);
+}
+.world-spoilers p {
+  margin: 0 0 14px;
+  color: var(--ink-2);
+}
+.world-switch {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  margin-bottom: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+}
+.world-switch span {
+  flex: 1;
+}
+.world-switch small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+/* ---------- The way in, on the book page ---------- */
+
+.tool.tool-world {
+  grid-column: 1 / -1;
+  position: relative;
+  overflow: hidden;
+  background: var(--pill);
+  color: var(--pill-ink);
+  border-color: transparent;
+}
+.tool.tool-world::after {
+  content: '';
+  position: absolute;
+  right: -30px;
+  top: -40px;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent) 0, transparent 68%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.tool.tool-world svg {
+  color: var(--accent);
+}
+.tool.tool-world .muted {
+  color: inherit;
+  opacity: 0.72;
+}
+
+/* ---------- Other ways in: the reader's chapter list, and Home after days away ---------- */
+
+.world-enter,
+.recap-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.world-enter {
+  position: sticky;
+  top: 8px;
+  z-index: 3;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.22);
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--pill);
+  color: var(--pill-ink);
+}
+.world-enter > svg:first-child {
+  color: var(--accent);
+  flex: none;
+}
+.world-enter span,
+.recap-note span {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.world-enter b,
+.recap-note b {
+  font: 800 1.02rem var(--display);
+  letter-spacing: -0.02em;
+}
+.world-enter small {
+  opacity: 0.72;
+  font-size: 0.78rem;
+}
+.recap-note {
+  margin: 14px 0 18px;
+  padding: 10px 14px 10px 10px;
+  border-radius: 22px;
+}
+.recap-note b {
+  font: italic 400 1.35rem/1.05 var(--italic);
+}
+.recap-note small {
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.world-scan {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  margin-bottom: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+}
+.world-scan small {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+.world-scan p {
+  margin: 0;
+}
+
+/*
+ * Over the moving canvases (People, Places) the controls are not frosted: a blur would be worked out again for every
+ * frame the canvas draws, which is what makes dragging stutter. They get a nearly solid ground instead.
+ */
+.world-people .round-btn,
+.world-places .round-btn,
+.world-people .world-tabs,
+.world-places .world-tabs,
+.world-people .world-tone,
+.world-people .world-tool,
+.world-places .world-tool,
+.world .lb-card,
+.world .world-scrub {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.world-people .round-btn,
+.world-places .round-btn,
+.world-people .world-tabs,
+.world-places .world-tabs,
+.world-people .world-tone,
+.world-people .world-tool,
+.world-places .world-tool {
+  background: var(--w-chip);
+}
+.world .lb-card,
+.world .world-scrub {
+  background: var(--w-solid);
+}
