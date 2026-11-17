@@ -5,6 +5,7 @@ import {
   clampRating,
   computeStats,
   speakerOf,
+  speakersFrom,
   speaksAs,
   continueChapter,
   dropBook,
@@ -308,5 +309,28 @@ describe('dropBook', () => {
     expect(dropped.shelf).toBe('dropped');
     expect(dropped.rating).toBeUndefined();
     expect(dropped.review).toBeUndefined();
+  });
+});
+
+describe('speakers from the cast', () => {
+  const cast = speakersFrom([
+    { id: 'cs', english: 'Cheng Shi', original: '程实', aliases: ['Foolish Play'] },
+    { id: 'zj', english: 'Zhang Jizu', original: '张祭祖' },
+    { id: 'x', english: 'X', original: 'X' },
+  ]);
+
+  it('finds a speaker by the English name in an English book, though the original is Chinese', () => {
+    expect(speakerOf('“I never lie,” Cheng Shi said.', cast)).toBe('cs');
+    expect(speakerOf('Zhang Jizu squinted. “Again?”', cast)).toBe('zj');
+  });
+
+  it('still finds the original name in the Chinese text, and other names', () => {
+    expect(speakerOf('程实说：“我从不说谎。”', cast)).toBe('cs');
+    expect(speakerOf('“Bow,” said Foolish Play.', cast)).toBe('cs');
+  });
+
+  it('keeps each name once, and drops one-letter Latin names', () => {
+    expect(cast[0].names).toEqual(['Cheng Shi', '程实', 'Foolish Play']);
+    expect(cast[2].names).toEqual([]);
   });
 });

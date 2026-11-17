@@ -131,7 +131,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   tokens). First a name with a speaking verb by the quote ("Chen Chong shouted", "said Song Yawen"), else a name that
   starts a sentence of the narration near the speech ("Cao Sansui frowned. “…”"). Other names (aliases) count; names
   inside the speech, or after "at/to/by…", do not; "he said" gives no face. Every cast member is a possible speaker,
-  and the face shows on every line they speak (it used to show once until someone else spoke).
+  and the face shows on every line they speak (it used to show once until someone else spoke). Every name a person goes by counts, English and original alike (`speakersFrom`, 2026-11-17): before, an English book looked only for the original name, so a cast with Chinese originals (程实 for Cheng Shi) almost never got a face.
 - Pictures (covers, character pictures, sticker photos) are saved as bytes (`src/picture.ts`), not Blobs. Safari on
   iPhone often failed to save a record again once it held a Blob read back from storage ("Error preparing Blob/File data
   to be stored in object store"), so every later change to a book with a cover failed (found 2026-11-12 via the cast
