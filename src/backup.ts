@@ -42,13 +42,15 @@ export async function makeBackup(data: LibraryData, now = Date.now()): Promise<B
   );
   return {
     app: 'yoomiread',
-    version: 3,
+    version: 4,
     exportedAt: now,
     books,
     chapters: data.chapters,
     notes: data.notes,
     sessions: data.sessions,
     glossary,
+    worldLinks: data.worldLinks ?? [],
+    worldEvents: data.worldEvents ?? [],
   };
 }
 
@@ -61,7 +63,7 @@ export function parseBackup(raw: string): LibraryData {
     throw new Error('This file is not a YoomiRead backup (not JSON).');
   }
   const b = data as Partial<Backup>;
-  if (b?.app !== 'yoomiread' || ![1, 2, 3].includes(b.version as number)) {
+  if (b?.app !== 'yoomiread' || ![1, 2, 3, 4].includes(b.version as number)) {
     throw new Error('This file is not a YoomiRead backup.');
   }
   if (!Array.isArray(b.books) || !Array.isArray(b.chapters) || !Array.isArray(b.notes)) {
@@ -83,5 +85,7 @@ export function parseBackup(raw: string): LibraryData {
     glossary: (b.glossary ?? [])
       .filter((g) => bookIds.has(g.bookId))
       .map((g): GlossaryEntry => ({ ...g, picture: g.picture ? dataUrlToPicture(g.picture) : undefined })),
+    worldLinks: (Array.isArray(b.worldLinks) ? b.worldLinks : []).filter((l) => bookIds.has(l.bookId)),
+    worldEvents: (Array.isArray(b.worldEvents) ? b.worldEvents : []).filter((e) => bookIds.has(e.bookId)),
   };
 }

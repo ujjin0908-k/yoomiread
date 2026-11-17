@@ -1,4 +1,5 @@
 import { FOOLISH_GAME_LOOKS, FOOLISH_GAME_STYLE } from './foolish-game-looks';
+import { FOOLISH_GAME_LINKS } from './foolish-game-world';
 import type { Guide } from './types';
 
 /**
@@ -322,4 +323,4 @@ const GUIDE: Guide = {
 };
 
 /** The guide, with each entry's picture description. */
-export const FOOLISH_GAME: Guide = { ...GUIDE, entries: GUIDE.entries.map((e) => ({ ...e, look: e.look ?? FOOLISH_GAME_LOOKS[e.english] })) };
+export const FOOLISH_GAME: Guide = { ...GUIDE, links: FOOLISH_GAME_LINKS, entries: GUIDE.entries.map((e) => ({ ...e, look: e.look ?? FOOLISH_GAME_LOOKS[e.english] })) };

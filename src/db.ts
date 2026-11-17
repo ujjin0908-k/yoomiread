@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { BackupChapter, Book, Chapter, ChapterText, GlossaryEntry, Note, Session, Translation } from './types';
+import type { BackupChapter, Book, Chapter, ChapterText, GlossaryEntry, Note, Session, Translation, WorldEvent, WorldLink } from './types';
 
 export class YoomiDB extends Dexie {
   books!: EntityTable<Book, 'id'>;
@@ -9,6 +9,8 @@ export class YoomiDB extends Dexie {
   sessions!: EntityTable<Session, 'id'>;
   translations!: EntityTable<Translation, 'chapterId'>;
   glossary!: EntityTable<GlossaryEntry, 'id'>;
+  worldLinks!: EntityTable<WorldLink, 'id'>;
+  worldEvents!: EntityTable<WorldEvent, 'id'>;
   /** Device-only settings (the API key lives here). Never exported. */
   settings!: EntityTable<{ key: string; value: unknown }, 'key'>;
 
@@ -44,6 +46,11 @@ export class YoomiDB extends Dexie {
       glossary: 'id, bookId, [bookId+original]',
       settings: 'key',
     });
+    // v5: the Living Book (links between names, and events for the timeline).
+    this.version(5).stores({
+      worldLinks: 'id, bookId',
+      worldEvents: 'id, bookId',
+    });
   }
 
   /** Adds chapters together with their text. */
@@ -67,13 +74,15 @@ export class YoomiDB extends Dexie {
 
   /** Tables that hold a book's own data (settings are not one of them). */
   private bookTables() {
-    return [this.books, this.chapters, this.texts, this.notes, this.sessions, this.translations, this.glossary];
+    return [this.books, this.chapters, this.texts, this.notes, this.sessions, this.translations, this.glossary, this.worldLinks, this.worldEvents];
   }
 
   async deleteBook(bookId: string): Promise<void> {
     await this.transaction('rw', this.bookTables(), async () => {
       await this.translations.where('bookId').equals(bookId).delete();
       await this.glossary.where('bookId').equals(bookId).delete();
+      await this.worldLinks.where('bookId').equals(bookId).delete();
+      await this.worldEvents.where('bookId').equals(bookId).delete();
       await this.notes.where('bookId').equals(bookId).delete();
       await this.texts.where('bookId').equals(bookId).delete();
       await this.chapters.where('bookId').equals(bookId).delete();
@@ -93,7 +102,7 @@ export class YoomiDB extends Dexie {
 
   /** Everything, with each chapter's text and translation put back in (the backup file format). */
   async exportAll(): Promise<LibraryData> {
-    const [books, chapters, texts, translations, notes, sessions, glossary] = await Promise.all([
+    const [books, chapters, texts, translations, notes, sessions, glossary, worldLinks, worldEvents] = await Promise.all([
       this.books.toArray(),
       this.chapters.toArray(),
       this.texts.toArray(),
@@ -101,11 +110,13 @@ export class YoomiDB extends Dexie {
       this.notes.toArray(),
       this.sessions.toArray(),
       this.glossary.toArray(),
+      this.worldLinks.toArray(),
+      this.worldEvents.toArray(),
     ]);
     const textOf = new Map(texts.map((t) => [t.chapterId, t.text]));
     const translationOf = new Map(translations.map(({ chapterId, bookId: _b, ...rest }) => [chapterId, rest]));
     const full: BackupChapter[] = chapters.map((c) => ({ ...c, text: textOf.get(c.id), translation: translationOf.get(c.id) }));
-    return { books, chapters: full, notes, sessions, glossary };
+    return { books, chapters: full, notes, sessions, glossary, worldLinks, worldEvents };
   }
 
   /** Replaces everything, all or nothing. Device settings (the API key) are kept. */
@@ -127,6 +138,8 @@ export class YoomiDB extends Dexie {
       await this.notes.bulkAdd(data.notes);
       await this.sessions.bulkAdd(data.sessions);
       await this.glossary.bulkAdd(data.glossary);
+      await this.worldLinks.bulkAdd(data.worldLinks ?? []);
+      await this.worldEvents.bulkAdd(data.worldEvents ?? []);
     });
   }
 }
@@ -137,6 +150,9 @@ export interface LibraryData {
   notes: Note[];
   sessions: Session[];
   glossary: GlossaryEntry[];
+  /** The Living Book. Optional so older callers and backups still fit. */
+  worldLinks?: WorldLink[];
+  worldEvents?: WorldEvent[];
 }
 
 export const db = new YoomiDB();

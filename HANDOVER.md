@@ -138,6 +138,18 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   scan). Old Blobs are converted at start-up (`storePicturesAsBytes` in `src/db.ts`); one Safari can no longer read is
   dropped so the record works again. Never store a Blob in the database again.
 
+- The Living Book, groundwork (2026-11-17; spec in the vault, "Plan - The Living Book"). Data and rules only, no screens
+  yet. `src/world/`: `readingLine` (furthest chapter read, or the one I am in), `worldAt` (the one place the no-spoiler
+  rule lives: facts, links, events and notes past the line are dropped; my own items always show; guide items with no
+  chapter show only with `Book.worldSpoilers`; a guide link marked `safe` (a setup fact, not a twist) shows once both ends
+  are met; an entry's note, other names and look are hidden without spoilers), `firstSeen` (the chapter each name is first
+  named in, found on the phone with the reader's name rules, one pass per chapter) and `loadWorld(bookId, line?)` (the
+  scan is cached in settings as `world-seen:<bookId>` and redone when names or chapters change). New tables
+  `worldLinks` and `worldEvents` (database v5, backup v4), place nesting `GlossaryEntry.within`. Guides can carry
+  `links`, `events` and `within`; the Foolish Game guide has ~150 links in `src/guides/foolish-game-world.ts`, each one
+  restating a line of the guide. Dev only: `?seed=world` on the dev server adds a 300-chapter test book
+  (`src/dev/seedWorld.ts`, filler text marked "(test)", read to chapter 120). Tests: `src/world/world.test.ts`.
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless
@@ -183,7 +195,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 187 unit tests
+npm test          # 202 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```
