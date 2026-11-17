@@ -8,7 +8,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { OrderToggle, ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
-import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakerOf, type Speaker } from '../logic';
+import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakerOf, speakersFrom, type Speaker } from '../logic';
 import { WordSheet } from './WordSheet';
 import { GlossaryCard, StoryPicture } from './GlossaryCard';
 import { scenesFor } from '../scenes';
@@ -128,7 +128,7 @@ export function ChapterPage({ id }: { id: string }) {
   const highlights = (notes ?? []).filter((n) => n.kind === 'highlight' && (n.on ?? 'original') === view);
   // Everyone in the cast is a possible speaker, so a line by someone without a picture never gets someone else's face.
   const people = (glossary ?? []).filter((g) => g.kind === 'person' && g.status === 'ok');
-  const speakers: Speaker[] = people.map((g) => ({ id: g.id, names: [english ? g.english : g.original, ...(g.aliases ?? [])].filter(Boolean) }));
+  const speakers: Speaker[] = speakersFrom(people);
   // The picture book: a place, god or group with a picture is shown big after the paragraph that first names it.
   const scenes = shown && prefs.storyPictures ? scenesFor(paragraphs(shown).map((x) => x.text), glossary ?? []) : [];
   const faceFor = (paragraph: string) => {

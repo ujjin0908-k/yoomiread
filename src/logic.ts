@@ -309,6 +309,18 @@ const SENTENCE_START = /(^|[.!?:;—–。！？：；”」』"]\s*)$/;
 export type Speaker = { id: string; names: string[] };
 
 /**
+ * The cast as possible speakers, each with every name they go by: English, original and other names. All of them
+ * count whatever the text's language, because an English book still holds the original name in the glossary
+ * (程实 for Cheng Shi); looking only for that one meant English lines never found a speaker.
+ */
+export function speakersFrom(people: { id: string; english: string; original: string; aliases?: string[] }[]): Speaker[] {
+  return people.map((g) => ({
+    id: g.id,
+    names: [...new Set([g.english, g.original, ...(g.aliases ?? [])].map((n) => n?.trim() ?? ''))].filter((n) => n.length > 1 || /[^\x00-\x7f]/.test(n)),
+  }));
+}
+
+/**
  * Who is speaking in a paragraph, worked out on this phone (nothing is sent anywhere). In order:
  * 1. a name with a speaking verb by a quotation mark ("Pu Yu said, “…”", "“…” said Pu Yu", 普宇说：“…”);
  * 2. otherwise, a name starting a sentence of the narration near the speech ("Chen Chong frowned. “Retreat!”"),
