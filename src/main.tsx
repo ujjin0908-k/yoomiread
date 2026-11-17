@@ -9,6 +9,7 @@ import './loud.css';
 initMotion();
 // Old pictures become bytes, so Safari can keep saving books that have a cover.
 void import('./db').then(({ storePicturesAsBytes }) => storePicturesAsBytes()).catch((e) => console.warn('Pictures were not converted:', e));
+void import('./backdrop').then(({ movePhoneBackdropToBook }) => movePhoneBackdropToBook()).catch((e) => console.warn('The background was not moved:', e));
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -2701,3 +2701,13 @@ html[data-reader='night'] { background: #161614; }
   margin: 0 0 8px auto;
   display: block;
 }
+.backdrop-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line, rgb(0 0 0 / 0.08));
+}
+.backdrop-title {
+  font-weight: 600;
+}

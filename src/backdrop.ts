@@ -1,27 +1,34 @@
 import { db } from './db';
-import { useLive } from './hooks';
 import type { Picture } from './picture';
 
 /**
- * A picture of the owner's own behind the pages while reading. The page colour lies over it, by `cover`
- * (0.5 shows the picture strongly, 0.95 is barely there), so the text stays easy to read.
- * Kept on this phone only, like the stickers: not part of a backup.
+ * A picture of the owner's own behind one book's pages while reading. The page colour lies over it, by `cover`
+ * (0.5 shows the picture strongly, 0.95 is barely there), so the text stays easy to read. Saved on the book, so each
+ * book can have its own; it goes into backups like the cover.
  */
 export interface Backdrop {
   picture: Picture;
   cover: number;
 }
 
-const KEY = 'readerBackdrop';
 export const DEFAULT_COVER = 0.8;
 
-export async function saveBackdrop(value: Backdrop | undefined): Promise<void> {
-  if (value) await db.settings.put({ key: KEY, value });
-  else await db.settings.delete(KEY);
+export async function saveBookBackdrop(bookId: string, value: Backdrop | undefined): Promise<void> {
+  await db.books.update(bookId, { backdrop: value });
 }
 
-export function useBackdrop(): Backdrop | undefined {
-  return useLive(async () => ((await db.settings.get(KEY))?.value as Backdrop | undefined) ?? null, [], 'backdrop') ?? undefined;
+/**
+ * Backgrounds used to be one for the whole phone (settings key "readerBackdrop", 2026-11-15). The owner set it for the
+ * book they were reading, so it moves to the book read most recently, unless that book has one, and the old one goes.
+ */
+export async function movePhoneBackdropToBook(target = db): Promise<string | undefined> {
+  const old = (await target.settings.get('readerBackdrop'))?.value as Backdrop | undefined;
+  if (!old) return undefined;
+  const books = await target.books.toArray();
+  const latest = books.sort((a, b) => (b.lastReadAt ?? 0) - (a.lastReadAt ?? 0))[0];
+  if (latest && !latest.backdrop) await target.books.update(latest.id, { backdrop: old });
+  await target.settings.delete('readerBackdrop');
+  return latest?.id;
 }
 
 /** Mixes two colours: `a` with `share` of `b` (0 gives a, 1 gives b). Both as #rrggbb; also takes [r, g, b]. */
