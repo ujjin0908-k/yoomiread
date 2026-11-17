@@ -31,7 +31,11 @@ async function pictureToDataUrl(picture: Picture | Blob | undefined): Promise<st
 
 export async function makeBackup(data: LibraryData, now = Date.now()): Promise<Backup> {
   const books = await Promise.all(
-    data.books.map(async (b) => ({ ...b, cover: await pictureToDataUrl(b.cover) })),
+    data.books.map(async (b) => ({
+      ...b,
+      cover: await pictureToDataUrl(b.cover),
+      backdrop: b.backdrop ? { cover: b.backdrop.cover, picture: await pictureToDataUrl(b.backdrop.picture) } : undefined,
+    })),
   );
   const glossary = await Promise.all(
     data.glossary.map(async (g) => ({ ...g, picture: await pictureToDataUrl(g.picture) })),
@@ -68,7 +72,11 @@ export function parseBackup(raw: string): LibraryData {
     throw new Error('The backup has chapters or notes for a book that is not in it.');
   }
   return {
-    books: b.books.map((x) => ({ ...x, cover: x.cover ? dataUrlToPicture(x.cover) : undefined })),
+    books: b.books.map((x) => ({
+      ...x,
+      cover: x.cover ? dataUrlToPicture(x.cover) : undefined,
+      backdrop: x.backdrop?.picture ? { cover: x.backdrop.cover, picture: dataUrlToPicture(x.backdrop.picture) } : undefined,
+    })),
     chapters: b.chapters,
     notes: b.notes,
     sessions: (b.sessions ?? []).filter((s) => bookIds.has(s.bookId)),

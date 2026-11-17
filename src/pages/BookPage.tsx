@@ -1,3 +1,4 @@
+import { BackdropPicker } from './BackdropPicker';
 import { inOrder, useChapterOrder } from '../chapterOrder';
 import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, PenLine, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -606,6 +607,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
         }}
       >
         {justImported && <p className="muted small">The title was taken from the file. Fix it now if it has a strange name.</p>}
+        {!justImported && <BackdropPicker book={book} />}
         <label>
           Title
           <input autoFocus={justImported && !hasChinese} required value={title} onChange={(e) => setTitle(e.target.value)} />

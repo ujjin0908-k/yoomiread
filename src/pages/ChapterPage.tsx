@@ -1,5 +1,6 @@
 import { inOrder, useChapterOrder } from '../chapterOrder';
-import { mix, topColour, useBackdrop } from '../backdrop';
+import { mix, topColour } from '../backdrop';
+import { BackdropPicker } from './BackdropPicker';
 import { pictureBlob, usePictureUrl } from '../picture';
 import { AlertTriangle, BookOpen, Bookmark, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, PenLine, Trash2, Type } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
@@ -69,11 +70,11 @@ export function ChapterPage({ id }: { id: string }) {
   useReadingSession(chapter, book);
   const aheadStatus = useTranslateAhead(chapter, book);
   useScrollMemory(chapter, text !== undefined && translation !== undefined, setScroll);
-  const backdrop = useBackdrop();
+  const backdrop = book?.backdrop;
   const [order, setOrder] = useChapterOrder(chapter?.bookId);
   // Scrolls the chapter being read into view when the chapter list opens (a stable function, so only once).
   const showCurrent = useCallback((el: HTMLElement | null) => el?.scrollIntoView({ block: 'center' }), []);
-  const backdropUrl = usePictureUrl(backdrop?.picture, 'backdrop');
+  const backdropUrl = usePictureUrl(backdrop?.picture, `backdrop-${book?.id}`);
   const [barsAway, setBarsAway] = useState(false);
   useAutoHideBars(setBarsAway);
   const zhNow = book?.language === 'zh';
@@ -379,7 +380,7 @@ export function ChapterPage({ id }: { id: string }) {
       )}
       {lookup && <WordSheet word={lookup.word} lang={lookup.lang} bookId={chapter.bookId} onClose={() => setLookup(undefined)} />}
       {book && <Mascot book={book} chapter={chapter} chapters={siblings ?? []} away={barsAway} />}
-      {sheet === 'look' && <LookSheet prefs={prefs} setPrefs={setPrefs} onClose={() => setSheet(undefined)} />}
+      {sheet === 'look' && <LookSheet book={book} prefs={prefs} setPrefs={setPrefs} onClose={() => setSheet(undefined)} />}
       {sheet === 'chapters' && (
         <Sheet title="Chapters" onClose={() => setSheet(undefined)}>
           {list.length > 1 && <OrderToggle order={order} onChange={setOrder} />}
@@ -581,7 +582,7 @@ function CommentBox({ chapter }: { chapter: Chapter }) {
   );
 }
 
-function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs: (c: Partial<ReaderPrefs>) => void; onClose: () => void }) {
+function LookSheet({ book, prefs, setPrefs, onClose }: { book?: Book; prefs: ReaderPrefs; setPrefs: (c: Partial<ReaderPrefs>) => void; onClose: () => void }) {
   return (
     <Sheet title="Reading" onClose={onClose}>
       <div className="look">
@@ -670,6 +671,7 @@ function LookSheet({ prefs, setPrefs, onClose }: { prefs: ReaderPrefs; setPrefs:
             onChange={(e) => setPrefs({ storyPictures: e.target.checked })}
           />
         </label>
+        {book && <BackdropPicker book={book} />}
       </div>
     </Sheet>
   );

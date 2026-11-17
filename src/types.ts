@@ -19,6 +19,8 @@ export interface Book {
   id: string;
   /** The cast has been searched for new characters up to and including this chapter number. */
   /** The story has been searched for new people, places, gods, groups and terms up to and including this chapter number. */
+  /** A picture of the owner's own behind this book's pages while reading (see src/backdrop.ts). */
+  backdrop?: { picture: Picture; cover: number };
   /** The art style added to every picture prompt for this book (a book guide can set it). */
   artStyle?: string;
   worldUpTo?: number;
@@ -202,7 +204,7 @@ export interface Backup {
   app: 'yoomiread';
   version: 1 | 2 | 3;
   exportedAt: number;
-  books: (Omit<Book, 'cover'> & { cover?: string })[];
+  books: (Omit<Book, 'cover' | 'backdrop'> & { cover?: string; backdrop?: { cover: number; picture?: string } })[];
   chapters: BackupChapter[];
   notes: Note[];
   sessions?: Session[];

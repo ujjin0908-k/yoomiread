@@ -87,9 +87,12 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   Zayinjier, Lao Jia, Li Wufang, Chun, Meng Youfang, An Jing…), six more heralds, new facts on existing people, and a
   picture description for every person (imagined from role, path and class: the sources barely describe looks).
   Character cards show "How it looks" with Copy picture prompt (portrait format for people).
-- Reading background (2026-11-15): Settings → "Reading background" puts the owner's own picture behind the reader
-  (`src/backdrop.ts`, settings key `readerBackdrop`), under the reader theme's page colour at "Picture strength", so
-  text stays readable in every theme. Kept on the phone only, not in backups (like stickers). The iPhone status bar is painted by iOS in the theme colour, so with a background the reader sets that colour from the top of the picture (`topColour`, `mix`) to blend in.
+- Reading background (2026-11-15; per book since 2026-11-17): each book can have its own picture behind the reader
+  (`Book.backdrop`, `src/backdrop.ts`, `BackdropPicker` in the book's Edit details and the reader's T settings), under the
+  theme's page colour at "Picture strength". In backups like the cover. The first phone-wide version (settings key
+  `readerBackdrop`) is moved once, at start-up, to the most recently read book (`movePhoneBackdropToBook`). The iPhone
+  status bar is painted by iOS in the theme colour, so with a background the reader sets that colour from the top of
+  the picture (`topColour`, `mix`).
 - Picture book (2026-11-15, owner's ask). Places, gods, groups and terms (paths, items) can have a picture (saved up to 1600 px) and a
   "How it looks" description (`GlossaryEntry.look`). "Copy picture prompt" (entry editor and glossary card) copies
   what it is + the description + the book's art style (`Book.artStyle`, set by a guide; `src/art.ts`) + wide format, to
@@ -180,7 +183,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
 
 ```
 npm install
-npm test          # 182 unit tests
+npm test          # 187 unit tests
 npm run build     # typecheck, then build into dist/
 npm run dev       # local dev server
 ```
