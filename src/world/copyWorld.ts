@@ -22,7 +22,10 @@ const plainTitle = (t: string) => squash(t).replace(/^the\s+/, '');
 export function sameNovel(a: Pick<Book, 'title' | 'originalTitle'>, b: Pick<Book, 'title' | 'originalTitle'>): boolean {
   const names = (x: Pick<Book, 'title' | 'originalTitle'>) => [x.title, x.originalTitle ?? ''].map(plainTitle).filter(Boolean);
   const mine = names(a);
-  return names(b).some((n) => mine.includes(n));
+  if (names(b).some((n) => mine.includes(n))) return true;
+  // Two titles the same built-in guide knows ("The Fool of the Gods" and "诸神愚戏") are the same novel too.
+  const guideA = guideFor(a as Book);
+  return !!guideA && guideA === guideFor(b as Book);
 }
 
 /** Other books in the library that are the same novel and have a world to give (a glossary). */

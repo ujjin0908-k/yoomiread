@@ -56,7 +56,11 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const twin = useLive(async () => {
     const b = await db.books.get(id);
     if (!b || b.worldFrom) return null;
-    return (await worldSources(b)).find((s) => sameNovel(b, s.book)) ?? null;
+    const list = await worldSources(b);
+    const same = list.find((s) => sameNovel(b, s.book));
+    // No same novel found by title: still offer a copy from another book while this one has (almost) no glossary.
+    if (same) return { ...same, same: true };
+    return list.length && (await db.glossary.where('bookId').equals(id).count()) < 5 ? { ...list[0], same: false } : null;
   }, [id]);
   const [coverBusy, setCoverBusy] = useState(false);
   const [coverError, setCoverError] = useState('');
@@ -262,10 +266,11 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
         {twin && (
           <section className="card copy-world-card">
             <p className="small">
-              The same novel is already here: <b>{twin.book.title}</b> has {twin.names} names, with its places, links and events.
+              {twin.same ? 'The same novel is already here: ' : 'Is this the same story as another book? '}
+              <b>{twin.book.title}</b> has {twin.names} names, with its places, links and events.
             </p>
             <button type="button" className="btn wide" onClick={() => setCopyingWorld(true)}>
-              Copy the world from {twin.book.title}
+              {twin.same ? `Copy the world from ${twin.book.title}` : 'Copy the world from another book'}
             </button>
           </section>
         )}

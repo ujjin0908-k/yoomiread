@@ -9,7 +9,7 @@ export type { Guide, GuideEntry, GuideEvent, GuideLink } from './types';
 /** Guides that come with the app, by book. Loaded only when asked for, so the app stays small. */
 const BUILT_IN: { titles: string[]; load: () => Promise<Guide> }[] = [
   {
-    titles: ['foolish game of the gods', 'the foolish game of gods', 'foolish game of gods', "gods' foolish play", '诸神愚戏', '諸神愚戲', 'zhu shen yu xi'],
+    titles: ['foolish game of the gods', 'the foolish game of gods', 'foolish game of gods', "gods' foolish play", '诸神愚戏', '諸神愚戲', 'zhu shen yu xi', 'the fool of the gods', 'fool of the gods', 'the foolish play of the gods', 'foolish play of the gods'],
     load: async () => (await import('./foolish-game')).FOOLISH_GAME,
   },
 ];
