@@ -5,12 +5,21 @@ import { chapterNumber } from './web';
  * the chapter before it, so a list that starts at chapter 521 keeps counting from 521.
  */
 export function guessNumbers(titles: string[]): number[] {
+  // "521: Title", as WebToEpub writes WTR-LAB chapters, counts too.
+  const lead = (t: string) => {
+    const m = /^\s*(\d{1,5})\s*[:.\-–—)]\s*\S/.exec(t);
+    return m ? Number(m[1]) : undefined;
+  };
+  const written = titles.map((t) => chapterNumber(t) ?? lead(t));
   const out: number[] = [];
   let prev = 0;
-  for (const t of titles) {
-    // "521: Title", as WebToEpub writes WTR-LAB chapters, counts too.
-    const lead = /^\s*(\d{1,5})\s*[:.\-–—)]\s*\S/.exec(t);
-    const n = chapterNumber(t) ?? (lead ? Number(lead[1]) : prev + 1);
+  for (let i = 0; i < titles.length; i++) {
+    let n = written[i];
+    if (n === undefined) {
+      // A bonus chapter between 1080 and 1081 cannot take 1081: it gets 1080.1 (then 1080.2…).
+      const next = written.slice(i + 1).find((x) => x !== undefined);
+      n = next === undefined || next > prev + 1 ? prev + 1 : Math.round((prev + 0.1) * 10) / 10;
+    }
     out.push(n);
     prev = n;
   }
@@ -45,4 +54,14 @@ export function rangeLabel(numbers: number[]): string {
   const lo = Math.min(...numbers);
   const hi = Math.max(...numbers);
   return lo === hi ? `chapter ${lo}` : `chapters ${lo} to ${hi}`;
+}
+
+/**
+ * Chapter numbers for a new book: the numbers in the titles ("第521章", "Chapter 12") when they run in order, so a
+ * book that starts at chapter 521 keeps its numbers; otherwise 1, 2, 3… as before.
+ */
+export function numbersFor(titles: string[]): number[] {
+  const guessed = guessNumbers(titles);
+  const rising = guessed.every((n, i) => i === 0 || n > guessed[i - 1]);
+  return rising ? guessed : titles.map((_, i) => i + 1);
 }

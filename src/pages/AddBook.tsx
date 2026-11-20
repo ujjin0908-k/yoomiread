@@ -10,7 +10,9 @@ import type { DraftChapter } from '../import/chapters';
 import { toPicture } from '../picture';
 import { lookUpNovel } from '../import/cover';
 import { extractChapter, extractChapterLinks, fetchPage, scriptOnlyReason } from '../import/web';
+import { numbersFor } from '../import/range';
 import { webLink } from '../sources';
+import { sameNovel } from '../world/copyWorld';
 import type { Book, BookLanguage, Shelf } from '../types';
 
 export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose: () => void }) {
@@ -47,17 +49,24 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
       shelf === 'finished' ? 'reading' : shelf,
       now,
     );
+    // Empty pages (a volume title on its own) are left out when there is real text.
+    const drafts = result.chapters.some((c) => c.text.trim()) ? result.chapters.filter((c) => c.text.trim()) : result.chapters;
+    const numbers = numbersFor(drafts.map((c) => c.title));
+    // The same novel already in the library (an English edition, say): its world can be copied over first, so the
+    // first chapters are not translated before the glossary is there.
+    const others = (await db.books.toArray()) as Book[];
+    const twin = others.some((b) => sameNovel(b, book));
     await db.transaction('rw', db.books, db.chapters, db.texts, async () => {
       await db.books.add(book);
       await db.addChapters(
-        result.chapters.map((c, i) => ({
-          chapter: { id: newId(), bookId: book.id, number: i + 1, title: c.title, url: c.url, read: false, createdAt: now },
+        drafts.map((c, i) => ({
+          chapter: { id: newId(), bookId: book.id, number: numbers[i], title: c.title, url: c.url, read: false, createdAt: now },
           text: c.text,
         })),
       );
     });
     // Not awaited: the first chapters are translated in the background while the book page opens.
-    void translateFirstChapters(book.id);
+    if (!twin) void translateFirstChapters(book.id);
     onClose();
     go(`book/${book.id}/${after ?? (result.scanned ? 'scanned' : 'imported')}`);
   }

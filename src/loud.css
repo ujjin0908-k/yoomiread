@@ -2226,3 +2226,13 @@ body[data-reader='night'] {
   font-weight: 700;
   color: #6b4bd8;
 }
+
+/* "Copy the world" offer on a book that is the same novel as another one in the library. */
+.copy-world-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+.copy-world-card p {
+  margin: 0;
+}

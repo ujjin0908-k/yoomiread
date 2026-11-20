@@ -31,6 +31,17 @@ export interface Book {
   worldSpoilers?: boolean;
   /** The style for this book's translations (optional). */
   style?: BookStyle;
+  /** The book its cast, world and style were copied from ("Copy the world", src/world/copyWorld.ts). */
+  worldFrom?: string;
+  /**
+   * Copied with the world: the chapter each name was first seen in, in the book it came from (glossary id → chapter).
+   * A book that starts at chapter 521 then still knows who was met before.
+   */
+  seenBefore?: Record<string, number>;
+  /** The reading line this book starts from: a copy that begins at chapter 521 counts 1 to 520 as read. */
+  startLine?: number;
+  /** The story before this book's first chapter, used as "the story so far" until a translated chapter has its own. */
+  storySoFar?: string;
   title: string;
   author: string;
   originalTitle?: string;

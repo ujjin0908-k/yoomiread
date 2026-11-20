@@ -223,6 +223,13 @@ export const FOOLISH_GAME_LOOKS: Record<string, string> = {
   'Li Zhi': 'A Priest of Truth with a gentle face, white robes marked with experiment tags, a book of light. White, blue.',
   'Fang Yuan': 'A Mage of Order and founder of the Order Alliance, a formal white coat, a staff topped with a golden torch. White, gold.',
   'Ji Ran': 'A Warrior of Fate with a star-marked blade and a calm, doomed look. Indigo, silver.',
+  // Added 2026-11-20 with the names from the Chinese text (imagined from role; the text barely describes looks).
+  Peraya: 'A tall woman scholar in layered grey-and-gold robes of the Tower of Logic, hair pinned with brass instruments, cool appraising eyes, glass vials and diagrams floating around her. Cold blue light, brass, parchment.',
+  'Sun Miao': 'A quiet young woman in dark travelling clothes who speaks by typing on a cracked glowing screen, her mouth pressed shut, a faint brand of Decay at her lips. Muted greens, screen glow.',
+  Ais: 'A watchful young player in a hooded coat, light on her feet, a lantern at her belt, half her face in shadow in a stone corridor. Amber lantern light, deep shadow.',
+  'Old Gallon': 'A weathered old man in patched robes kneeling at a broken teleportation circle, scooping yellow earth into its cracks, fear and hope in his tired eyes. Dusty ochre, faded runes.',
+  'Dragon King': 'A broad, swaggering player in heavy scaled armour with a dragon-crest helm under his arm, a scar across his grin, ruins behind him. Bronze, storm grey.',
+  'Dagger of the Stars': 'A vast sealed laboratory in the Tower of Logic shaped like a star-forged blade driven into the earth, its doors carved with constellations, a captive sun burning inside. Starlight, white-gold, black stone.',
 };
 
 /** The art style added to every picture prompt for this book. */

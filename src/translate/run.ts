@@ -153,7 +153,7 @@ async function runChapter(chapter: Chapter, options: ChapterOptions): Promise<Ch
     chapterTitle: chapter.title,
     text: text.text,
     glossary,
-    previousSummary,
+    previousSummary: previousSummary ?? book?.storySoFar,
     style: book?.style,
   });
   const result = await chat(options.settings, options.model, messages, options.onText, options.signal);
