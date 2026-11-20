@@ -2236,3 +2236,43 @@ body[data-reader='night'] {
 .copy-world-card p {
   margin: 0;
 }
+
+/* "Check the original": the English line and the Chinese it came from. */
+.fix-line .fix-en,
+.fix-line .fix-zh {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  line-height: 1.55;
+}
+.fix-line .fix-zh {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.05rem;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.fix-line mark {
+  background: color-mix(in srgb, var(--accent, #e8432a) 28%, transparent);
+  color: inherit;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+/* Three buttons in the selection bar (Highlight, Original, Look up) must fit an iPhone's width. */
+.selection-bar:has(> .pill-btn:nth-of-type(3)) {
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+}
+.selection-bar:has(> .pill-btn:nth-of-type(3)) .pill-btn.small {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 10px;
+  font-size: 0.85rem;
+  justify-content: center;
+}
+.selection-bar:has(> .pill-btn:nth-of-type(3)) .pill-btn.small svg {
+  display: none;
+}

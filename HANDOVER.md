@@ -247,6 +247,14 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
     names common after 521 (Peraya 裴拉娅, Sun Miao 孙缈, Ais 艾思, Old Gallon 老加仑, Dragon King 龙王, Dagger of the
     Stars 群星匕首). Left without Chinese on purpose: names that are also common words (An Jing 安静, Ji Ran 既然) and
     early characters that do not appear after 520.
+- **Check the original (2026-11-20, owner's ask: "Granny's—" in a translation was 姥姥的, Da Yi's catchphrase):** in a
+  translated chapter, select English words; the bar shows "Original" (`src/pages/FixLine.tsx`, logic
+  `src/translate/fixLine.ts`). It shows the English paragraph and the Chinese one it came from (same paragraph number;
+  a best guess when the counts differ). "Find the Chinese" asks the model which words became the selection, what they
+  mean and a better English (one small call, added to the book's spend; the Chinese must be in the paragraph or it is
+  not trusted), or "Use my selection" takes Chinese selected by hand, for free. "Save the fix" changes those words in
+  this chapter's saved translation and adds a locked glossary entry (or updates the one with the same Chinese), so later
+  chapters follow it. The guide now has 姥姥的 too.
 - **Fanqie:** declined as a link source. It publishes original novels, so the reason is not licensing: a link reader
   would copy the text in bulk, and the site's terms likely restrict that. Use paste or file import for chapters you read there.
 - **Highlights:** a highlight shows only in the language it was made in (original or English).
