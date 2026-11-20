@@ -1574,6 +1574,31 @@ body[data-reader='night'] {
   opacity: 0.55;
   cursor: default;
 }
+/* "From … to … · Tick these": choose a run of chapters without tapping each one. */
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.range-row input {
+  width: 6.5em;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.file-pick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.file-pick input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
 .batch-stray {
   gap: 12px;
   align-items: flex-start;

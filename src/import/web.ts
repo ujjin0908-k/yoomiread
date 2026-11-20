@@ -203,3 +203,20 @@ export function findContentsChapter(
     return links.filter((l) => text.includes(squash(l.title))).length >= need;
   })?.id;
 }
+
+/**
+ * Sites whose chapter text is loaded by the site's own scripts behind a bot check, so the page reader never gets it.
+ * Returns what to tell the reader instead of "no story text", or nothing for other sites.
+ */
+export function scriptOnlyReason(url: string): string | undefined {
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return undefined;
+  }
+  if (host === 'wtr-lab.com' || host.endsWith('.wtr-lab.com')) {
+    return "WTR-LAB loads its chapter text behind a bot check, so YoomiRead can't read it from a link. Save the chapters as an ePub on your own device, then use \"From a file\" on the book's page to add them, with a range like 521 to 1488.";
+  }
+  return undefined;
+}
