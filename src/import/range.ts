@@ -8,7 +8,9 @@ export function guessNumbers(titles: string[]): number[] {
   const out: number[] = [];
   let prev = 0;
   for (const t of titles) {
-    const n = chapterNumber(t) ?? prev + 1;
+    // "521: Title", as WebToEpub writes WTR-LAB chapters, counts too.
+    const lead = /^\s*(\d{1,5})\s*[:.\-–—)]\s*\S/.exec(t);
+    const n = chapterNumber(t) ?? (lead ? Number(lead[1]) : prev + 1);
     out.push(n);
     prev = n;
   }

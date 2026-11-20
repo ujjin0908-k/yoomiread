@@ -6,6 +6,9 @@ describe('guessNumbers', () => {
   it('reads numbers from titles and counts on for titles without one', () => {
     expect(guessNumbers(['Chapter 521: Fate', 'Side story', '第523章 命运', 'Ch. 524'])).toEqual([521, 522, 523, 524]);
   });
+  it('reads a number at the start of a title', () => {
+    expect(guessNumbers(['520: The eldest prince and the old gal', '521: No one can always be favored by [Fate]...', '1488: Character Side Story: Survivors'])).toEqual([520, 521, 1488]);
+  });
   it('starts at 1 when the first titles have no number', () => {
     expect(guessNumbers(['Prologue', 'The start'])).toEqual([1, 2]);
   });
