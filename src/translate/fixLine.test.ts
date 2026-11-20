@@ -48,7 +48,7 @@ describe('saveFix', () => {
   });
 
   it('changes the chapter and adds a locked glossary entry, or updates the one with the same Chinese', async () => {
-    await db.translations.add({ chapterId: 'c', bookId: 'b', text: 'He said "Granny\'s—" again.', model: 'm' });
+    await db.translations.add({ chapterId: 'c', bookId: 'b', text: 'He said "Granny\'s—" again.', model: 'm', createdAt: 1 });
     await saveFix({ chapterId: 'c', bookId: 'b', start: 9, end: 17, replacement: 'Damn', entry: { original: '姥姥的', english: 'Damn', note: 'a curse', kind: 'term' } });
     expect((await db.translations.get('c'))?.text).toBe('He said "Damn—" again.');
     const [g] = await db.glossary.toArray();
