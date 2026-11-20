@@ -17,7 +17,7 @@ const term = (english: string, original: string, aliases: string[], note: string
 const GUIDE: Guide = {
   book: 'Foolish Game of the Gods',
   style: FOOLISH_GAME_STYLE,
-  titles: ['foolish game of the gods', 'the foolish game of gods', 'foolish game of gods', "gods' foolish play", '诸神愚戏', '諸神愚戲', 'zhu shen yu xi'],
+  titles: ['foolish game of the gods', 'the foolish game of gods', 'foolish game of gods', "gods' foolish play", '诸神愚戏', '諸神愚戲', 'zhu shen yu xi', 'the fool of the gods', 'fool of the gods', 'the foolish play of the gods', 'foolish play of the gods'],
   // Corrections to what an earlier version of this guide added (2026-11-14): the Nature Cult was filed under the
   // Natural Alliance. Applied before filling in, so filling in again gives each its own entry.
   fixes: [{ english: 'Natural Alliance', kind: 'group', original: '自然联盟', removeAliases: ['Nature Sect', 'Naturalist Sect'] }],

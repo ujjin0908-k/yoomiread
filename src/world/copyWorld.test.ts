@@ -27,6 +27,8 @@ describe('copying a world', () => {
     expect(sameNovel({ title: 'Foolish Game of the Gods', originalTitle: '诸神愚戏' }, { title: '诸神愚戏' })).toBe(true);
     expect(sameNovel({ title: 'The Foolish Game of the Gods' }, { title: 'foolish game of the gods' })).toBe(true);
     expect(sameNovel({ title: 'Foolish Game of the Gods' }, { title: 'Another Book' })).toBe(false);
+    // Different titles, one novel: the built-in guide knows both.
+    expect(sameNovel({ title: 'The Fool Of The Gods' }, { title: '诸神愚戏' })).toBe(true);
   });
 
   it('gives English-only names their Chinese from the guide and keeps Chinese nicknames', () => {
