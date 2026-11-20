@@ -21,6 +21,13 @@ function fingerprint(entries: GlossaryEntry[], chapters: { id: string; number: n
 }
 
 export async function loadFirstSeen(bookId: string): Promise<Map<string, number>> {
+  const [found, book] = await Promise.all([scanFirstSeen(bookId), db.books.get(bookId)]);
+  // A copied world remembers who was met in the book it came from, before this book's first chapter.
+  for (const [id, n] of Object.entries(book?.seenBefore ?? {})) if (!found.has(id) || n < found.get(id)!) found.set(id, n);
+  return found;
+}
+
+async function scanFirstSeen(bookId: string): Promise<Map<string, number>> {
   const [entries, chapters] = await Promise.all([
     db.glossary.where('bookId').equals(bookId).toArray(),
     db.chapters.where('bookId').equals(bookId).toArray(),

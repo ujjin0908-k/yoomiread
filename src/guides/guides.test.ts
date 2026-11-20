@@ -78,7 +78,7 @@ describe('book guides', () => {
     await applyGuide('b', FOOLISH_GAME);
     const groups = (await db.glossary.toArray()).filter((g) => g.kind === 'group');
     expect(groups.filter((g) => g.english === 'Natural Alliance')).toHaveLength(1);
-    expect((await db.glossary.get('na'))?.original).toBe('Natural Alliance');
+    expect((await db.glossary.get('na'))?.original).toBe('自然联盟');
     expect(groups.find((g) => g.english === 'Nature Cult')?.original).toBe('自然教派');
     expect(groups.some((g) => g.english === 'Logic Association')).toBe(true);
   });

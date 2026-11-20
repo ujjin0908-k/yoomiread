@@ -8,6 +8,8 @@ import { toPicture } from '../picture';
 import { coverFromLink } from '../import/cover';
 import { ChapterLinks } from './ChapterLinks';
 import { ChapterFile } from './ChapterFile';
+import { CopyWorld } from './CopyWorld';
+import { sameNovel, worldSources } from '../world/copyWorld';
 import { celebrate } from '../motion';
 import { useImportJob } from '../translate/onImport';
 import { db } from '../db';
@@ -49,6 +51,13 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const [addingChapter, setAddingChapter] = useState(false);
   const [addingMany, setAddingMany] = useState(false);
   const [addingFile, setAddingFile] = useState(false);
+  const [copyingWorld, setCopyingWorld] = useState(false);
+  // Another book with a world to copy (the same novel first), offered until a world has been copied in.
+  const twin = useLive(async () => {
+    const b = await db.books.get(id);
+    if (!b || b.worldFrom) return null;
+    return (await worldSources(b)).find((s) => sameNovel(b, s.book)) ?? null;
+  }, [id]);
   const [coverBusy, setCoverBusy] = useState(false);
   const [coverError, setCoverError] = useState('');
   const [editingReview, setEditingReview] = useState(false);
@@ -250,6 +259,17 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
           ))}
         </div>
 
+        {twin && (
+          <section className="card copy-world-card">
+            <p className="small">
+              The same novel is already here: <b>{twin.book.title}</b> has {twin.names} names, with its places, links and events.
+            </p>
+            <button type="button" className="btn wide" onClick={() => setCopyingWorld(true)}>
+              Copy the world from {twin.book.title}
+            </button>
+          </section>
+        )}
+
         <div className="tool-row">
           <button type="button" className="tool" onClick={() => go(`glossary/${id}`)}>
             <BookMarked size={18} />
@@ -378,6 +398,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
           }}
         />
       )}
+      {copyingWorld && <CopyWorld book={book} onClose={() => setCopyingWorld(false)} />}
       {addingFile && <ChapterFile book={book} chapters={list} onClose={() => setAddingFile(false)} />}
       {addingChapter && (
         <AddChapter bookId={id} next={nextChapterNumber(list)} onClose={() => setAddingChapter(false)} />
@@ -571,6 +592,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
   const [honorifics, setHonorifics] = useState<BookStyle['honorifics'] | ''>(book.style?.honorifics ?? '');
   const [styleNotes, setStyleNotes] = useState(book.style?.notes ?? '');
   const [styleSample, setStyleSample] = useState(book.style?.sample ?? '');
+  const [storySoFar, setStorySoFar] = useState(book.storySoFar ?? '');
   const [naming, setNaming] = useState('');
   const hasChinese = /[\u3400-\u9fff]/.test(title);
 
@@ -604,6 +626,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
       novelUpdatesUrl: webLink(novelUpdates),
       sources: parseSources(sources),
       style: styleFrom({ tone, honorifics, notes: styleNotes, sample: styleSample }),
+      storySoFar: storySoFar.trim() || undefined,
       updatedAt: Date.now(),
     });
     onClose();
@@ -681,6 +704,10 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
           <label>
             Style sample <span className="muted small">(optional: one or two paragraphs of English you like; stays on this phone)</span>
             <textarea rows={4} value={styleSample} onChange={(e) => setStyleSample(e.target.value)} />
+          </label>
+          <label>
+            The story so far <span className="muted small">(optional: before this book's first chapter, for a book that carries on from another)</span>
+            <textarea rows={3} value={storySoFar} onChange={(e) => setStorySoFar(e.target.value)} />
           </label>
         </fieldset>
         <div className="row between">

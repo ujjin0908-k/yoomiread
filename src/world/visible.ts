@@ -13,8 +13,9 @@ import type { Book, Chapter, GlossaryEntry, Note, ProfileFact, WorldEvent, World
  * Every screen of the world reads through `worldAt`, so this file is the only place the rule lives.
  */
 
-export function readingLine(book: Pick<Book, 'lastChapterId'>, chapters: Chapter[]): number {
-  let line = 0;
+export function readingLine(book: Pick<Book, 'lastChapterId' | 'startLine'>, chapters: Chapter[]): number {
+  // A book that carries on from another (copied world, starting at chapter 521) counts what came before as read.
+  let line = book.startLine ?? 0;
   for (const c of chapters) if (isRead(c) && c.number > line) line = c.number;
   const current = chapters.find((c) => c.id === book.lastChapterId);
   if (current && current.number > line) line = current.number;

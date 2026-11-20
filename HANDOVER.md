@@ -224,6 +224,29 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   - "Many from a link" has the same "From … to … · Tick these" row, so a long contents page needs no tapping one by one.
   - WTR-LAB: a link now says why it cannot be read and points to "From a file" (`scriptOnlyReason` in `src/import/web.ts`);
     "Many from a link" refuses it up front so a batch of hundreds of failing reads never starts.
+- **Copy the world (2026-11-20, owner's ask):** a second copy of a novel (the Chinese original next to the English
+  edition) takes over the first one's whole world without touching it. The owner reads Foolish Game in English to 520
+  (PDF) and carries on from 521 in Chinese with the app's translator.
+  - Importing an ePub or PDF now numbers chapters from their titles when they run in order (`numbersFor` in
+    `src/import/range.ts`): a book starting "第521章" starts at 521. Empty pages (a volume title alone) are left out.
+    When the same novel is already in the library (`sameNovel`: a title or original title in common), the first
+    chapters are not auto-translated, so nothing is translated before the glossary is copied.
+  - The book page then offers "Copy the world from …" (`src/pages/CopyWorld.tsx`, logic `src/world/copyWorld.ts`):
+    glossary entries with profiles, pictures, looks and places nested, links, events, art style, spoiler switch, scan
+    marks (`worldUpTo`, `castUpTo`, `linksUpTo`) and translation style. Names the new book already has are not added twice.
+  - For a Chinese copy, names the English book only knows in English get their Chinese from the guide (`chineseNames`),
+    and the guide then adds its remaining names. The translator only sends glossary names found in a chapter's text,
+    so this is what makes the glossary work on Chinese text. The style notes gain a rule: 【命运】 → [Fate].
+  - Style sample: a passage of the English edition (`passageFrom`, from the furthest chapter read), editable, with
+    "Take another passage". The story so far (`Book.storySoFar`, editable in Edit details) starts from the newest
+    "Ask the cat" recap of the English book, and is used as the translator's story so far until a translated chapter has one.
+  - `Book.startLine` (the English book's reading line) counts chapters before the copy's first chapter as read, and
+    `Book.seenBefore` keeps who was first seen where in the English book, so the Living Book is not empty at 521.
+  - Guide (2026-11-20): Chinese for ~60 more names (people, gods, groups, places, terms), each checked against the
+    Chinese ePub text (程实 15,309 times, 秦薪 1,522, 【源初】 910 …); Chinese nicknames (大猫, 瞎子, 杜期瑜); six new
+    names common after 521 (Peraya 裴拉娅, Sun Miao 孙缈, Ais 艾思, Old Gallon 老加仑, Dragon King 龙王, Dagger of the
+    Stars 群星匕首). Left without Chinese on purpose: names that are also common words (An Jing 安静, Ji Ran 既然) and
+    early characters that do not appear after 520.
 - **Fanqie:** declined as a link source. It publishes original novels, so the reason is not licensing: a link reader
   would copy the text in bulk, and the site's terms likely restrict that. Use paste or file import for chapters you read there.
 - **Highlights:** a highlight shows only in the language it was made in (original or English).
