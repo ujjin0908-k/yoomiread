@@ -4,7 +4,8 @@ import { db } from '../db';
 import { guessLanguage, newId, nextChapterNumber } from '../logic';
 import { toPicture } from '../picture';
 import { fetchCover } from '../import/cover';
-import { chapterNumber, extractChapter, extractChapterLinks, fetchPage, findContentsChapter, findContentsLink, type ChapterLink } from '../import/web';
+import { chapterNumber, extractChapter, extractChapterLinks, fetchPage, findContentsChapter, findContentsLink, scriptOnlyReason, type ChapterLink } from '../import/web';
+import { guessNumbers, inRange } from '../import/range';
 import { webLink } from '../sources';
 import type { Book, Chapter } from '../types';
 
@@ -67,6 +68,9 @@ export function ChapterLinks({
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [running, setRunning] = useState(false);
+  // "From chapter … to …": starts after the last chapter in the book, so a book imported up to 520 offers 521 on.
+  const [from, setFrom] = useState(() => String(nextChapterNumber(chapters)));
+  const [to, setTo] = useState('');
   const [summary, setSummary] = useState('');
   const stop = useRef<AbortController>();
   const started = useRef(false);
@@ -81,6 +85,8 @@ export function ChapterLinks({
     setSummary('');
     const url = webLink(raw);
     if (!url) return setError('Paste a web address that starts with https://');
+    const blocked = scriptOnlyReason(url);
+    if (blocked) return setError(blocked);
     setStatus('Reading the contents page…');
     try {
       let page = await fetchPage(url);
@@ -142,7 +148,7 @@ export function ChapterLinks({
         setStatus(`Reading ${i + 1} of ${todo.length}: ${l.title}`);
         try {
           const text = await readChapter(l.url, controller.signal);
-          const n = chapterNumber(l.title);
+          const n = numbers[(found ?? []).indexOf(l)] ?? chapterNumber(l.title);
           const taken = new Set(existing.map((c) => c.number));
           const row: Chapter = {
             id: newId(),
@@ -192,7 +198,13 @@ export function ChapterLinks({
   }
 
   const list = found ?? [];
+  const numbers = guessNumbers(list.map((l) => l.title));
   const added = list.filter(have).length;
+  const pickRange = () => {
+    const lo = from.trim() ? Number(from) : undefined;
+    const hi = to.trim() ? Number(to) : undefined;
+    setPicked(new Set(inRange(numbers, lo, hi).map((i) => list[i]).filter((l) => !have(l)).map((l) => l.url)));
+  };
   const toAdd = list.filter((l) => picked.has(l.url) && !have(l)).length;
 
   return (
@@ -249,6 +261,32 @@ export function ChapterLinks({
               None
             </button>
           </div>
+
+          <form
+            className="range-row"
+            aria-label="Choose a range of chapters"
+            onSubmit={(e) => {
+              e.preventDefault();
+              pickRange();
+            }}
+          >
+            <span className="small">From</span>
+            <input type="number" inputMode="numeric" min={1} aria-label="From chapter" value={from} disabled={running} onChange={(e) => setFrom(e.target.value)} />
+            <span className="small">to</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              aria-label="To chapter"
+              placeholder={list.length ? String(Math.max(...numbers)) : 'end'}
+              value={to}
+              disabled={running}
+              onChange={(e) => setTo(e.target.value)}
+            />
+            <button type="submit" className="filter-chip" disabled={running}>
+              Tick these
+            </button>
+          </form>
 
           <ul className="batch-list">
             {list.map((l) => {

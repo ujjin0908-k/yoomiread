@@ -215,6 +215,15 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
     without logging in is fetched, so a locked chapter would import as its teaser.
   - WTR-LAB: the chapter text is loaded by scripts after the page opens (like Kakao Page), so the page reader finds none.
     The site is on the list but cannot be read until the app can run those scripts.
+- **Adding chapters to a book that is already here (2026-11-20, owner's ask):** for a book imported up to some chapter
+  (Foolish Game: PDF to 520) whose later chapters come from elsewhere. New chapters join the same book, so its cast,
+  places, links, events, reading line and glossary carry on; there is no copying between books.
+  - "From a file" on the book page (`src/pages/ChapterFile.tsx`): pick an ePub or PDF, choose "From … to …" (From starts
+    after the book's last chapter), add. Numbers come from the titles (`guessNumbers` in `src/import/range.ts`; a title
+    without one counts on from the one before); a number already in the book moves to the next free one (`placeNumbers`).
+  - "Many from a link" has the same "From … to … · Tick these" row, so a long contents page needs no tapping one by one.
+  - WTR-LAB: a link now says why it cannot be read and points to "From a file" (`scriptOnlyReason` in `src/import/web.ts`);
+    "Many from a link" refuses it up front so a batch of hundreds of failing reads never starts.
 - **Fanqie:** declined as a link source. It publishes original novels, so the reason is not licensing: a link reader
   would copy the text in bulk, and the site's terms likely restrict that. Use paste or file import for chapters you read there.
 - **Highlights:** a highlight shows only in the language it was made in (original or English).

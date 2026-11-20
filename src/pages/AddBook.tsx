@@ -9,7 +9,7 @@ import { SHELVES, guessLanguage, moveToShelf, newId } from '../logic';
 import type { DraftChapter } from '../import/chapters';
 import { toPicture } from '../picture';
 import { lookUpNovel } from '../import/cover';
-import { extractChapter, extractChapterLinks, fetchPage } from '../import/web';
+import { extractChapter, extractChapterLinks, fetchPage, scriptOnlyReason } from '../import/web';
 import { webLink } from '../sources';
 import type { Book, BookLanguage, Shelf } from '../types';
 
@@ -88,7 +88,7 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
         );
         return;
       }
-      if (!chapter.text) throw new Error('No story text was found on that page.');
+      if (!chapter.text) throw new Error(scriptOnlyReason(page.url) ?? 'No story text was found on that page.');
       // A chapter of a novel with a contents page: the book takes the novel's title, cover and link, not the chapter's.
       const novel = await lookUpNovel(page.html, page.url);
       const chapterTitle = novel ? chapter.title.replace(/^[A-Z][A-Z0-9]{0,5}\s*[–—-]\s+/, '') : chapter.title;

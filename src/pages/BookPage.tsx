@@ -7,6 +7,7 @@ import { Book3D, Cover, OrderToggle, ProgressBar, Sheet, Stars, TopBar, Working 
 import { toPicture } from '../picture';
 import { coverFromLink } from '../import/cover';
 import { ChapterLinks } from './ChapterLinks';
+import { ChapterFile } from './ChapterFile';
 import { celebrate } from '../motion';
 import { useImportJob } from '../translate/onImport';
 import { db } from '../db';
@@ -47,6 +48,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   }, [id]);
   const [addingChapter, setAddingChapter] = useState(false);
   const [addingMany, setAddingMany] = useState(false);
+  const [addingFile, setAddingFile] = useState(false);
   const [coverBusy, setCoverBusy] = useState(false);
   const [coverError, setCoverError] = useState('');
   const [editingReview, setEditingReview] = useState(false);
@@ -305,6 +307,9 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
               <button type="button" className="link" onClick={() => setAddingMany(true)}>
                 Many from a link
               </button>
+              <button type="button" className="link" onClick={() => setAddingFile(true)}>
+                From a file
+              </button>
               <button type="button" className="link" onClick={() => setAddingChapter(true)}>
                 <Plus size={16} /> Chapter
               </button>
@@ -373,6 +378,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
           }}
         />
       )}
+      {addingFile && <ChapterFile book={book} chapters={list} onClose={() => setAddingFile(false)} />}
       {addingChapter && (
         <AddChapter bookId={id} next={nextChapterNumber(list)} onClose={() => setAddingChapter(false)} />
       )}
