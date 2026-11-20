@@ -11,6 +11,7 @@ import { go, useLive } from '../hooks';
 import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakerOf, speakersFrom, type Speaker } from '../logic';
 import { WordSheet } from './WordSheet';
 import { GlossaryCard, StoryPicture } from './GlossaryCard';
+import { FixLine } from './FixLine';
 import { scenesFor } from '../scenes';
 import { glossaryFor } from '../glossaryMatch';
 import { Mascot } from '../mascot/Mascot';
@@ -63,6 +64,8 @@ export function ChapterPage({ id }: { id: string }) {
   // English first when there is a translation; I can switch any time.
   const [chosenView, setView] = useState<View>();
   const [card, setCard] = useState<GlossaryEntry>();
+  // "Check the original" for a selected English line (src/pages/FixLine.tsx).
+  const [fixing, setFixing] = useState<Selection>();
   // A word tapped in the reader, looked up in a dictionary and Wikipedia.
   const [lookup, setLookup] = useState<{ word: string; lang: 'en' | 'zh' }>();
   const [scroll, setScroll] = useState(0);
@@ -306,10 +309,12 @@ export function ChapterPage({ id }: { id: string }) {
 
       {pending && !open ? (
         <div className="selection-bar">
-          <span className="muted small">
-            “{pending.quote.slice(0, 36)}
-            {pending.quote.length > 36 ? '…' : ''}”
-          </span>
+          {!english && (
+            <span className="muted small">
+              “{pending.quote.slice(0, 36)}
+              {pending.quote.length > 36 ? '…' : ''}”
+            </span>
+          )}
           <button
             type="button"
             className="pill-btn small"
@@ -320,6 +325,20 @@ export function ChapterPage({ id }: { id: string }) {
             <Highlighter size={16} />
             <span>Highlight</span>
           </button>
+          {english && text && (
+            <button
+              type="button"
+              className="pill-btn small ghost-pill"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setFixing(pending);
+                window.getSelection()?.removeAllRanges();
+              }}
+            >
+              <Languages size={16} />
+              <span>Original</span>
+            </button>
+          )}
           {known ? (
             <button
               type="button"
@@ -453,6 +472,9 @@ export function ChapterPage({ id }: { id: string }) {
         />
       )}
       {card && <GlossaryCard entry={card} onClose={() => setCard(undefined)} />}
+      {fixing && translation && text && (
+        <FixLine bookId={chapter.bookId} chapterId={chapter.id} original={text} english={translation.text} selection={fixing} onClose={() => setFixing(undefined)} />
+      )}
     </div>
   );
 }

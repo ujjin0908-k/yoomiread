@@ -237,6 +237,7 @@ const GUIDE: Guide = {
     term('Assassin', '刺客', [], 'One of the six base classes'),
     term('Hunter', '猎人', [], 'One of the six base classes'),
     term('Bard', '吟游诗人', ['Singer'], 'One of the six base classes'),
+    term('Damn it (Da Yi)', '姥姥的', ['Laolao de'], 'Da Yi’s catchphrase: a mild northern exclamation, literally “grandma’s”. Translate it as an exclamation that fits the moment (Damn! / Hell yeah!), never as “granny”'),
     term('Clown', '小丑', ['Clowns', 'Honest Clown'], 'Cheng Shi’s hidden identity; members of the Society of the Mediocre are Clowns'),
 
     // People. Path / god / class, and who they are.
