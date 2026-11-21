@@ -199,6 +199,16 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
     "Making the voice", too slow to make speech live. ElevenLabs was discussed: its free plan covers less than one
     chapter a month, so it would need a paid plan.
 
+- **Chapter titles in English (2026-11-21).** A chapter's translation now also returns its title in English
+  (`===TITLE===` line, `splitReply`), saved as `Chapter.titleEn` and shown wherever a chapter is listed or read
+  (`titleOf` in `src/logic.ts`; the reader shows it over the English view). "English titles" on a translated book's
+  chapter list puts every remaining title into English, 120 per request (`translateTitles` in `src/translate/run.ts`),
+  with the glossary names found in those titles.
+- **"Retry" to the cat (2026-11-21).** Typing "retry", "translate it again", "retry with the other model" in his chat
+  translates the chapter that failed (or the one open) again in the background, with no chat call
+  (`src/mascot/retry.ts`); he says when it is done or why it failed. A failure now remembers the chapter id and the
+  error (`Trouble.chapterId`, `Trouble.error`), and his cross line names the reason.
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless

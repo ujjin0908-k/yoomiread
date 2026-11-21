@@ -4,7 +4,7 @@ import { Book3D, Empty, Pocket, TabBar } from '../components';
 import { backupDue, loadBackupState, saveBackupFile, snoozeBackup } from '../backupNow';
 import { db } from '../db';
 import { go, useLive, useOnline } from '../hooks';
-import { bookProgress, computeStats, continueChapter, estimateMinutes, formatDuration } from '../logic';
+import { bookProgress, computeStats, titleOf, continueChapter, estimateMinutes, formatDuration } from '../logic';
 import { useMood } from '../mascot/useMood';
 import { Wizard } from '../mascot/Wizard';
 import type { Book, Chapter } from '../types';
@@ -110,7 +110,7 @@ export function Home() {
             <span>
               <b>Previously on…</b>
               <small>
-                {daysAway} days since {current.title}. See where you were.
+                {daysAway} days since {titleOf(current)}. See where you were.
               </small>
             </span>
             <ChevronRight size={18} />
@@ -192,7 +192,7 @@ function NowReading({ book, chapters }: { book: Book; chapters: Chapter[] }) {
           </span>
         </div>
         <h3 lang={book.language === 'zh' ? 'zh' : undefined}>{book.title}</h3>
-        <span className="muted small">{next ? `${next.title}${left ? ` · ${left} min left` : ''}` : 'No chapters yet'}</span>
+        <span className="muted small">{next ? `${titleOf(next)}${left ? ` · ${left} min left` : ''}` : 'No chapters yet'}</span>
         <button type="button" className="pill-btn" onClick={() => go(next ? `chapter/${next.id}` : `book/${book.id}`)}>
           <span>{next ? 'Continue' : 'Open book'}</span>
           <ChevronRight size={18} />

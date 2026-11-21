@@ -8,6 +8,10 @@ export interface Trouble {
   kind: 'failed' | 'skipped';
   /** The chapter's title, so he can say which one. */
   chapter: string;
+  /** The chapter's id, so "try again" in his chat knows which one to translate. */
+  chapterId?: string;
+  /** What went wrong, in the translator's words. */
+  error?: string;
 }
 
 /** How long he stays cross about it. A clean translation calms him at once (see trouble.ts). */

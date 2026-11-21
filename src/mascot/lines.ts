@@ -30,8 +30,8 @@ export function lineFor(mood: Mood, seed: string, trouble?: Trouble): string {
   // When he is cross he says exactly what went wrong, and with which chapter.
   if (mood === 'angry' && trouble) {
     return trouble.kind === 'failed'
-      ? `Hmph. The translator gave up on "${trouble.chapter}". Try it again, or try the other model.`
-      : `Hmph. Lines were cut from "${trouble.chapter}". I marked them in red. I do not like it either.`;
+      ? `Hmph. The translator gave up on "${trouble.chapter}"${trouble.error ? ` (${trouble.error.slice(0, 120)})` : ''}. Say “retry” and I will translate it again, or “retry with the other model”.`
+      : `Hmph. Lines were cut from "${trouble.chapter}". I marked them in red. Say “retry with the other model” and I will try again.`;
   }
   let h = 0;
   for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;

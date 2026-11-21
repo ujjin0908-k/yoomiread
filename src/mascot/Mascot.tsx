@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { db } from '../db';
-import { isRead, needsTranslation } from '../logic';
+import { isRead, needsTranslation, titleOf } from '../logic';
 import { addSpend, callCost, loadSettings, modelFor } from '../translate/run';
 import { chat } from '../translate/api';
 import { formatCost, type ChatMessage } from '../translate/prompt';
@@ -8,6 +8,7 @@ import type { Book, Chapter, GlossaryEntry } from '../types';
 import { useMood } from './useMood';
 import { lineFor } from './lines';
 import { Wizard } from './Wizard';
+import { retryTranslation, wantsRetry } from './retry';
 
 /** A small, stable hash, used to remember answers. */
 function hash(text: string): string {
@@ -21,7 +22,7 @@ function readExcerpts(chapters: Chapter[], texts: Map<string, string>, upTo: num
   return chapters
     .filter((c) => isRead(c) && c.number <= upTo)
     .slice(-3)
-    .map((c) => `Chapter ${c.number}: ${c.title}\n${(texts.get(c.id) ?? '').slice(0, 1500)}`)
+    .map((c) => `Chapter ${c.number}: ${titleOf(c)}\n${(texts.get(c.id) ?? '').slice(0, 1500)}`)
     .join('\n\n');
 }
 
@@ -37,6 +38,15 @@ export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter:
   async function ask() {
     const q = question.trim();
     if (!q) return;
+    // "Retry", "translate it again", "use the other model": he does it himself, no chat needed.
+    if (wantsRetry(q)) {
+      setError('');
+      setQuestion('');
+      const { now, later } = await retryTranslation({ book, current: chapter, trouble, message: q });
+      setAnswer({ text: now, note: later ? 'Translating in the background. You can keep reading or close this.' : '' });
+      if (later) void later.then((text) => setAnswer({ text, note: '' }));
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -122,7 +132,7 @@ export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter:
               void ask();
             }}
           >
-            <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask him about the story so far" disabled={busy} />
+            <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask about the story, or say “retry”" disabled={busy} />
             <button type="submit" className="btn ghost" disabled={busy || !question.trim()}>
               {busy ? '…' : 'Ask'}
             </button>

@@ -9,11 +9,13 @@ export interface ChatMessage {
 export const NEW_TERMS = '===NEW TERMS===';
 /** Marks the short story-so-far summary, written after the translation and before the new names. */
 export const SUMMARY = '===SUMMARY===';
+/** Marks the chapter title in English, in a chapter's reply. */
+export const TITLE = '===TITLE===';
 /** Marks a passage the model could not translate. The reader shows it in red as "Censored and skipped". */
 export const CENSORED = '[[CENSORED]]';
 const CENSORED_ANY = /\[{1,2}\s*censored\s*\]{1,2}/gi;
 
-function glossaryLines(entries: GlossaryEntry[]): string {
+export function glossaryLines(entries: GlossaryEntry[]): string {
   return entries
     .map((g) => {
       const parts = [`${g.original} = ${g.english}`];
@@ -69,7 +71,9 @@ export function chapterMessages(input: {
     '- Use the glossary exactly for every name and term in it. Use each person\'s pronouns as given.',
     '- Keep the tone of the original. Dialogue should sound like real speech.',
     '- Output only the translation, with no notes, no title line and no commentary.',
-    `- After the translation, write a line "${SUMMARY}" and then the story so far in English: 3 to 6 sentences covering`,
+    `- After the translation, write a line "${TITLE}" and then the chapter title in English on one line, using the glossary for names.`,
+    '  Leave out the chapter number ("第589章 入梦" becomes "Into the Dream"); keep words like "Side Story".',
+    `- Then write a line "${SUMMARY}" and then the story so far in English: 3 to 6 sentences covering`,
     '  who is who, what has happened, and where things stand at the end of this chapter. Update the earlier summary given in the message',
     '  with this chapter. Keep it under 200 words: compress older events, keep names and the current situation.',
     `- Then write a line "${NEW_TERMS}" and then one JSON object per line for each character name`,
@@ -171,13 +175,17 @@ export function isRefusal(reply: string): boolean {
   return REFUSAL.test(reply.trim().slice(0, 200));
 }
 
-export function splitReply(reply: string): { text: string; terms: ProposedTerm[]; summary?: string } {
+export function splitReply(reply: string): { text: string; terms: ProposedTerm[]; summary?: string; title?: string } {
   const at = reply.indexOf(NEW_TERMS);
   const beforeTerms = at >= 0 ? reply.slice(0, at) : reply;
   const terms = at >= 0 ? parseTerms(reply.slice(at + NEW_TERMS.length)) : [];
   const marker = beforeTerms.indexOf(SUMMARY);
-  const body = marker >= 0 ? beforeTerms.slice(0, marker) : beforeTerms;
+  const beforeSummary = marker >= 0 ? beforeTerms.slice(0, marker) : beforeTerms;
   const summary = marker >= 0 ? beforeTerms.slice(marker + SUMMARY.length).trim() : '';
+  // The English chapter title, between the translation and the summary (older replies have none).
+  const titleAt = beforeSummary.indexOf(TITLE);
+  const body = titleAt >= 0 ? beforeSummary.slice(0, titleAt) : beforeSummary;
+  const title = titleAt >= 0 ? cleanChapterTitle(beforeSummary.slice(titleAt + TITLE.length)) : undefined;
   // Normalise paragraph breaks to the blank-line form the reader expects.
   const text = body
     .replace(/\r\n/g, '\n')
@@ -187,7 +195,22 @@ export function splitReply(reply: string): { text: string; terms: ProposedTerm[]
     .map((p) => p.trim())
     .filter(Boolean)
     .join('\n\n');
-  return { text, terms, summary: summary || undefined };
+  return { text, terms, summary: summary || undefined, title };
+}
+
+/** One clean line of title: no quotes, no "Chapter 589:" in front, no markdown. */
+export function cleanChapterTitle(raw: string): string | undefined {
+  const line = raw
+    .split('\n')
+    .map((l) => l.trim())
+    .find(Boolean);
+  if (!line) return undefined;
+  const t = line
+    .replace(/^[#*\s]+|[*\s]+$/g, '')
+    .replace(/^(?:chapter|ch\.?)\s*\d+\s*[:.\-–—]?\s*/i, '')
+    .replace(/^["“'‘]+|["”'’]+$/g, '')
+    .trim();
+  return t && t.length <= 120 ? t : undefined;
 }
 
 const CJK = /[㐀-鿿豈-﫿]/g;

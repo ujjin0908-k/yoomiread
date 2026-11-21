@@ -76,6 +76,8 @@ export interface Chapter {
   bookId: string;
   number: number;
   title: string;
+  /** The title in English, for a book that is translated (from the chapter's translation, or "English titles"). */
+  titleEn?: string;
   /** The web address it was read from, so a batch import does not add the same chapter twice. */
   url?: string;
   /** Number of characters in the chapter text (the text itself is in its own table). */
@@ -111,6 +113,8 @@ export interface Translation {
   warnings?: string[];
   /** The story so far, up to and including this chapter; the next chapter starts from it. */
   summary?: string;
+  /** The chapter title in English, from the same reply. */
+  title?: string;
   createdAt: number;
 }
 
