@@ -11,6 +11,8 @@ function offlineFiles(): Plugin {
     generateBundle(_options, bundle) {
       const files = Object.keys(bundle)
         .filter((f) => !f.endsWith('.map') && f !== 'index.html')
+        // The read-aloud voice engine (about 24 MB) is saved the first time it is used, not on every install.
+        .filter((f) => !/kokoro\.worker|ort-wasm/.test(f))
         .map((f) => `/${f}`)
         .sort();
       // File names carry content hashes, so the list itself tells versions apart.
