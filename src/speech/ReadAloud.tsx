@@ -87,7 +87,8 @@ export function VoiceSheet({ onClose }: { onClose: () => void }) {
   }
 
   if (!prefs) return null;
-  const chosen = prefs.voice || voices?.[0]?.voiceURI;
+  // A saved voice that is no longer listed (a novelty voice) counts as the first one, which is what plays.
+  const chosen = voices?.some((v) => v.voiceURI === prefs.voice) ? prefs.voice : voices?.[0]?.voiceURI;
   const good = (voices ?? []).filter((v) => voiceRank(v) < 2).length;
   return (
     <Sheet title="Voice" onClose={onClose}>

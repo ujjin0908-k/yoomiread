@@ -69,20 +69,43 @@ export function subscribe(listener: () => void): () => void {
 
 const synth = (): SpeechSynthesis | undefined => (typeof window !== 'undefined' ? window.speechSynthesis : undefined);
 
-/** Quality, from the voice's name: the downloaded Premium and Enhanced voices sound far better. */
-export function voiceRank(v: Pick<SpeechSynthesisVoice, 'name'>): number {
-  if (/premium/i.test(v.name)) return 0;
-  if (/enhanced|neural|natural/i.test(v.name)) return 1;
+/**
+ * Apple's novelty voices (they sing, bubble or warble) and the old robotic ones. They are English voices too, so
+ * without this list one of them could end up as the default.
+ */
+const NOVELTY = new Set(
+  [
+    'Albert', 'Bad News', 'Bahh', 'Bells', 'Boing', 'Bubbles', 'Cellos', 'Deranged', 'Good News', 'Hysterical', 'Jester', 'Junior',
+    'Kathy', 'Organ', 'Pipe Organ', 'Princess', 'Ralph', 'Superstar', 'Trinoids', 'Whisper', 'Wobble', 'Zarvox', 'Fred',
+    'Eddy', 'Flo', 'Grandma', 'Grandpa', 'Reed', 'Rocko', 'Sandy', 'Shelley',
+  ].map((n) => n.toLowerCase()),
+);
+
+/** True for a voice that is not meant for reading (novelty or robotic). */
+export function isNovelty(v: Pick<SpeechSynthesisVoice, 'name' | 'voiceURI'>): boolean {
+  const base = v.name.replace(/\s*\(.*\)\s*$/, '').trim().toLowerCase();
+  return NOVELTY.has(base) || /speech\.synthesis\.voice\.|eloquence/i.test(v.voiceURI);
+}
+
+/**
+ * Quality: the downloaded Premium and Enhanced voices sound far better. iPhone does not always say so in the name,
+ * so the voice's id is read too ("com.apple.voice.premium.en-US.Ava").
+ */
+export function voiceRank(v: Pick<SpeechSynthesisVoice, 'name'> & Partial<Pick<SpeechSynthesisVoice, 'voiceURI'>>): number {
+  const both = `${v.name} ${v.voiceURI ?? ''}`;
+  if (/premium/i.test(both)) return 0;
+  if (/enhanced|neural|natural/i.test(both)) return 1;
   return 2;
 }
 
-/** The phone's English voices, best first, then by name. */
+/** The phone's English reading voices, best first: Premium, Enhanced, then Samantha (iPhone's usual voice), then by name. */
 export function englishVoices<V extends Pick<SpeechSynthesisVoice, 'name' | 'lang' | 'voiceURI'>>(all: V[]): V[] {
   const seen = new Set<string>();
+  const usual = (v: V) => (/^samantha\b/i.test(v.name) ? 0 : 1);
   return all
-    .filter((v) => /^en([-_]|$)/i.test(v.lang))
+    .filter((v) => /^en([-_]|$)/i.test(v.lang) && !isNovelty(v))
     .filter((v) => (seen.has(v.voiceURI) ? false : (seen.add(v.voiceURI), true)))
-    .sort((a, b) => voiceRank(a) - voiceRank(b) || a.name.localeCompare(b.name));
+    .sort((a, b) => voiceRank(a) - voiceRank(b) || usual(a) - usual(b) || a.name.localeCompare(b.name));
 }
 
 /** The phone's voices; on iPhone they arrive a moment after the page opens. */
@@ -99,7 +122,8 @@ export function loadVoices(): Promise<SpeechSynthesisVoice[]> {
 }
 
 function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
-  return voices.find((v) => v.voiceURI === settings.voice) ?? englishVoices(voices)[0];
+  const saved = voices.find((v) => v.voiceURI === settings.voice);
+  return saved && !isNovelty(saved) ? saved : englishVoices(voices)[0];
 }
 
 function utterance(text: string, voice: SpeechSynthesisVoice | undefined, speed: number): SpeechSynthesisUtterance {
