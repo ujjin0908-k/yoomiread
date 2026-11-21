@@ -13,7 +13,6 @@
   "dependencies": {
     "dexie": "4.0.10",
     "fflate": "0.8.3",
-    "kokoro-js": "^1.2.1",
     "lucide-react": "0.460.0",
     "pdfjs-dist": "4.8.69",
     "react": "18.3.1",
