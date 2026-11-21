@@ -25,12 +25,13 @@ import {
   isRead,
   moveToShelf,
   needsTranslation,
+  titleOf,
   newId,
   nextChapterNumber,
   progress,
 } from '../logic';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
-import { keepTranslation, loadSettings, modelFor, translateChapter, translateTitle, type ChapterRun } from '../translate/run';
+import { keepTranslation, loadSettings, modelFor, translateChapter, translateTitle, translateTitles, type ChapterRun } from '../translate/run';
 import type { Book, BookLanguage, BookStyle, Chapter, Shelf, TranslateSettings } from '../types';
 import { parseSources, sourcesText, webLink } from '../sources';
 
@@ -52,6 +53,8 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const [addingMany, setAddingMany] = useState(false);
   const [addingFile, setAddingFile] = useState(false);
   const [copyingWorld, setCopyingWorld] = useState(false);
+  // "English titles": every chapter title put into English, a few cheap requests for the whole book.
+  const [titling, setTitling] = useState('');
   // Another book with a world to copy (the same novel first), offered until a world has been copied in.
   const twin = useLive(async () => {
     const b = await db.books.get(id);
@@ -329,6 +332,24 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
             <h2>Chapters</h2>
             <div className="row">
               {list.length > 1 && <OrderToggle order={order} onChange={setOrder} />}
+              {needsTranslation(book) && list.some((c) => !c.titleEn && /[\u3400-\u9fff]/.test(c.title)) && (
+                <button
+                  type="button"
+                  className="link"
+                  disabled={!!titling && !titling.startsWith('Done') && !titling.startsWith('Could')}
+                  onClick={async () => {
+                    setTitling('Putting titles into English…');
+                    try {
+                      const done = await translateTitles(id, (at, total) => setTitling(`Putting titles into English: ${at} of ${total}…`));
+                      setTitling(`Done: ${done} titles in English.`);
+                    } catch (e) {
+                      setTitling(`Could not translate the titles: ${e instanceof Error ? e.message : 'failed'}`);
+                    }
+                  }}
+                >
+                  English titles
+                </button>
+              )}
               <button type="button" className="link" onClick={() => setAddingMany(true)}>
                 Many from a link
               </button>
@@ -340,6 +361,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
               </button>
             </div>
           </div>
+          {titling && <p className={`small${titling.startsWith('Could') ? ' warn' : ' muted'}`}>{titling}</p>}
           {chapters && chapters.length === 0 && (
             <p className="muted">Add chapters one by one, or paste a novel's contents page link to add many at once.</p>
           )}
@@ -365,7 +387,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
                 <a href={`#/chapter/${c.id}`} className="chapter-link">
                   <span className="chapter-name">
                     <span className="muted">{c.number}</span>
-                    <span lang={book.language === 'zh' ? 'zh' : undefined}>{c.title}</span>
+                    <span lang={book.language === 'zh' && !c.titleEn ? 'zh' : undefined}>{titleOf(c)}</span>
                   </span>
                   <span className="chips">
                     {isRead(c) ? (

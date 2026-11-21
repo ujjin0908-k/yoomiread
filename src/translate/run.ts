@@ -4,7 +4,7 @@ import type { Chapter, GlossaryEntry, ModelOption, TranslateSettings, Translatio
 import { chat, type ChatResult } from './api';
 import { needsTranslation } from '../logic';
 import { clearTrouble, noteTrouble } from '../mascot/trouble';
-import { CENSORED, chapterMessages, cleanTitle, costOf, estimateTokens, glossaryScanMessages, isRefusal, parseTerms, pronounWarnings, splitReply, titleMessages, type ChatMessage, type ProposedTerm } from './prompt';
+import { CENSORED, chapterMessages, cleanChapterTitle, cleanTitle, glossaryLines, costOf, estimateTokens, glossaryScanMessages, isRefusal, parseTerms, pronounWarnings, splitReply, titleMessages, type ChatMessage, type ProposedTerm } from './prompt';
 import { paragraphs } from '../logic';
 
 /** Prices and ids as the owner's provider lists them on 2026-10-24 (change them in Settings when they move). */
@@ -131,11 +131,11 @@ export async function translateChapter(chapter: Chapter, options: ChapterOptions
   try {
     const run = await runChapter(chapter, options);
     const skipped = run.translation.text.split('\n\n').includes(CENSORED);
-    await (skipped ? noteTrouble('skipped', chapter.title) : clearTrouble()).catch(() => {});
+    await (skipped ? noteTrouble('skipped', chapter.title, chapter.id) : clearTrouble()).catch(() => {});
     return run;
   } catch (e) {
     // Stopping on purpose is not a failure.
-    if (!options.signal?.aborted) await noteTrouble('failed', chapter.title).catch(() => {});
+    if (!options.signal?.aborted) await noteTrouble('failed', chapter.title, chapter.id, e instanceof Error ? e.message : undefined).catch(() => {});
     throw e;
   }
 }
@@ -157,7 +157,7 @@ async function runChapter(chapter: Chapter, options: ChapterOptions): Promise<Ch
     style: book?.style,
   });
   const result = await chat(options.settings, options.model, messages, options.onText, options.signal);
-  const { text: english, terms, summary } = splitReply(result.text);
+  const { text: english, terms, summary, title } = splitReply(result.text);
   const option = modelFor(options.settings, options.model);
   const spend = callCost(option, messages, result);
   // A refusal is not a translation: show it as an error and keep the chapter untranslated.
@@ -185,11 +185,13 @@ async function runChapter(chapter: Chapter, options: ChapterOptions): Promise<Ch
     costEstimated: spend.estimated,
     warnings: translationWarnings(text.text, english, glossary),
     summary,
+    title,
     createdAt: Date.now(),
   };
   let newTerms = 0;
   if (options.save !== false) {
     await db.translations.put(translation);
+    if (title) await db.chapters.update(chapter.id, { titleEn: title });
     newTerms = await addProposals(chapter.bookId, terms);
   }
   return { translation, terms, newTerms };
@@ -215,6 +217,7 @@ export function translationWarnings(original: string, english: string, glossary:
 /** Saves a translation made earlier without saving (the one picked in Compare). */
 export async function keepTranslation(run: ChapterRun): Promise<number> {
   await db.translations.put(run.translation);
+  if (run.translation.title) await db.chapters.update(run.translation.chapterId, { titleEn: run.translation.title });
   return addProposals(run.translation.bookId, run.terms);
 }
 
@@ -262,4 +265,70 @@ export async function translateTitle(
   const english = cleanTitle(result.text);
   if (!english) throw new Error('The model gave no title back.');
   return english;
+}
+
+/** Chapter titles to put into English in one request (each is short, so many fit). */
+const TITLES_PER_CALL = 120;
+
+/** The request for a batch of chapter titles: numbered lines in, numbered lines out. */
+export function titleBatchMessages(titles: string[], glossary: GlossaryEntry[]): ChatMessage[] {
+  const named = glossary.filter((g) => g.status === 'ok' && [g.original, ...(g.aliases ?? [])].some((n) => n && titles.some((t) => t.includes(n))));
+  return [
+    {
+      role: 'system',
+      content:
+        'You translate the chapter titles of a Chinese web novel into English for a single reader. Use the glossary exactly for names. ' +
+        'Leave out the chapter number ("第589章 入梦" becomes "Into the Dream"); keep words like "Side Story". Keep the tone of each title. ' +
+        'Reply with the same numbered lines and nothing else: "1. Title".',
+    },
+    {
+      role: 'user',
+      content: [named.length ? `Glossary:\n${glossaryLines(named)}` : '', titles.map((t, i) => `${i + 1}. ${t}`).join('\n')].filter(Boolean).join('\n\n'),
+    },
+  ];
+}
+
+/** Reads numbered lines back: title i (0-based) → English. */
+export function parseTitleBatch(reply: string, count: number): Map<number, string> {
+  const out = new Map<number, string>();
+  for (const line of reply.split('\n')) {
+    const m = /^\s*(\d+)\s*[.)：:]\s*(.+)$/.exec(line);
+    if (!m) continue;
+    const i = Number(m[1]) - 1;
+    const title = cleanChapterTitle(m[2]);
+    if (i >= 0 && i < count && title && !out.has(i)) out.set(i, title);
+  }
+  return out;
+}
+
+/**
+ * Puts the chapter titles of a book into English, a batch at a time (chapters that have one already are skipped).
+ * Each batch is saved as it comes back. Returns how many titles were done.
+ */
+export async function translateTitles(bookId: string, onProgress?: (done: number, total: number) => void, signal?: AbortSignal): Promise<number> {
+  const settings = await loadSettings();
+  const book = await db.books.get(bookId);
+  const model = modelFor(settings, book?.model);
+  const glossary = (await db.glossary.where('bookId').equals(bookId).toArray()) as GlossaryEntry[];
+  const todo = ((await db.chapters.where('bookId').equals(bookId).sortBy('number')) as Chapter[]).filter((c) => !c.titleEn && /[㐀-鿿]/.test(c.title));
+  let done = 0;
+  onProgress?.(0, todo.length);
+  for (let at = 0; at < todo.length; at += TITLES_PER_CALL) {
+    if (signal?.aborted) break;
+    const batch = todo.slice(at, at + TITLES_PER_CALL);
+    const messages = titleBatchMessages(
+      batch.map((c) => c.title),
+      glossary,
+    );
+    const result = await chat(settings, model.id, messages, undefined, signal);
+    const spend = callCost(model, messages, result);
+    await addSpend(bookId, spend.cost, spend.estimated);
+    const titles = parseTitleBatch(result.text, batch.length);
+    await db.transaction('rw', db.chapters, async () => {
+      for (const [i, t] of titles) await db.chapters.update(batch[i].id, { titleEn: t });
+    });
+    done += titles.size;
+    onProgress?.(at + batch.length, todo.length);
+  }
+  return done;
 }

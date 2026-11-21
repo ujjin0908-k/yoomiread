@@ -356,3 +356,8 @@ export function speakerOf(paragraph: string, people: Speaker[], reach = 30, near
 export function speaksAs(paragraph: string, name: string, reach = 30): boolean {
   return !!name && speakerOf(paragraph, [{ id: name, names: [name] }], reach) === name;
 }
+
+/** A chapter's title to show: the English one when the book is translated and it has one, else the original. */
+export function titleOf(c: { title: string; titleEn?: string }): string {
+  return c.titleEn || c.title;
+}

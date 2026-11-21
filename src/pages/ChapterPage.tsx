@@ -8,7 +8,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { OrderToggle, ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
-import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakerOf, speakersFrom, type Speaker } from '../logic';
+import { titleOf, bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakerOf, speakersFrom, type Speaker } from '../logic';
 import { WordSheet } from './WordSheet';
 import { GlossaryCard, StoryPicture } from './GlossaryCard';
 import { FixLine } from './FixLine';
@@ -113,7 +113,7 @@ export function ChapterPage({ id }: { id: string }) {
       readAloudNotice(`Chapter ${chapter.number} is not translated yet, so reading stopped.`);
       return;
     }
-    void startReading({ bookId: chapter.bookId, chapterId: id, title: chapter.title, text: readable, from: 0 });
+    void startReading({ bookId: chapter.bookId, chapterId: id, title: titleOf(chapter), text: readable, from: 0 });
   }, [player.nextChapterId, id, text, translation, chapter, book, readable]);
   useScrollMemory(chapter, text !== undefined && translation !== undefined, setScroll);
   const backdrop = book?.backdrop;
@@ -224,7 +224,7 @@ export function ChapterPage({ id }: { id: string }) {
                   if (translation?.text) setView('translation');
                   const first = [...(textRef.current?.querySelectorAll<HTMLElement>('p[data-start]') ?? [])].find((el) => el.getBoundingClientRect().bottom > 90);
                   const from = chosenView === 'original' && translation?.text ? 0 : Number(first?.dataset.start ?? 0);
-                  void startReading({ bookId: chapter.bookId, chapterId: id, title: chapter.title, text: readable, from });
+                  void startReading({ bookId: chapter.bookId, chapterId: id, title: titleOf(chapter), text: readable, from });
                 }}
               >
                 <Headphones size={19} />
@@ -256,8 +256,8 @@ export function ChapterPage({ id }: { id: string }) {
       <main className="page reader-main" style={{ fontSize: FONT_SIZES[prefs.size] }}>
         <p className="eyebrow">Chapter {chapter.number}</p>
         {aheadStatus && <p className="small muted">{aheadStatus}</p>}
-        <h1 className="chapter-title" lang={zh ? 'zh' : undefined}>
-          {chapter.title}
+        <h1 className="chapter-title" lang={english && chapter.titleEn ? undefined : zh ? 'zh' : undefined}>
+          {english && chapter.titleEn ? chapter.titleEn : chapter.title}
         </h1>
         <span className="title-rule" aria-hidden="true" />
 
@@ -481,7 +481,7 @@ export function ChapterPage({ id }: { id: string }) {
                   onClick={() => setSheet(undefined)}
                 >
                   <span className="muted">{c.number}</span>
-                  <span lang={zh ? 'zh' : undefined}>{c.title}</span>
+                  <span lang={zh && !c.titleEn ? 'zh' : undefined}>{titleOf(c)}</span>
                   {c.bookmarked && <Bookmark size={14} aria-label="Bookmarked" />}
                   {isRead(c) && <span className="muted small">✓</span>}
                 </a>
