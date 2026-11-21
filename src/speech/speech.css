@@ -77,3 +77,9 @@
   color: inherit;
   font: inherit;
 }
+
+.read-aloud .read-aloud-go {
+  flex: none;
+  min-height: 40px;
+  padding: 0 16px;
+}

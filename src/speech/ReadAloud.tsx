@@ -1,7 +1,8 @@
 import { Pause, Play, SkipBack, SkipForward, X } from 'lucide-react';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Sheet } from '../components';
-import { changeVoice, englishVoices, loadReadAloud, loadVoices, pause, playerState, resume, sayOnce, skip, stop, subscribe, voiceRank, type ReadAloudSettings } from './player';
+import { changeVoice, confirmSpend, englishVoices, loadReadAloud, loadVoices, pause, playerState, resume, sayOnce, skip, stop, subscribe, voiceRank, type ReadAloudSettings } from './player';
+import { audioKey, clearSavedAudio, elevenCredits, silentUrl, speakPart } from './eleven';
 import './speech.css';
 
 /** What a voice says when tried out in the picker. */
@@ -33,7 +34,16 @@ export function ReadAloudBar({ chapterId }: { chapterId: string }) {
 
   const english = englishVoices(voices);
   const voice = english.find((v) => v.voiceURI === prefs?.voice) ?? english[0];
-  const line = p.error ?? (p.status === 'ended' ? 'End of the chapter' : `${voice ? voiceLabel(voice).name : 'Voice'} · ${prefs?.speed ?? 1}×`);
+  const who = prefs?.engine === 'eleven' ? 'ElevenLabs' : voice ? voiceLabel(voice).name : 'Voice';
+  const line =
+    p.error ??
+    (p.status === 'asking'
+      ? p.ask ?? 'This uses ElevenLabs credits.'
+      : p.status === 'waiting'
+        ? 'ElevenLabs is making the voice…'
+        : p.status === 'ended'
+          ? 'End of the chapter'
+          : `${who} · ${prefs?.speed ?? 1}×`);
 
   return (
     <>
@@ -41,7 +51,11 @@ export function ReadAloudBar({ chapterId }: { chapterId: string }) {
         <button type="button" className="round-btn plain" aria-label="Back one sentence" disabled={!p.total} onClick={() => skip(-1)}>
           <SkipBack size={18} />
         </button>
-        {p.status === 'playing' ? (
+        {p.status === 'asking' ? (
+          <button type="button" className="pill-btn small read-aloud-go" onClick={confirmSpend}>
+            <span>Listen</span>
+          </button>
+        ) : p.status === 'playing' || p.status === 'waiting' ? (
           <button type="button" className="round-btn" aria-label="Pause" onClick={pause}>
             <Pause size={20} />
           </button>
@@ -55,7 +69,7 @@ export function ReadAloudBar({ chapterId }: { chapterId: string }) {
         </button>
         <button type="button" className="read-aloud-line" onClick={() => setPicking(true)}>
           <span className={p.error ? 'warn small' : 'small'}>{line}</span>
-          {p.total > 0 && !p.error && (
+          {p.total > 0 && !p.error && p.status !== 'asking' && (
             <span className="muted small">
               {p.index + 1} / {p.total} · tap for voices
             </span>
@@ -105,6 +119,18 @@ export function VoiceSheet({ onClose }: { onClose: () => void }) {
           <input type="checkbox" className="switch" checked={prefs.autoNext} onChange={(e) => void choose({ autoNext: e.target.checked })} />
           <span>Go on to the next chapter</span>
         </label>
+        <div className="filter-row" role="group" aria-label="Who reads">
+          <button type="button" className={`filter-chip${prefs.engine !== 'eleven' ? ' on' : ''}`} aria-pressed={prefs.engine !== 'eleven'} onClick={() => void choose({ engine: 'phone' })}>
+            iPhone voice (free)
+          </button>
+          <button type="button" className={`filter-chip${prefs.engine === 'eleven' ? ' on' : ''}`} aria-pressed={prefs.engine === 'eleven'} onClick={() => void choose({ engine: 'eleven' })}>
+            ElevenLabs
+          </button>
+        </div>
+        {prefs.engine === 'eleven' ? (
+          <ElevenPanel prefs={prefs} choose={choose} />
+        ) : (
+        <>
         <p className="muted small">
           These are the voices on this phone. {good ? '' : 'Only standard voices are here so far. '}For much better ones, open the iPhone's Settings →
           Accessibility → Read & Speak (Spoken Content on older iOS) → Voices → English, and download a Premium or Enhanced voice (Ava, Zoe, Evan,
@@ -134,7 +160,96 @@ export function VoiceSheet({ onClose }: { onClose: () => void }) {
             })}
           </ul>
         )}
+        </>
+        )}
       </div>
     </Sheet>
+  );
+}
+
+/** ElevenLabs: the owner's key and voice (both stay on this phone), credits left, saved audio. */
+function ElevenPanel({ prefs, choose }: { prefs: ReadAloudSettings; choose: (c: Partial<ReadAloudSettings>) => Promise<void> }) {
+  const [key, setKey] = useState(prefs.elevenKey);
+  const [voice, setVoice] = useState(prefs.elevenVoice);
+  const [status, setStatus] = useState('');
+  const [trying, setTrying] = useState(false);
+  const sample = useRef<HTMLAudioElement>();
+
+  async function check() {
+    await choose({ elevenKey: key.trim(), elevenVoice: voice.trim() });
+    setStatus('Checking…');
+    try {
+      const { used, limit } = await elevenCredits(key.trim());
+      setStatus(`Key works. ${(limit - used).toLocaleString()} of ${limit.toLocaleString()} credits left this month (Flash uses half a credit a character, about 4,500–5,000 a chapter).`);
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : 'Could not check.');
+    }
+  }
+
+  async function hear() {
+    sample.current ??= new Audio();
+    // Unlock sound inside the tap.
+    sample.current.src = silentUrl();
+    void sample.current.play().catch(() => {});
+    setTrying(true);
+    setStatus('');
+    try {
+      await choose({ elevenKey: key.trim(), elevenVoice: voice.trim() });
+      const blob = await speakPart({
+        key: key.trim(),
+        voiceId: voice.trim(),
+        speed: prefs.speed,
+        text: SAMPLE_LINE,
+        cacheKey: audioKey('sample', voice.trim(), prefs.speed, SAMPLE_LINE),
+      });
+      sample.current.src = URL.createObjectURL(blob);
+      await sample.current.play();
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : 'Could not play the sample.');
+    } finally {
+      setTrying(false);
+    }
+  }
+
+  return (
+    <>
+      <p className="muted small">
+        Reads with your own ElevenLabs account, using Flash (their cheaper model). Your key stays on this phone. Each chapter's audio is saved,
+        so a chapter is paid for once. Speed is limited to 0.7× to 1.2× here.
+      </p>
+      <label>
+        API key <span className="muted small">(elevenlabs.io → your profile → API keys)</span>
+        <input type="password" autoComplete="off" value={key} placeholder="sk_…" onChange={(e) => setKey(e.target.value)} onBlur={() => void choose({ elevenKey: key.trim() })} />
+      </label>
+      <label>
+        Voice ID <span className="muted small">(from the voice's page in their Voice Library)</span>
+        <input autoCapitalize="off" autoCorrect="off" value={voice} onChange={(e) => setVoice(e.target.value)} onBlur={() => void choose({ elevenVoice: voice.trim() })} />
+      </label>
+      <div className="row-2">
+        <button type="button" className="btn ghost" disabled={!key.trim()} onClick={() => void check()}>
+          Check key
+        </button>
+        <button type="button" className="pill-btn" disabled={!key.trim() || !voice.trim() || trying} onClick={() => void hear()}>
+          <Play size={16} />
+          <span>{trying ? 'Making…' : 'Hear it'}</span>
+        </button>
+      </div>
+      <label className="row small">
+        <input type="checkbox" className="switch" checked={prefs.askFirst} onChange={(e) => void choose({ askFirst: e.target.checked })} />
+        <span>Show the cost and ask before a chapter uses credits</span>
+      </label>
+      {status && <p className={`small${/works/.test(status) ? '' : ' warn'}`}>{status}</p>}
+      <button
+        type="button"
+        className="btn ghost wide"
+        onClick={async () => {
+          if (!confirm('Delete all saved ElevenLabs audio from this phone? Chapters would be paid for again if played.')) return;
+          const n = await clearSavedAudio();
+          setStatus(`Deleted ${n} saved audio files.`);
+        }}
+      >
+        Delete saved audio
+      </button>
+    </>
   );
 }
