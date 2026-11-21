@@ -41,8 +41,8 @@ export interface PlayerState {
   current?: { start: number; end: number };
   index: number;
   total: number;
-  /** First time only: how much of the voice model has downloaded, 0 to 1. */
-  download?: number;
+  /** First time only: how much of the voice model has downloaded. */
+  download?: { mb: number; fraction?: number };
   device?: 'webgpu' | 'wasm';
   /** True when the voice is slower than real time on this phone, so it pauses between pieces. */
   slow?: boolean;
@@ -155,7 +155,7 @@ export async function startReading(input: { bookId: string; chapterId: string; t
   });
   setMediaSession(input.title);
   try {
-    const device = await loadVoice(!!settings.gpu, (f) => mine === run && set({ download: f }));
+    const device = await loadVoice(!!settings.gpu, (d) => mine === run && set({ download: d }));
     if (mine !== run) return;
     set({ device, download: undefined, status: 'waiting' });
   } catch (e) {

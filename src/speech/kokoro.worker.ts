@@ -33,7 +33,8 @@ function load(wantGpu = false): Promise<KokoroTTS> {
         dtype: gpu ? 'fp32' : 'q8',
         device,
         progress_callback: (p: { status: string; file?: string; loaded?: number; total?: number }) => {
-          if (p.status === 'progress' && p.total) post({ type: 'progress', file: p.file, loaded: p.loaded, total: p.total });
+          // Sent even when the size is not known (the model's host does not always say), so the count still moves.
+          if (p.status === 'progress' && p.file) post({ type: 'progress', file: p.file, loaded: p.loaded ?? 0, total: p.total });
         },
       });
     })

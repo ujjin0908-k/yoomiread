@@ -37,9 +37,9 @@ export function ReadAloudBar({ chapterId }: { chapterId: string }) {
   const line =
     p.error ??
     (p.status === 'loading'
-      ? p.download !== undefined
-        ? `Getting the voice ready (first time only): ${Math.round(p.download * 100)}%`
-        : `Getting the voice ready… ${secs} s`
+      ? p.download && p.download.fraction !== 1
+        ? `Downloading the voice (once): ${p.download?.fraction !== undefined ? `${Math.round(p.download.fraction * 100)}%` : `${p.download.mb} MB`} · ${secs} s`
+        : `Starting the voice… ${secs} s`
       : p.status === 'waiting'
         ? `Making the voice… ${secs} s`
         : p.status === 'ended'

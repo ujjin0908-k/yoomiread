@@ -8,25 +8,27 @@ export interface Spoken {
   rate: number;
 }
 
-/** Download progress of the voice model, 0 to 1, while it is being fetched the first time. */
-export type ProgressListener = (fraction: number) => void;
+/** Download progress of the voice model the first time: megabytes so far, and the fraction when the sizes are known. */
+export type ProgressListener = (progress: { mb: number; fraction?: number }) => void;
 
 let worker: Worker | undefined;
 let nextId = 1;
 const waiting = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
 const progress = new Set<ProgressListener>();
-const files = new Map<string, { loaded: number; total: number }>();
+const files = new Map<string, { loaded: number; total?: number }>();
 
 function start(): Worker {
   if (worker) return worker;
   worker = new Worker(new URL('./kokoro.worker.ts', import.meta.url), { type: 'module' });
   worker.onmessage = (event) => {
     const m = event.data as { id?: number; type: string; message?: string; file?: string; loaded?: number; total?: number; samples?: Float32Array; rate?: number };
-    if (m.type === 'progress' && m.file && m.total) {
-      files.set(m.file, { loaded: m.loaded ?? 0, total: m.total });
+    if (m.type === 'progress' && m.file) {
+      files.set(m.file, { loaded: m.loaded ?? 0, total: m.total || undefined });
       const all = [...files.values()];
-      const fraction = all.reduce((s, f) => s + f.loaded, 0) / all.reduce((s, f) => s + f.total, 0);
-      for (const l of progress) l(Math.min(1, fraction));
+      const loaded = all.reduce((s, f) => s + f.loaded, 0);
+      const known = all.every((f) => f.total);
+      const fraction = known ? Math.min(1, loaded / all.reduce((s, f) => s + (f.total ?? 0), 0)) : undefined;
+      for (const l of progress) l({ mb: Math.round(loaded / 1e6), fraction });
       return;
     }
     const job = m.id !== undefined ? waiting.get(m.id) : undefined;
