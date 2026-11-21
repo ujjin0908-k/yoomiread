@@ -55,9 +55,9 @@ function ask<T>(msg: Record<string, unknown>): Promise<T> {
 }
 
 /** Gets the voice model ready (downloads it the first time). */
-export function loadVoice(onProgress?: ProgressListener): Promise<'webgpu' | 'wasm'> {
+export function loadVoice(gpu: boolean, onProgress?: ProgressListener): Promise<'webgpu' | 'wasm'> {
   if (onProgress) progress.add(onProgress);
-  return ask<'webgpu' | 'wasm'>({ type: 'load' }).finally(() => onProgress && progress.delete(onProgress));
+  return ask<'webgpu' | 'wasm'>({ type: 'load', gpu }).finally(() => onProgress && progress.delete(onProgress));
 }
 
 /** Speaks a short piece of text into audio samples. */

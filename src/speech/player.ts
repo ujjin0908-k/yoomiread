@@ -13,6 +13,8 @@ export interface ReadAloudSettings {
   speed: number;
   /** Go on to the next chapter at the end of one. */
   autoNext: boolean;
+  /** Use the graphics chip (WebGPU): faster where it works, but a bigger download (about 330 MB) and more memory. */
+  gpu?: boolean;
 }
 
 export const DEFAULT_READ_ALOUD: ReadAloudSettings = { voice: 'am_michael', speed: 1, autoNext: true };
@@ -106,6 +108,9 @@ function element(): HTMLAudioElement {
   if (!audio) {
     audio = new Audio();
     audio.preload = 'auto';
+    audio.onerror = () => {
+      if (state.status === 'playing') set({ status: 'paused', error: 'The phone could not play the sound. Tap ▶ to try again.' });
+    };
     audio.onended = () => {
       const mine = run;
       setTimeout(() => mine === run && advance(), 0);
@@ -122,8 +127,9 @@ function clearMade() {
 /** Starts reading a chapter from `from` (a position in its text: where the reader is). Call it from a tap. */
 export async function startReading(input: { bookId: string; chapterId: string; title: string; text: string; from?: number }): Promise<void> {
   // Unlock the audio element inside the tap, before anything waits (iPhone only allows sound started by a tap).
+  asMedia();
   const el = element();
-  el.src = SILENCE;
+  el.src = silenceUrl();
   void el.play().catch(() => {});
   stopWork();
   const mine = run;
@@ -149,7 +155,7 @@ export async function startReading(input: { bookId: string; chapterId: string; t
   });
   setMediaSession(input.title);
   try {
-    const device = await loadVoice((f) => mine === run && set({ download: f }));
+    const device = await loadVoice(!!settings.gpu, (f) => mine === run && set({ download: f }));
     if (mine !== run) return;
     set({ device, download: undefined, status: 'waiting' });
   } catch (e) {
@@ -196,7 +202,12 @@ function playCurrent() {
   const el = element();
   el.src = url;
   set({ status: 'playing', current: chunks[state.index] });
-  void el.play().catch((e) => set({ status: 'paused', error: e instanceof Error ? e.message : 'Tap play to go on.' }));
+  void el.play().catch((e) =>
+    set({
+      status: 'paused',
+      error: e instanceof Error && e.name === 'NotAllowedError' ? 'The phone held the sound back. Tap ▶ to start it.' : 'The sound did not start. Tap ▶ to try again.',
+    }),
+  );
   void make(run);
 }
 
@@ -222,6 +233,7 @@ export function pause() {
 
 export function resume() {
   if (state.status !== 'paused') return;
+  asMedia();
   set({ error: undefined });
   if (made.has(state.index) && audio?.src && audio.currentTime > 0 && !audio.ended) {
     set({ status: 'playing' });
@@ -289,4 +301,22 @@ function setMediaSession(title: string) {
 }
 
 /** A tiny silent WAV, played inside the first tap so the phone allows sound later. */
-export const SILENCE = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
+let silence: string | undefined;
+/**
+ * A short clip of silence (0.2 s), played inside the first tap so the phone allows sound later. It must have real
+ * length: an empty clip can be refused, and then nothing after it plays.
+ */
+export function silenceUrl(): string {
+  silence ??= URL.createObjectURL(new Blob([toWav(new Float32Array(4800), 24000)], { type: 'audio/wav' }));
+  return silence;
+}
+
+/** Sound plays as media (like a podcast), so the silent switch does not mute it. iOS 17 and later. */
+export function asMedia() {
+  try {
+    const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+    if (session) session.type = 'playback';
+  } catch {
+    // Not there on older phones.
+  }
+}

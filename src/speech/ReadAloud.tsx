@@ -1,8 +1,8 @@
 import { Pause, Play, SkipBack, SkipForward, X } from 'lucide-react';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Sheet } from '../components';
-import { speak } from './engine';
-import { SILENCE, changeVoice, loadReadAloud, pause, playerState, resume, skip, stop, subscribe, toWav, type ReadAloudSettings } from './player';
+import { loadVoice, speak } from './engine';
+import { asMedia, changeVoice, silenceUrl, loadReadAloud, pause, playerState, resume, skip, stop, subscribe, toWav, type ReadAloudSettings } from './player';
 import { SAMPLE_LINE, VOICES, voiceById } from './voices';
 import './speech.css';
 
@@ -19,6 +19,17 @@ export function ReadAloudBar({ chapterId }: { chapterId: string }) {
   useEffect(() => {
     void loadReadAloud().then(setPrefs);
   }, [picking]);
+  // Seconds spent getting ready or making the next piece, so slow is told apart from stuck.
+  const busy = p.status === 'loading' || p.status === 'waiting';
+  const [since, setSince] = useState(0);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (!busy) return;
+    setSince(Date.now());
+    const t = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [busy, p.index]);
+  const secs = busy && since ? Math.max(0, Math.round((Date.now() - since) / 1000)) : 0;
   if (p.status === 'idle' && !p.error) return null;
   if (p.chapterId && p.chapterId !== chapterId && p.status !== 'idle') return null;
 
@@ -28,9 +39,9 @@ export function ReadAloudBar({ chapterId }: { chapterId: string }) {
     (p.status === 'loading'
       ? p.download !== undefined
         ? `Getting the voice ready (first time only): ${Math.round(p.download * 100)}%`
-        : 'Getting the voice ready…'
+        : `Getting the voice ready… ${secs} s`
       : p.status === 'waiting'
-        ? 'Making the voice…'
+        ? `Making the voice… ${secs} s`
         : p.status === 'ended'
           ? 'End of the chapter'
           : `${voice} · ${prefs?.speed ?? 1}×${p.slow ? ' · this phone is slower than the voice, so it pauses' : ''}`);
@@ -88,9 +99,11 @@ export function VoiceSheet({ onClose }: { onClose: () => void }) {
     setError('');
     // Unlock sound inside the tap.
     sample.current ??= new Audio();
-    sample.current.src = SILENCE;
+    asMedia();
+    sample.current.src = silenceUrl();
     void sample.current.play().catch(() => {});
     try {
+      await loadVoice(!!prefs?.gpu);
       const { samples, rate } = await speak(SAMPLE_LINE, id, prefs?.speed ?? 1);
       sample.current.src = URL.createObjectURL(new Blob([toWav(samples, rate)], { type: 'audio/wav' }));
       await sample.current.play();
@@ -121,6 +134,10 @@ export function VoiceSheet({ onClose }: { onClose: () => void }) {
         <label className="row small">
           <input type="checkbox" className="switch" checked={prefs.autoNext} onChange={(e) => void choose({ autoNext: e.target.checked })} />
           <span>Go on to the next chapter</span>
+        </label>
+        <label className="row small">
+          <input type="checkbox" className="switch" checked={!!prefs.gpu} onChange={(e) => void choose({ gpu: e.target.checked })} />
+          <span>Use the graphics chip: faster on new iPhones, but a bigger download (about 330 MB). Turn it off if the voice stays silent. Takes effect after closing and reopening the app.</span>
         </label>
         <p className="muted small">The voice is Kokoro, made on this phone: free, and private. Grades are its makers' (A is best). Tap ▶ to hear one.</p>
         {error && <p className="warn small">{error}</p>}
