@@ -1,14 +1,21 @@
 import { Pause, Play, SkipBack, SkipForward, X } from 'lucide-react';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Sheet } from '../components';
-import { loadVoice, speak } from './engine';
-import { asMedia, changeVoice, silenceUrl, loadReadAloud, pause, playerState, resume, skip, stop, subscribe, toWav, type ReadAloudSettings } from './player';
-import { SAMPLE_LINE, VOICES, voiceById } from './voices';
+import { changeVoice, englishVoices, loadReadAloud, loadVoices, pause, playerState, resume, sayOnce, skip, stop, subscribe, voiceRank, type ReadAloudSettings } from './player';
 import './speech.css';
+
+/** What a voice says when tried out in the picker. */
+const SAMPLE_LINE = "My name is Cheng Shi, and I never lie. You just haven't been fooled by me yet.";
 
 /** The player's state, kept up to date in a component. */
 export function usePlayer() {
   return useSyncExternalStore(subscribe, playerState);
+}
+
+/** A voice's name without the quality tag, and the tag on its own. */
+function voiceLabel(v: SpeechSynthesisVoice): { name: string; tag: string } {
+  const rank = voiceRank(v);
+  return { name: v.name.replace(/\s*\((premium|enhanced)\)\s*/i, ''), tag: rank === 0 ? 'Premium' : rank === 1 ? 'Enhanced' : 'Standard' };
 }
 
 /** The bar at the bottom of the reader while a chapter is read aloud. */
@@ -16,35 +23,17 @@ export function ReadAloudBar({ chapterId }: { chapterId: string }) {
   const p = usePlayer();
   const [picking, setPicking] = useState(false);
   const [prefs, setPrefs] = useState<ReadAloudSettings>();
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   useEffect(() => {
     void loadReadAloud().then(setPrefs);
+    void loadVoices().then(setVoices);
   }, [picking]);
-  // Seconds spent getting ready or making the next piece, so slow is told apart from stuck.
-  const busy = p.status === 'loading' || p.status === 'waiting';
-  const [since, setSince] = useState(0);
-  const [, tick] = useState(0);
-  useEffect(() => {
-    if (!busy) return;
-    setSince(Date.now());
-    const t = setInterval(() => tick((n) => n + 1), 1000);
-    return () => clearInterval(t);
-  }, [busy, p.index]);
-  const secs = busy && since ? Math.max(0, Math.round((Date.now() - since) / 1000)) : 0;
   if (p.status === 'idle' && !p.error) return null;
   if (p.chapterId && p.chapterId !== chapterId && p.status !== 'idle') return null;
 
-  const voice = voiceById(prefs?.voice ?? '')?.name ?? 'Voice';
-  const line =
-    p.error ??
-    (p.status === 'loading'
-      ? p.download && p.download.fraction !== 1
-        ? `Downloading the voice (once): ${p.download?.fraction !== undefined ? `${Math.round(p.download.fraction * 100)}%` : `${p.download.mb} MB`} · ${secs} s`
-        : `Starting the voice… ${secs} s`
-      : p.status === 'waiting'
-        ? `Making the voice… ${secs} s`
-        : p.status === 'ended'
-          ? 'End of the chapter'
-          : `${voice} · ${prefs?.speed ?? 1}×${p.slow ? ' · this phone is slower than the voice, so it pauses' : ''}`);
+  const english = englishVoices(voices);
+  const voice = english.find((v) => v.voiceURI === prefs?.voice) ?? english[0];
+  const line = p.error ?? (p.status === 'ended' ? 'End of the chapter' : `${voice ? voiceLabel(voice).name : 'Voice'} · ${prefs?.speed ?? 1}×`);
 
   return (
     <>
@@ -52,12 +41,12 @@ export function ReadAloudBar({ chapterId }: { chapterId: string }) {
         <button type="button" className="round-btn plain" aria-label="Back one sentence" disabled={!p.total} onClick={() => skip(-1)}>
           <SkipBack size={18} />
         </button>
-        {p.status === 'playing' || p.status === 'waiting' || p.status === 'loading' ? (
+        {p.status === 'playing' ? (
           <button type="button" className="round-btn" aria-label="Pause" onClick={pause}>
             <Pause size={20} />
           </button>
         ) : (
-          <button type="button" className="round-btn" aria-label="Play" disabled={p.status === 'idle' || p.status === 'ended'} onClick={resume}>
+          <button type="button" className="round-btn" aria-label="Play" disabled={p.status !== 'paused'} onClick={resume}>
             <Play size={20} />
           </button>
         )}
@@ -68,7 +57,7 @@ export function ReadAloudBar({ chapterId }: { chapterId: string }) {
           <span className={p.error ? 'warn small' : 'small'}>{line}</span>
           {p.total > 0 && !p.error && (
             <span className="muted small">
-              {p.index + 1} / {p.total}
+              {p.index + 1} / {p.total} · tap for voices
             </span>
           )}
         </button>
@@ -83,36 +72,14 @@ export function ReadAloudBar({ chapterId }: { chapterId: string }) {
 
 const SPEEDS = [0.8, 0.9, 1, 1.1, 1.2, 1.35, 1.5];
 
-/** Choose the voice and speed. Each voice can be heard first (it is made on the phone, so it takes a moment). */
+/** Choose the voice and speed from the phone's own English voices. Each can be heard first. */
 export function VoiceSheet({ onClose }: { onClose: () => void }) {
   const [prefs, setPrefs] = useState<ReadAloudSettings>();
-  const [trying, setTrying] = useState('');
-  const [error, setError] = useState('');
-  const sample = useRef<HTMLAudioElement>();
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>();
   useEffect(() => {
     void loadReadAloud().then(setPrefs);
-    return () => sample.current?.pause();
+    void loadVoices().then((all) => setVoices(englishVoices(all)));
   }, []);
-
-  async function tryVoice(id: string) {
-    setTrying(id);
-    setError('');
-    // Unlock sound inside the tap.
-    sample.current ??= new Audio();
-    asMedia();
-    sample.current.src = silenceUrl();
-    void sample.current.play().catch(() => {});
-    try {
-      await loadVoice(!!prefs?.gpu);
-      const { samples, rate } = await speak(SAMPLE_LINE, id, prefs?.speed ?? 1);
-      sample.current.src = URL.createObjectURL(new Blob([toWav(samples, rate)], { type: 'audio/wav' }));
-      await sample.current.play();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not play the sample.');
-    } finally {
-      setTrying('');
-    }
-  }
 
   async function choose(change: Partial<ReadAloudSettings>) {
     setPrefs((p) => (p ? { ...p, ...change } : p));
@@ -120,6 +87,8 @@ export function VoiceSheet({ onClose }: { onClose: () => void }) {
   }
 
   if (!prefs) return null;
+  const chosen = prefs.voice || voices?.[0]?.voiceURI;
+  const good = (voices ?? []).filter((v) => voiceRank(v) < 2).length;
   return (
     <Sheet title="Voice" onClose={onClose}>
       <div className="form">
@@ -135,27 +104,35 @@ export function VoiceSheet({ onClose }: { onClose: () => void }) {
           <input type="checkbox" className="switch" checked={prefs.autoNext} onChange={(e) => void choose({ autoNext: e.target.checked })} />
           <span>Go on to the next chapter</span>
         </label>
-        <label className="row small">
-          <input type="checkbox" className="switch" checked={!!prefs.gpu} onChange={(e) => void choose({ gpu: e.target.checked })} />
-          <span>Use the graphics chip: faster on new iPhones, but a bigger download (about 330 MB). Turn it off if the voice stays silent. Takes effect after closing and reopening the app.</span>
-        </label>
-        <p className="muted small">The voice is Kokoro, made on this phone: free, and private. Grades are its makers' (A is best). Tap ▶ to hear one.</p>
-        {error && <p className="warn small">{error}</p>}
-        <ul className="voice-list">
-          {VOICES.map((v) => (
-            <li key={v.id} className={prefs.voice === v.id ? 'on' : undefined}>
-              <button type="button" className="voice-pick" aria-pressed={prefs.voice === v.id} onClick={() => void choose({ voice: v.id })}>
-                <b>{v.name}</b>
-                <span className="muted small">
-                  {v.accent} {v.gender.toLowerCase()} · {v.grade}
-                </span>
-              </button>
-              <button type="button" className="round-btn plain" aria-label={`Hear ${v.name}`} disabled={!!trying} onClick={() => void tryVoice(v.id)}>
-                {trying === v.id ? <span className="small">…</span> : <Play size={16} />}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <p className="muted small">
+          These are the voices on this phone. {good ? '' : 'Only standard voices are here so far. '}For much better ones, open the iPhone's Settings →
+          Accessibility → Read & Speak (Spoken Content on older iOS) → Voices → English, and download a Premium or Enhanced voice (Ava, Zoe, Evan,
+          Nathan…). Then close and reopen YoomiRead, and it shows up here at the top.
+        </p>
+        {voices === undefined ? (
+          <p className="muted small">Looking for voices…</p>
+        ) : !voices.length ? (
+          <p className="warn small">No English voices were found on this phone.</p>
+        ) : (
+          <ul className="voice-list">
+            {voices.map((v) => {
+              const { name, tag } = voiceLabel(v);
+              return (
+                <li key={v.voiceURI} className={chosen === v.voiceURI ? 'on' : undefined}>
+                  <button type="button" className="voice-pick" aria-pressed={chosen === v.voiceURI} onClick={() => void choose({ voice: v.voiceURI })}>
+                    <b>{name}</b>
+                    <span className="muted small">
+                      {tag} · {v.lang}
+                    </span>
+                  </button>
+                  <button type="button" className="round-btn plain" aria-label={`Hear ${name}`} onClick={() => sayOnce(SAMPLE_LINE, v.voiceURI, prefs.speed)}>
+                    <Play size={16} />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </Sheet>
   );

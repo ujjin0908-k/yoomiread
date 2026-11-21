@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { chunkAt, sayable, speechChunks } from './chunks';
-import { toWav } from './player';
+import { englishVoices } from './player';
 
 describe('read aloud pieces', () => {
   const text = 'Cheng Shi smiled. "You lost." He left.\n\n？\n\nDa Yi followed behind, brimming with excitement......';
@@ -32,13 +32,10 @@ describe('read aloud pieces', () => {
   });
 });
 
-describe('toWav', () => {
-  it('writes a 16-bit mono WAV header and the samples', () => {
-    const wav = new DataView(toWav(new Float32Array([0, 1, -1]), 24000));
-    const tag = (at: number) => String.fromCharCode(...[0, 1, 2, 3].map((i) => wav.getUint8(at + i)));
-    expect([tag(0), tag(8), tag(36)]).toEqual(['RIFF', 'WAVE', 'data']);
-    expect(wav.getUint32(24, true)).toBe(24000);
-    expect(wav.byteLength).toBe(44 + 6);
-    expect([wav.getInt16(44, true), wav.getInt16(46, true), wav.getInt16(48, true)]).toEqual([0, 32767, -32768]);
+describe('phone voices', () => {
+  it('keeps English voices, Premium first, then Enhanced, then the rest, each once', () => {
+    const v = (name: string, lang = 'en-US', voiceURI = name) => ({ name, lang, voiceURI });
+    const list = englishVoices([v('Samantha'), v('Ting-Ting', 'zh-CN'), v('Ava (Premium)'), v('Daniel', 'en-GB'), v('Evan (Enhanced)'), v('Samantha')]);
+    expect(list.map((x) => x.name)).toEqual(['Ava (Premium)', 'Evan (Enhanced)', 'Daniel', 'Samantha']);
   });
 });

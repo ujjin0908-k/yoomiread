@@ -1,27 +1,28 @@
 import { db } from '../db';
 import { chunkAt, speechChunks, type SpeechChunk } from './chunks';
-import { loadVoice, speak } from './engine';
 
 /**
- * Read aloud: one player for the whole app, so it keeps going while pages change (the next chapter starts by itself).
- * Pieces of the chapter are spoken by Kokoro in its worker, a few ahead of the one playing, and played one after the
- * other through a single <audio> element (it keeps playing with the phone's controls and, often, with the screen locked).
+ * Read aloud with the phone's own voices (the Web Speech API): free, instant, works offline. On iPhone, better voices
+ * are downloaded in Settings → Accessibility → Read & Speak → Voices (the "Premium" and "Enhanced" ones), and then
+ * show up here. One player for the whole app, so it keeps going while pages change (the next chapter starts by itself).
  */
 
 export interface ReadAloudSettings {
+  /** The voice's id (its voiceURI); empty means the phone's best English voice. */
   voice: string;
   speed: number;
   /** Go on to the next chapter at the end of one. */
   autoNext: boolean;
-  /** Use the graphics chip (WebGPU): faster where it works, but a bigger download (about 330 MB) and more memory. */
-  gpu?: boolean;
 }
 
-export const DEFAULT_READ_ALOUD: ReadAloudSettings = { voice: 'am_michael', speed: 1, autoNext: true };
+export const DEFAULT_READ_ALOUD: ReadAloudSettings = { voice: '', speed: 1, autoNext: true };
 
 export async function loadReadAloud(): Promise<ReadAloudSettings> {
   const saved = (await db.settings.get('readAloud'))?.value as Partial<ReadAloudSettings> | undefined;
-  return { ...DEFAULT_READ_ALOUD, ...(saved ?? {}) };
+  const merged = { ...DEFAULT_READ_ALOUD, ...(saved ?? {}) };
+  // A voice id from the old Kokoro voices ("am_michael") is not a phone voice.
+  if (/^[ab][fm]_/.test(merged.voice)) merged.voice = '';
+  return merged;
 }
 
 export async function saveReadAloud(change: Partial<ReadAloudSettings>): Promise<ReadAloudSettings> {
@@ -30,7 +31,7 @@ export async function saveReadAloud(change: Partial<ReadAloudSettings>): Promise
   return next;
 }
 
-export type PlayerStatus = 'idle' | 'loading' | 'waiting' | 'playing' | 'paused' | 'ended';
+export type PlayerStatus = 'idle' | 'playing' | 'paused' | 'ended';
 
 export interface PlayerState {
   status: PlayerStatus;
@@ -41,28 +42,16 @@ export interface PlayerState {
   current?: { start: number; end: number };
   index: number;
   total: number;
-  /** First time only: how much of the voice model has downloaded. */
-  download?: { mb: number; fraction?: number };
-  device?: 'webgpu' | 'wasm';
-  /** True when the voice is slower than real time on this phone, so it pauses between pieces. */
-  slow?: boolean;
   error?: string;
   /** The chapter the player wants to go on with (set at the end of a chapter when "next chapter" is on). */
   nextChapterId?: string;
 }
 
-/** Pieces made ahead of the one playing. More smooths over a slow phone; each one is a few hundred KB of audio. */
-const AHEAD = 6;
-
 let state: PlayerState = { status: 'idle', index: 0, total: 0 };
 const listeners = new Set<() => void>();
 let chunks: SpeechChunk[] = [];
-let made = new Map<number, string>(); // piece index → object URL of its WAV
-let run = 0; // bumped on every start/stop, so old work is dropped
-let making = false;
-let audio: HTMLAudioElement | undefined;
+let run = 0; // bumped whenever speech is cut off, so a cancelled piece does not move the player on
 let settings: ReadAloudSettings = DEFAULT_READ_ALOUD;
-let timing: number[] = []; // seconds of work per second of audio, for the last few pieces
 
 function set(change: Partial<PlayerState>) {
   state = { ...state, ...change };
@@ -78,204 +67,157 @@ export function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-/** Float samples (−1 to 1) as a 16-bit mono WAV file. */
-export function toWav(samples: Float32Array, rate: number): ArrayBuffer {
-  const data = samples.length * 2;
-  const buf = new ArrayBuffer(44 + data);
-  const v = new DataView(buf);
-  const text = (at: number, s: string) => [...s].forEach((ch, i) => v.setUint8(at + i, ch.charCodeAt(0)));
-  text(0, 'RIFF');
-  v.setUint32(4, 36 + data, true);
-  text(8, 'WAVE');
-  text(12, 'fmt ');
-  v.setUint32(16, 16, true);
-  v.setUint16(20, 1, true);
-  v.setUint16(22, 1, true);
-  v.setUint32(24, rate, true);
-  v.setUint32(28, rate * 2, true);
-  v.setUint16(32, 2, true);
-  v.setUint16(34, 16, true);
-  text(36, 'data');
-  v.setUint32(40, data, true);
-  for (let i = 0; i < samples.length; i++) {
-    const s = Math.max(-1, Math.min(1, samples[i]));
-    v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-  }
-  return buf;
+const synth = (): SpeechSynthesis | undefined => (typeof window !== 'undefined' ? window.speechSynthesis : undefined);
+
+/** Quality, from the voice's name: the downloaded Premium and Enhanced voices sound far better. */
+export function voiceRank(v: Pick<SpeechSynthesisVoice, 'name'>): number {
+  if (/premium/i.test(v.name)) return 0;
+  if (/enhanced|neural|natural/i.test(v.name)) return 1;
+  return 2;
 }
 
-function element(): HTMLAudioElement {
-  if (!audio) {
-    audio = new Audio();
-    audio.preload = 'auto';
-    audio.onerror = () => {
-      if (state.status === 'playing') set({ status: 'paused', error: 'The phone could not play the sound. Tap ▶ to try again.' });
-    };
-    audio.onended = () => {
-      const mine = run;
-      setTimeout(() => mine === run && advance(), 0);
-    };
-  }
-  return audio;
+/** The phone's English voices, best first, then by name. */
+export function englishVoices<V extends Pick<SpeechSynthesisVoice, 'name' | 'lang' | 'voiceURI'>>(all: V[]): V[] {
+  const seen = new Set<string>();
+  return all
+    .filter((v) => /^en([-_]|$)/i.test(v.lang))
+    .filter((v) => (seen.has(v.voiceURI) ? false : (seen.add(v.voiceURI), true)))
+    .sort((a, b) => voiceRank(a) - voiceRank(b) || a.name.localeCompare(b.name));
 }
 
-function clearMade() {
-  for (const url of made.values()) URL.revokeObjectURL(url);
-  made = new Map();
+/** The phone's voices; on iPhone they arrive a moment after the page opens. */
+export function loadVoices(): Promise<SpeechSynthesisVoice[]> {
+  const s = synth();
+  if (!s) return Promise.resolve([]);
+  const now = s.getVoices();
+  if (now.length) return Promise.resolve(now);
+  return new Promise((resolve) => {
+    const done = () => resolve(s.getVoices());
+    s.addEventListener('voiceschanged', done, { once: true });
+    setTimeout(done, 1500);
+  });
+}
+
+function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
+  return voices.find((v) => v.voiceURI === settings.voice) ?? englishVoices(voices)[0];
+}
+
+function utterance(text: string, voice: SpeechSynthesisVoice | undefined, speed: number): SpeechSynthesisUtterance {
+  const u = new SpeechSynthesisUtterance(text);
+  if (voice) {
+    u.voice = voice;
+    u.lang = voice.lang;
+  } else u.lang = 'en-US';
+  u.rate = speed;
+  return u;
+}
+
+/** Says one line with a voice (for trying voices out). Call it from a tap. */
+export function sayOnce(text: string, voiceURI: string, speed: number) {
+  const s = synth();
+  if (!s) return;
+  if (state.status === 'playing') pause();
+  s.cancel();
+  s.speak(utterance(text, s.getVoices().find((x) => x.voiceURI === voiceURI), speed));
 }
 
 /** Starts reading a chapter from `from` (a position in its text: where the reader is). Call it from a tap. */
 export async function startReading(input: { bookId: string; chapterId: string; title: string; text: string; from?: number }): Promise<void> {
-  // Unlock the audio element inside the tap, before anything waits (iPhone only allows sound started by a tap).
-  asMedia();
-  const el = element();
-  el.src = silenceUrl();
-  void el.play().catch(() => {});
-  stopWork();
-  const mine = run;
-  settings = await loadReadAloud();
+  const s = synth();
+  if (!s) {
+    set({ status: 'idle', error: 'This browser cannot read aloud.' });
+    return;
+  }
+  cut();
   chunks = speechChunks(input.text);
   if (!chunks.length) {
     set({ status: 'idle', error: 'This chapter has nothing to read aloud.' });
     return;
   }
   const index = chunkAt(chunks, input.from ?? 0);
-  timing = [];
-  set({
-    status: 'loading',
-    bookId: input.bookId,
-    chapterId: input.chapterId,
-    title: input.title,
-    index,
-    total: chunks.length,
-    current: chunks[index],
-    error: undefined,
-    nextChapterId: undefined,
-    slow: false,
-  });
+  set({ status: 'playing', bookId: input.bookId, chapterId: input.chapterId, title: input.title, index, total: chunks.length, current: chunks[index], error: undefined, nextChapterId: undefined });
   setMediaSession(input.title);
-  try {
-    const device = await loadVoice(!!settings.gpu, (d) => mine === run && set({ download: d }));
-    if (mine !== run) return;
-    set({ device, download: undefined, status: 'waiting' });
-  } catch (e) {
-    if (mine === run) set({ status: 'idle', download: undefined, error: e instanceof Error ? e.message : 'The voice could not be loaded.' });
-    return;
+  // iPhone only speaks when speech starts in a tap: the first piece starts now, before anything waits.
+  sayCurrent();
+  const before = settings;
+  settings = await loadReadAloud();
+  // The saved voice or speed was not known yet: the sentence starts again with them.
+  if (state.status === 'playing' && (before.voice !== settings.voice || before.speed !== settings.speed || !s.getVoices().length)) {
+    await loadVoices();
+    if (state.status !== 'playing') return;
+    cut();
+    sayCurrent();
   }
-  void make(mine);
-  playCurrent();
 }
 
-/** Makes audio for the pieces ahead of the one playing, one at a time. */
-async function make(mine: number) {
-  if (making) return;
-  making = true;
-  try {
-    for (;;) {
-      if (mine !== run) return;
-      let next = state.index;
-      while (made.has(next)) next++;
-      if (next >= chunks.length || next - state.index >= AHEAD) return;
-      const t0 = performance.now();
-      const { samples, rate } = await speak(chunks[next].text, settings.voice, settings.speed);
-      if (mine !== run) return;
-      const seconds = samples.length / rate;
-      timing = [...timing.slice(-3), (performance.now() - t0) / 1000 / Math.max(0.3, seconds)];
-      made.set(next, URL.createObjectURL(new Blob([toWav(samples, rate)], { type: 'audio/wav' })));
-      const slow = timing.length >= 2 && timing.reduce((a, b) => a + b, 0) / timing.length > 1;
-      if (slow !== state.slow) set({ slow });
-      if (next === state.index && state.status === 'waiting') playCurrent();
+function sayCurrent() {
+  const s = synth();
+  const piece = chunks[state.index];
+  if (!s || !piece) return;
+  const mine = ++run;
+  const u = utterance(piece.text, pickVoice(s.getVoices()), settings.speed);
+  u.onend = () => {
+    if (mine !== run || state.status !== 'playing') return;
+    if (state.index + 1 >= chunks.length) {
+      set({ status: 'ended', current: undefined });
+      return;
     }
-  } catch (e) {
-    if (mine === run) set({ status: 'paused', error: e instanceof Error ? e.message : 'The voice stopped.' });
-  } finally {
-    making = false;
-  }
+    set({ index: state.index + 1, current: chunks[state.index + 1] });
+    sayCurrent();
+  };
+  u.onerror = (e) => {
+    if (mine !== run || e.error === 'interrupted' || e.error === 'canceled') return;
+    set({ status: 'paused', error: 'The voice stopped. Tap ▶ to go on.' });
+  };
+  set({ current: piece });
+  s.speak(u);
 }
 
-function playCurrent() {
-  const url = made.get(state.index);
-  if (!url) {
-    set({ status: 'waiting', current: chunks[state.index] });
-    return;
-  }
-  const el = element();
-  el.src = url;
-  set({ status: 'playing', current: chunks[state.index] });
-  void el.play().catch((e) =>
-    set({
-      status: 'paused',
-      error: e instanceof Error && e.name === 'NotAllowedError' ? 'The phone held the sound back. Tap ▶ to start it.' : 'The sound did not start. Tap ▶ to try again.',
-    }),
-  );
-  void make(run);
+/** Stops the voice without moving on (the caller chooses what comes next). */
+function cut() {
+  run++;
+  synth()?.cancel();
 }
 
-function advance() {
-  const done = made.get(state.index);
-  if (done) {
-    URL.revokeObjectURL(done);
-    made.delete(state.index);
-  }
-  if (state.index + 1 >= chunks.length) {
-    set({ status: 'ended', current: undefined });
-    return;
-  }
-  set({ index: state.index + 1 });
-  playCurrent();
-}
-
+// Pausing stops the sentence and starts it again on play: iPhone's own pause is unreliable.
 export function pause() {
-  if (state.status !== 'playing' && state.status !== 'waiting') return;
-  audio?.pause();
+  if (state.status !== 'playing') return;
+  cut();
   set({ status: 'paused' });
 }
 
 export function resume() {
   if (state.status !== 'paused') return;
-  asMedia();
-  set({ error: undefined });
-  if (made.has(state.index) && audio?.src && audio.currentTime > 0 && !audio.ended) {
-    set({ status: 'playing' });
-    void audio.play().catch(() => set({ status: 'paused' }));
-  } else playCurrent();
+  set({ status: 'playing', error: undefined });
+  sayCurrent();
 }
 
 /** One piece back or forward. */
 export function skip(by: number) {
   if (!chunks.length) return;
   const index = Math.max(0, Math.min(chunks.length - 1, state.index + by));
-  audio?.pause();
-  set({ index });
-  playCurrent();
-}
-
-function stopWork() {
-  run++;
-  audio?.pause();
-  clearMade();
+  cut();
+  set({ index, current: chunks[index], status: 'playing', error: undefined });
+  sayCurrent();
 }
 
 export function stop() {
-  stopWork();
+  cut();
   chunks = [];
-  set({ status: 'idle', current: undefined, index: 0, total: 0, chapterId: undefined, error: undefined, nextChapterId: undefined, download: undefined });
+  set({ status: 'idle', current: undefined, index: 0, total: 0, chapterId: undefined, error: undefined, nextChapterId: undefined });
 }
 
-/** New voice or speed: what is already made is dropped and made again from the piece playing. */
+/** New voice or speed: the sentence being read starts again with it. */
 export async function changeVoice(change: Partial<ReadAloudSettings>) {
   settings = await saveReadAloud(change);
-  if (state.status === 'idle' || state.status === 'ended' || !chunks.length) return;
-  const wasPaused = state.status === 'paused';
-  stopWork();
-  timing = [];
-  void make(run);
-  if (!wasPaused) playCurrent();
+  if (state.status !== 'playing') return;
+  cut();
+  sayCurrent();
 }
 
 /** Stops with a message for the bar (e.g. the next chapter has no English to read). */
 export function notice(error: string) {
-  stopWork();
+  cut();
   chunks = [];
   set({ status: 'idle', current: undefined, index: 0, total: 0, nextChapterId: undefined, error });
 }
@@ -297,26 +239,5 @@ function setMediaSession(title: string) {
     ms.setActionHandler('stop', () => stop());
   } catch {
     // Older browsers: the reader's own buttons still work.
-  }
-}
-
-/** A tiny silent WAV, played inside the first tap so the phone allows sound later. */
-let silence: string | undefined;
-/**
- * A short clip of silence (0.2 s), played inside the first tap so the phone allows sound later. It must have real
- * length: an empty clip can be refused, and then nothing after it plays.
- */
-export function silenceUrl(): string {
-  silence ??= URL.createObjectURL(new Blob([toWav(new Float32Array(4800), 24000)], { type: 'audio/wav' }));
-  return silence;
-}
-
-/** Sound plays as media (like a podcast), so the silent switch does not mute it. iOS 17 and later. */
-export function asMedia() {
-  try {
-    const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
-    if (session) session.type = 'playback';
-  } catch {
-    // Not there on older phones.
   }
 }
