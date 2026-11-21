@@ -195,6 +195,16 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   paragraph being read is marked and kept in view. Better iPhone voices: Settings → Accessibility → Read & Speak →
   Voices → English (Premium/Enhanced), then reopen the app. Pause stops the sentence and restarts it on play (iPhone's
   own pause is unreliable). The chapter is cut into sentences by `chunks.ts`.
+  - **ElevenLabs (2026-11-21, owner's ask, Flash only: the better model was too dear).** Voice sheet → "ElevenLabs":
+    the owner's API key and voice ID (default QAmlwgbPtjxpk7u98Qs9), kept in device settings (never in a backup).
+    The phone calls api.elevenlabs.io directly (it allows browsers), no server. `src/speech/eleven.ts`: the chapter's
+    sentences are grouped into parts of up to 1,500 characters (`partsOf`), each spoken with `eleven_flash_v2_5`
+    (half a credit per character, about $0.04 per 1,000 characters pay-as-you-go) and saved in cache storage
+    `yoomiread-audio` (kept across app updates by `sw.js`), keyed by chapter, voice, speed and the text, so a chapter
+    is paid for once. Before a chapter uses credits the bar shows characters, credits and dollars with a Listen
+    button ("ask first", on by default). The next part is made while one plays; the paragraph mark follows the audio
+    by sentence length (`chunkAtTime`). "Check key" shows credits left; "Delete saved audio" frees the space.
+    Errors in plain words (bad key, out of credits, unknown voice, free account blocked).
   - Kokoro (an on-device AI voice) was tried first the same day and removed: on the owner's iPhone it stayed on
     "Making the voice", too slow to make speech live. ElevenLabs was discussed: its free plan covers less than one
     chapter a month, so it would need a paid plan.
