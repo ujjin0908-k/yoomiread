@@ -188,6 +188,24 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   - "Full card" on a person leads to the cast's character page, which shows everything known (guide lines included),
     as it always has. The world's own cards stay inside the reading line.
 
+- **Read aloud (2026-11-21, owner's choice: Kokoro).** The headphones button in the reader reads the English (the
+  translation, or an English book's text) with Kokoro, an open voice model run on the phone (`src/speech/`): free,
+  private, 26 English voices (American and British, with its makers' grades) chosen in the Voice sheet (tap the bar),
+  each with ▶ to hear it first; speed 0.8× to 1.5×; "Go on to the next chapter" (stops with a note when the next one
+  has no translation). The paragraph being read is marked and kept in view; the phone's lock-screen controls work
+  through Media Session.
+  - `kokoro.worker.ts` runs `kokoro-js` in a worker. WebGPU (fp32 model) when the browser has it, else the processor
+    (q8 model, about 90 MB). The model and voices come from Hugging Face the first time, then transformers.js keeps
+    them. The engine's own files (about 24 MB) are left out of the install-time offline list (`vite.config.ts`) and
+    saved by the service worker on first use.
+  - `player.ts`: one player for the app. The chapter is cut into sentences (`chunks.ts`), each spoken a few ahead
+    (`AHEAD`) and played as a WAV through one <audio> element. "slower than the voice" shows when making audio takes
+    longer than playing it.
+  - Measured on the build machine's processor (no WebGPU): 6.7 s of speech took 17 s to make. Not yet measured on an
+    iPhone; if it is too slow there, the next step is making a chapter's audio ahead and keeping it.
+  - `.npmrc` sets `onnxruntime-node-install-cuda=skip`: kokoro-js pulls in onnxruntime-node (Node only), whose install
+    otherwise tries a GPU download that fails.
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless

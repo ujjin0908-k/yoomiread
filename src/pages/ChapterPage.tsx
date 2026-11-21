@@ -2,7 +2,7 @@ import { inOrder, useChapterOrder } from '../chapterOrder';
 import { mix, topColour } from '../backdrop';
 import { BackdropPicker } from './BackdropPicker';
 import { pictureBlob, usePictureUrl } from '../picture';
-import { AlertTriangle, BookOpen, Bookmark, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, Orbit, PenLine, Trash2, Type } from 'lucide-react';
+import { AlertTriangle, BookOpen, Bookmark, Headphones, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, Orbit, PenLine, Trash2, Type } from 'lucide-react';
 import '../world/world.css';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { OrderToggle, ProgressBar, Sheet, TopBar, Working } from '../components';
@@ -12,6 +12,8 @@ import { bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTransl
 import { WordSheet } from './WordSheet';
 import { GlossaryCard, StoryPicture } from './GlossaryCard';
 import { FixLine } from './FixLine';
+import { ReadAloudBar, usePlayer } from '../speech/ReadAloud';
+import { loadReadAloud, notice as readAloudNotice, startReading, stop as stopReading, wantNext } from '../speech/player';
 import { scenesFor } from '../scenes';
 import { glossaryFor } from '../glossaryMatch';
 import { Mascot } from '../mascot/Mascot';
@@ -73,6 +75,46 @@ export function ChapterPage({ id }: { id: string }) {
 
   useReadingSession(chapter, book);
   const aheadStatus = useTranslateAhead(chapter, book);
+
+  // Read aloud (src/speech): only English can be read, so the translation, or the text of an English book.
+  const player = usePlayer();
+  const readable = translation?.text ? translation.text : text && book && !needsTranslation(book, text) ? text : undefined;
+  const listening = player.chapterId === id && player.status !== 'idle';
+  // The paragraph being read is marked, and kept in view.
+  useEffect(() => {
+    const root = textRef.current;
+    if (!root) return;
+    root.querySelectorAll('p.speaking').forEach((el) => el.classList.remove('speaking'));
+    if (!listening || !player.current) return;
+    const at = player.current.start;
+    const el = [...root.querySelectorAll<HTMLElement>('p[data-start]')].filter((x) => Number(x.dataset.start) <= at).pop();
+    if (!el) return;
+    el.classList.add('speaking');
+    const r = el.getBoundingClientRect();
+    if (r.top < 90 || r.bottom > window.innerHeight - 140) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [listening, player.current?.start, chosenView, readable]);
+  // The end of a chapter: it counts as read, and the next one is opened and read on when "next chapter" is on.
+  useEffect(() => {
+    if (player.status !== 'ended' || player.chapterId !== id || !siblings) return;
+    void db.chapters.update(id, { read: true, position: 1 });
+    void loadReadAloud().then((ra) => {
+      const i = siblings.findIndex((c) => c.id === id);
+      const after = siblings[i + 1];
+      if (ra.autoNext && after) {
+        wantNext(after.id);
+        go(`chapter/${after.id}`);
+      } else stopReading();
+    });
+  }, [player.status, player.chapterId, id, siblings]);
+  // Arriving at the chapter the player asked for: read it from the start (once its text is loaded).
+  useEffect(() => {
+    if (player.nextChapterId !== id || text === undefined || translation === undefined || !chapter || !book) return;
+    if (!readable) {
+      readAloudNotice(`Chapter ${chapter.number} is not translated yet, so reading stopped.`);
+      return;
+    }
+    void startReading({ bookId: chapter.bookId, chapterId: id, title: chapter.title, text: readable, from: 0 });
+  }, [player.nextChapterId, id, text, translation, chapter, book, readable]);
   useScrollMemory(chapter, text !== undefined && translation !== undefined, setScroll);
   const backdrop = book?.backdrop;
   const [order, setOrder] = useChapterOrder(chapter?.bookId);
@@ -170,6 +212,22 @@ export function ChapterPage({ id }: { id: string }) {
             {needsTranslation(book, text) && (
               <button type="button" className="round-btn plain" aria-label="Translate" disabled={!text} onClick={() => setSheet('translate')}>
                 <Languages size={19} />
+              </button>
+            )}
+            {readable && (
+              <button
+                type="button"
+                className={`round-btn plain${listening ? ' on' : ''}`}
+                aria-label="Read aloud"
+                onClick={() => {
+                  // From the first paragraph on the screen; the translation is shown so the marks can be followed.
+                  if (translation?.text) setView('translation');
+                  const first = [...(textRef.current?.querySelectorAll<HTMLElement>('p[data-start]') ?? [])].find((el) => el.getBoundingClientRect().bottom > 90);
+                  const from = chosenView === 'original' && translation?.text ? 0 : Number(first?.dataset.start ?? 0);
+                  void startReading({ bookId: chapter.bookId, chapterId: id, title: chapter.title, text: readable, from });
+                }}
+              >
+                <Headphones size={19} />
               </button>
             )}
             {chapter && (
@@ -472,6 +530,7 @@ export function ChapterPage({ id }: { id: string }) {
         />
       )}
       {card && <GlossaryCard entry={card} onClose={() => setCard(undefined)} />}
+      <ReadAloudBar chapterId={id} />
       {fixing && translation && text && (
         <FixLine bookId={chapter.bookId} chapterId={chapter.id} original={text} english={translation.text} selection={fixing} onClose={() => setFixing(undefined)} />
       )}
