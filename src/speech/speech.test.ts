@@ -36,6 +36,18 @@ describe('phone voices', () => {
   it('keeps English voices, Premium first, then Enhanced, then the rest, each once', () => {
     const v = (name: string, lang = 'en-US', voiceURI = name) => ({ name, lang, voiceURI });
     const list = englishVoices([v('Samantha'), v('Ting-Ting', 'zh-CN'), v('Ava (Premium)'), v('Daniel', 'en-GB'), v('Evan (Enhanced)'), v('Samantha')]);
-    expect(list.map((x) => x.name)).toEqual(['Ava (Premium)', 'Evan (Enhanced)', 'Daniel', 'Samantha']);
+    expect(list.map((x) => x.name)).toEqual(['Ava (Premium)', 'Evan (Enhanced)', 'Samantha', 'Daniel']);
+  });
+
+  it('leaves out the novelty and robotic voices, and finds Premium by the id', () => {
+    const v = (name: string, voiceURI = name, lang = 'en-US') => ({ name, lang, voiceURI });
+    const list = englishVoices([
+      v('Albert', 'com.apple.speech.synthesis.voice.Albert'),
+      v('Bad News'),
+      v('Grandma (English (US))', 'com.apple.eloquence.en-US.Grandma'),
+      v('Zoe', 'com.apple.voice.premium.en-US.Zoe'),
+      v('Samantha', 'com.apple.voice.compact.en-US.Samantha'),
+    ]);
+    expect(list.map((x) => x.name)).toEqual(['Zoe', 'Samantha']);
   });
 });
