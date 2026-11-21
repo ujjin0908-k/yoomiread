@@ -6,7 +6,7 @@ import { KokoroTTS } from 'kokoro-js';
 
 const MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 
-type In = { id: number; type: 'load' } | { id: number; type: 'speak'; text: string; voice: string; speed: number };
+type In = { id: number; type: 'load'; gpu?: boolean } | { id: number; type: 'speak'; text: string; voice: string; speed: number };
 
 let tts: Promise<KokoroTTS> | undefined;
 let device: 'webgpu' | 'wasm' = 'wasm';
@@ -24,8 +24,8 @@ async function hasGpu(): Promise<boolean> {
   }
 }
 
-function load(): Promise<KokoroTTS> {
-  tts ??= hasGpu()
+function load(wantGpu = false): Promise<KokoroTTS> {
+  tts ??= (wantGpu ? hasGpu() : Promise.resolve(false))
     .then((gpu) => {
       device = gpu ? 'webgpu' : 'wasm';
       return KokoroTTS.from_pretrained(MODEL, {
@@ -48,7 +48,7 @@ self.onmessage = async (event: MessageEvent<In>) => {
   const m = event.data;
   try {
     if (m.type === 'load') {
-      await load();
+      await load(m.gpu);
       post({ id: m.id, type: 'ready', device });
     } else {
       const model = await load();
