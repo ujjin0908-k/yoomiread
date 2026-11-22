@@ -1,0 +1,3 @@
+oz.json.gz: "The Wonderful Wizard of Oz" by L. Frank Baum (1900). The text is in the public domain.
+Taken from the Standard Ebooks edition (https://standardebooks.org), whose own work is dedicated to the public
+domain under CC0 1.0. Converted to this file's format for YoomiRead on 2026-11-22.

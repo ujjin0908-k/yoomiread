@@ -279,7 +279,7 @@ export function titleBatchMessages(titles: string[], glossary: GlossaryEntry[]):
     {
       role: 'system',
       content:
-        'You translate the chapter titles of a Chinese web novel into English for a single reader. Use the glossary exactly for names. ' +
+        'You translate the chapter titles of a Chinese web novel into English. Use the glossary exactly for names. ' +
         'Leave out the chapter number ("第589章 入梦" becomes "Into the Dream"); keep words like "Side Story". Keep the tone of each title. ' +
         'Reply with the same numbered lines and nothing else: "1. Title".',
     },

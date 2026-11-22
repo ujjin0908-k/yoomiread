@@ -1,6 +1,8 @@
 // Offline dictionaries: English (ECDICT) and Chinese (CC-CEDICT), shortened and shipped with the app.
 // Each file loads the first time it is needed, then stays on the phone for offline use.
 
+import { gzipJson } from './gzipJson';
+
 export interface Entry {
   /** Pinyin for Chinese words, phonetic spelling for English. */
   pron: string;
@@ -14,9 +16,8 @@ const loaded: Partial<Record<'en' | 'zh', Promise<Dict>>> = {};
 async function load(lang: 'en' | 'zh'): Promise<Dict> {
   loaded[lang] ??= (async () => {
     const res = await fetch(`/dict/${lang}.json.gz`);
-    if (!res.ok || !res.body) throw new Error('The dictionary could not be loaded.');
-    const text = await new Response(res.body.pipeThrough(new DecompressionStream('gzip'))).text();
-    return JSON.parse(text) as Dict;
+    if (!res.ok) throw new Error('The dictionary could not be loaded.');
+    return gzipJson<Dict>(res);
   })();
   return loaded[lang]!;
 }

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Book3D, Cover, OrderToggle, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
 import { toPicture } from '../picture';
 import { coverFromLink } from '../import/cover';
+import { features } from '../edition';
 import { ChapterLinks } from './ChapterLinks';
 import { ChapterFile } from './ChapterFile';
 import { CopyWorld } from './CopyWorld';
@@ -218,7 +219,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
             ))}
         </dl>
 
-        {!book.cover && ((book.sources?.length ?? 0) > 0 || list.some((c) => c.url)) && (
+        {features.links && !book.cover && ((book.sources?.length ?? 0) > 0 || list.some((c) => c.url)) && (
           <div className="sources">
             <button type="button" className="btn ghost" disabled={coverBusy} onClick={() => void getCover()}>
               {coverBusy ? 'Getting the cover…' : 'Get cover from the link'}
@@ -227,9 +228,9 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
           </div>
         )}
 
-        {(book.novelUpdatesUrl || (book.sources?.length ?? 0) > 0) && (
+        {((features.novelUpdates && book.novelUpdatesUrl) || (book.sources?.length ?? 0) > 0) && (
           <div className="sources">
-            {book.novelUpdatesUrl && (
+            {features.novelUpdates && book.novelUpdatesUrl && (
               <a className="btn ghost" href={book.novelUpdatesUrl} target="_blank" rel="noopener noreferrer">
                 Novel Updates
               </a>
@@ -351,9 +352,11 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
                   English titles
                 </button>
               )}
-              <button type="button" className="link" onClick={() => setAddingMany(true)}>
-                Many from a link
-              </button>
+              {features.links && (
+                <button type="button" className="link" onClick={() => setAddingMany(true)}>
+                  Many from a link
+                </button>
+              )}
               <button type="button" className="link" onClick={() => setAddingFile(true)}>
                 From a file
               </button>
@@ -414,7 +417,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
         </button>
       </main>
 
-      {(addingMany || batching) && (
+      {features.links && (addingMany || batching) && (
         <ChapterLinks
           book={book}
           chapters={list}
@@ -767,10 +770,12 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
             The first chapters read like {GENRES.find((g) => g.id === guess)!.name}. Use it
           </button>
         )}
-        <label>
-          Novel Updates link <span className="muted small">(optional)</span>
-          <input inputMode="url" autoCapitalize="off" value={novelUpdates} onChange={(e) => setNovelUpdates(e.target.value)} />
-        </label>
+        {features.novelUpdates && (
+          <label>
+            Novel Updates link <span className="muted small">(optional)</span>
+            <input inputMode="url" autoCapitalize="off" value={novelUpdates} onChange={(e) => setNovelUpdates(e.target.value)} />
+          </label>
+        )}
         <label>
           Where to read <span className="muted small">(one per line: name | link)</span>
           <textarea rows={3} value={sources} onChange={(e) => setSources(e.target.value)} />

@@ -588,6 +588,11 @@ h3 {
 .home-empty .empty-orn {
   display: none;
 }
+.home-empty > .btn {
+  /* Clear of the round + button and the tab bar when scrolled to the end. */
+  margin: 4px 0 120px;
+  align-self: center;
+}
 
 .now {
   display: flex;

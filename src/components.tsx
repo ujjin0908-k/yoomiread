@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Pointer
 import { usePictureUrl } from './picture';
 import { motionOk } from './motion';
 import type { Book } from './types';
+import { go } from './hooks';
 
 export function Stars({ value, onChange, size = 'md' }: { value?: number; onChange?: (v: number) => void; size?: 'sm' | 'md' }) {
   const v = value ?? 0;
@@ -197,6 +198,30 @@ export function ProgressBar({ value, label }: { value: number; label?: string })
     <div className="bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
       <span style={{ width: `${pct}%` }} />
     </div>
+  );
+}
+
+/** A button that adds the free sample book and opens it. */
+export function SampleButton({ className = 'btn' }: { className?: string }) {
+  const [state, setState] = useState('');
+  return (
+    <>
+      <button
+        type="button"
+        className={className}
+        disabled={state === 'busy'}
+        onClick={() => {
+          setState('busy');
+          void import('./sample')
+            .then(({ addSampleBook }) => addSampleBook())
+            .then((id) => go(`book/${id}`))
+            .catch((e: unknown) => setState(e instanceof Error ? e.message : 'The sample book could not be added.'));
+        }}
+      >
+        {state === 'busy' ? 'Adding the sample…' : 'Try a free sample book'}
+      </button>
+      {state && state !== 'busy' && <p className="warn small center">{state}</p>}
+    </>
   );
 }
 

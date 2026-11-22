@@ -1,3 +1,4 @@
+import { features } from '../edition';
 import { translateFirstChapters } from '../translate/onImport';
 import { BookOpen, ClipboardPaste, FileText, Globe, PenLine } from 'lucide-react';
 import { useState } from 'react';
@@ -194,7 +195,7 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
       </Sheet>
     );
   }
-  if (mode === 'link') {
+  if (mode === 'link' && features.links) {
     return (
       <Sheet title="From a web link" onClose={onClose}>
         <form
@@ -258,13 +259,15 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
             }}
           />
         </label>
-        <button type="button" className="add-option" disabled={!!status} onClick={() => setMode('link')}>
-          <Globe size={26} strokeWidth={1.5} />
-          <span>
-            <strong>From a web link</strong>
-            <span className="muted small">Paste a chapter's link and read it here</span>
-          </span>
-        </button>
+        {features.links && (
+          <button type="button" className="add-option" disabled={!!status} onClick={() => setMode('link')}>
+            <Globe size={26} strokeWidth={1.5} />
+            <span>
+              <strong>From a web link</strong>
+              <span className="muted small">Paste a chapter's link and read it here</span>
+            </span>
+          </button>
+        )}
         <button type="button" className="add-option" disabled={!!status} onClick={() => setMode('paste')}>
           <ClipboardPaste size={26} strokeWidth={1.5} />
           <span>

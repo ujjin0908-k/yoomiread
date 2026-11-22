@@ -1,6 +1,6 @@
 import { Plus, Search, Sticker, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Cover, Empty, PageTitle, Pocket, ProgressBar, Stars, TabBar, type PocketTint } from '../components';
+import { Cover, Empty, PageTitle, Pocket, ProgressBar, SampleButton, Stars, TabBar, type PocketTint } from '../components';
 import { useLive } from '../hooks';
 import { LIBRARY_SORTS, SHELVES, bookProgress, sortBooks, type LibrarySort } from '../logic';
 import type { Book, BookLanguage, Chapter, Shelf } from '../types';
@@ -193,8 +193,13 @@ export function Library() {
           <Empty
             title={q ? 'No books match' : lang !== 'all' ? 'No books in this language' : 'Nothing here yet'}
           >
-            {q ? 'Try another word.' : lang !== 'all' ? 'Tap All to see every book.' : 'Tap + to import a PDF or write a book down.'}
+            {q ? 'Try another word.' : lang !== 'all' ? 'Tap All to see every book.' : 'Tap + to import a PDF or ePub, or write a book down.'}
           </Empty>
+        )}
+        {books && !books.length && !q && (
+          <div className="center">
+            <SampleButton className="btn ghost" />
+          </div>
         )}
 
         <ul className="arch-grid" key={shelf}>
