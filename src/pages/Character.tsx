@@ -8,10 +8,11 @@ import { useLive } from '../hooks';
 import { shrinkImage } from '../images';
 import { toPicture } from '../picture';
 import { isRead, needsTranslation } from '../logic';
-import { chaptersToRead, chaptersToSearch, planCost, planReading, readingTexts, searchCost, searchedTo, searchPlan, searchStory, updateProfiles, type UpdateResult } from '../translate/profiles';
+import { chaptersToRead, chaptersToSearch, planCost, planReading, readingTexts, searchCost, searchedTo, searchKinds, searchPlan, searchStory, updateProfiles, type UpdateResult } from '../translate/profiles';
+import { genreOf, kindLabel } from '../genres';
 import { formatCost } from '../translate/prompt';
 import { loadSettings, modelFor } from '../translate/run';
-import type { Book, Chapter, CharacterProfile, GlossaryEntry, GlossaryKind, ProfileFact, TranslateSettings } from '../types';
+import type { Book, Chapter, CharacterProfile, GlossaryEntry, ProfileFact, TranslateSettings } from '../types';
 import { EntrySheet, Face } from './Glossary';
 
 const PRONOUN: Record<string, { label: string; subject: string; possessive: string }> = {
@@ -454,6 +455,7 @@ export function NewPeopleSearch({ book, chapters, known }: { book: Book; chapter
   const [status, setStatus] = useState('');
   const [result, setResult] = useState('');
   const stop = useRef<AbortController>();
+  const genre = genreOf(book);
   const from = searchedTo(book);
   const todo = chaptersToSearch(chapters, from);
   const todoKey = todo.map((c) => c.id).join();
@@ -489,7 +491,7 @@ export function NewPeopleSearch({ book, chapters, known }: { book: Book; chapter
         const by = (['person', 'place', 'god', 'group', 'term'] as const)
           .map((k) => [k, done.added.filter((g) => g.kind === k).length] as const)
           .filter(([, n]) => n)
-          .map(([k, n]) => `${n} ${KIND_WORDS[k][n === 1 ? 0 : 1]}`);
+          .map(([k, n]) => `${n} ${kindLabel(genre, k, n !== 1).toLowerCase()}`);
         parts.push(`Found ${by.join(', ')}: check them under "To check" at the top.`);
       }
       if (done.updated) parts.push(`Added details to ${done.updated} ${done.updated === 1 ? 'entry' : 'entries'}.`);
@@ -524,7 +526,7 @@ export function NewPeopleSearch({ book, chapters, known }: { book: Book; chapter
         <button type="button" className="update-btn" disabled={!ready} onClick={() => void run()}>
           <span>
             Look for new names and places
-            <small>people, places, gods, groups, terms, links and events in {span(todo)}</small>
+            <small>{searchKinds(book, []).map((k) => kindLabel(genre, k, true).toLowerCase()).join(', ')}, links and events in {span(todo)}</small>
           </span>
           <em>{ready ? `about ${formatCost(cost)}` : '…'}</em>
         </button>
@@ -538,10 +540,4 @@ export function NewPeopleSearch({ book, chapters, known }: { book: Book; chapter
   );
 }
 
-const KIND_WORDS: Record<GlossaryKind, [string, string]> = {
-  person: ['person', 'people'],
-  place: ['place', 'places'],
-  god: ['god', 'gods'],
-  group: ['group', 'groups'],
-  term: ['term', 'terms'],
-};
+

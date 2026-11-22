@@ -4,6 +4,9 @@ export type Shelf = 'want' | 'reading' | 'finished' | 'dropped';
 
 export type BookLanguage = 'zh' | 'en' | 'other';
 
+/** The book's genre preset (see src/genres.ts). Not set means "General", how every book worked before presets. */
+export type GenreId = 'general' | 'fantasy' | 'cultivation' | 'scifi' | 'romance' | 'mystery';
+
 /** How this book should read in English. Applied to every chapter translated for it. */
 export interface BookStyle {
   tone?: 'natural' | 'literary' | 'punchy' | 'formal';
@@ -46,6 +49,8 @@ export interface Book {
   author: string;
   originalTitle?: string;
   language: BookLanguage;
+  /** Names the world's kinds and tells the story search what to look for (src/genres.ts). */
+  genre?: GenreId;
   shelf: Shelf;
   /** Cover image: taken from the PDF's first page, or added by hand. */
   cover?: Picture;
