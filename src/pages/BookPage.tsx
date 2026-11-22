@@ -932,7 +932,7 @@ function TranslateSheet({ book, chapters, done, onClose }: { book: Book; chapter
       <div className="form">
         {!ready && (
           <p className="warn small">
-            Add your provider address and API key in <a href="#/settings">Settings</a> first.
+            Set up AI in <a href="#/settings">Settings</a> first.
           </p>
         )}
         <label>

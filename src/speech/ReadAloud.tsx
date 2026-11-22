@@ -6,7 +6,7 @@ import { audioKey, clearSavedAudio, elevenCredits, silentUrl, speakPart } from '
 import './speech.css';
 
 /** What a voice says when tried out in the picker. */
-const SAMPLE_LINE = "My name is Cheng Shi, and I never lie. You just haven't been fooled by me yet.";
+const SAMPLE_LINE = 'Once upon a time, in a house at the edge of the woods, there lived a girl who loved to read.';
 
 /** The player's state, kept up to date in a component. */
 export function usePlayer() {

@@ -1,6 +1,6 @@
 import { picturePrompt } from '../art';
 import { genreOf, kindLabel, kindsShown } from '../genres';
-import { applyGuide, guideFor, parseGuide, type Guide } from '../guides';
+import { applyGuide, guideFor, guideInfo, parseGuide, type Guide } from '../guides';
 import { chapterBefore } from '../trail';
 import { Check, Copy, ImagePlus, Lock, Plus, Sparkles, Trash2, Unlock } from 'lucide-react';
 import { useRef, useState } from 'react';
@@ -252,6 +252,7 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
  */
 function GuideBox({ book }: { book: Book }) {
   const builtIn = guideFor(book);
+  const info = guideInfo(book);
   const [result, setResult] = useState('');
   const [busy, setBusy] = useState(false);
   const file = useRef<HTMLInputElement>(null);
@@ -274,13 +275,13 @@ function GuideBox({ book }: { book: Book }) {
     <section className="new-people glass guide-box">
       <div className="row between">
         <strong>Book guide</strong>
-        <span className="muted small">free · spoilers</span>
+        <span className="muted small">{info && !info.spoilers ? 'free · no spoilers' : 'free · may have spoilers'}</span>
       </div>
       {builtIn && (
         <button type="button" className="update-btn" disabled={busy} onClick={() => void fill(builtIn)}>
           <span>
             Fill in from the book guide
-            <small>the 16 gods and 6 paths, places, groups, game rules and main characters</small>
+            <small>{info?.blurb}</small>
           </span>
           <em>free</em>
         </button>
@@ -518,7 +519,7 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
         )}
         <label>
           Other names <span className="muted small">(optional, with commas{kind === 'person' ? ': nicknames, titles' : ''})</span>
-          <input value={aliases} placeholder={kind === 'person' ? 'e.g. Little Song, the boss' : 'e.g. other spellings'} onChange={(e) => setAliases(e.target.value)} />
+          <input value={aliases} placeholder={kind === 'person' ? 'e.g. Granny, the captain, the boss' : 'e.g. other spellings'} onChange={(e) => setAliases(e.target.value)} />
         </label>
         <div className="row-2">
           <label>

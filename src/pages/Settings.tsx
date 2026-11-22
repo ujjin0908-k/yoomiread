@@ -59,7 +59,8 @@ export function Settings() {
           <h3>Your data</h3>
           <p className="muted">
             {counts ? `${counts.books} books, ${counts.chapters} chapters, ${counts.notes} notes and highlights.` : '…'}{' '}
-            Everything is saved on this device only.
+            Everything is saved on this device only. Download a backup now and then: if the browser's data is cleared,
+            the backup is the only copy of your books and notes.
           </p>
           <div className="stack">
             <button type="button" className="btn primary" onClick={() => void exportBackup()}>
@@ -128,10 +129,6 @@ export function Settings() {
             Open this page in Safari, tap Share, then “Add to Home Screen”. It opens full screen like an app.
           </p>
         </section>
-        <section className="card">
-          <h3>Coming next</h3>
-          <p className="muted">Import ePub and chapter links, OCR for scanned PDFs, then the AI novel writer.</p>
-        </section>
       </main>
     </>
   );
@@ -184,13 +181,15 @@ function TranslationSettings() {
 
   return (
     <section className="card form translate-settings">
-      <h3>Translation</h3>
+      <h3>AI</h3>
       <p className="muted small">
-        Any OpenAI-compatible provider. The key stays on this phone and is never put in a backup. Set a spending limit with
-        your provider.
+        Translation, character profiles, the story search and the cat's chat use an AI service you choose. Reading,
+        notes, the dictionary and book guides work without it. Paste its address (it ends in /v1; any
+        OpenAI-compatible service works) and your key. The key stays on this phone and is never put in a backup. Set a
+        spending limit with the service.
       </p>
       <label>
-        Provider address
+        Service address
         <input
           inputMode="url"
           autoCapitalize="off"

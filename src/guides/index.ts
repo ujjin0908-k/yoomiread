@@ -9,14 +9,18 @@ import type { Guide, GuideEntry, GuideEvent, GuideLink } from './types';
 export type { Guide, GuideEntry, GuideEvent, GuideLink } from './types';
 
 /** Guides that come with the app, by book. Loaded only when asked for, so the app stays small. */
-const BUILT_IN: { titles: string[]; load: () => Promise<Guide>; ownerOnly?: boolean }[] = [
+const BUILT_IN: { titles: string[]; load: () => Promise<Guide>; ownerOnly?: boolean; blurb: string; spoilers: boolean }[] = [
   {
+    blurb: 'the cast, places, groups and lore, with links and events dated by chapter',
+    spoilers: false,
     titles: ['the wonderful wizard of oz', 'wonderful wizard of oz', 'the wizard of oz', 'wizard of oz'],
     load: async () => (await import('./oz')).OZ,
   },
   // Owner's build only. Written this way so a public build leaves the guide out of the app files entirely.
   ...(import.meta.env.VITE_EDITION === 'public' ? [] : [{
     ownerOnly: true,
+    blurb: 'the 16 gods and 6 paths, places, groups, game rules and main characters',
+    spoilers: true,
     titles: ['foolish game of the gods', 'the foolish game of gods', 'foolish game of gods', "gods' foolish play", '诸神愚戏', '諸神愚戲', 'zhu shen yu xi', 'the fool of the gods', 'fool of the gods', 'the foolish play of the gods', 'foolish play of the gods'],
     load: async () => (await import('./foolish-game')).FOOLISH_GAME,
   }]),
@@ -24,10 +28,20 @@ const BUILT_IN: { titles: string[]; load: () => Promise<Guide>; ownerOnly?: bool
 
 const plainTitle = (t: string) => t.toLowerCase().replace(/[“”"'‘’]/g, "'").replace(/^the\s+/, '').replace(/\s+/g, ' ').trim();
 
+function builtInFor(book: Book) {
+  const mine = [book.title, book.originalTitle ?? ''].map(plainTitle).filter(Boolean);
+  return BUILT_IN.filter((g) => features.ownerGuides || !g.ownerOnly).find((g) => g.titles.some((t) => mine.includes(plainTitle(t))));
+}
+
 /** The built-in guide for this book, if there is one. */
 export function guideFor(book: Book): (() => Promise<Guide>) | undefined {
-  const mine = [book.title, book.originalTitle ?? ''].map(plainTitle).filter(Boolean);
-  return BUILT_IN.filter((g) => features.ownerGuides || !g.ownerOnly).find((g) => g.titles.some((t) => mine.includes(plainTitle(t))))?.load;
+  return builtInFor(book)?.load;
+}
+
+/** What the built-in guide for this book holds, in a few words, and whether it gives away later events. */
+export function guideInfo(book: Book): { blurb: string; spoilers: boolean } | undefined {
+  const g = builtInFor(book);
+  return g && { blurb: g.blurb, spoilers: g.spoilers };
 }
 
 const KINDS: GlossaryKind[] = ['person', 'place', 'god', 'group', 'term'];

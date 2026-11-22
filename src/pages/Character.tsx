@@ -2,7 +2,7 @@ import { LookBox } from './GlossaryCard';
 import { cameFromChapter, chapterBefore } from '../trail';
 import { ImagePlus, ShieldCheck, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Sheet, TopBar, Working } from '../components';
+import { NeedAI, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
 import { shrinkImage } from '../images';
@@ -251,7 +251,7 @@ export function CharacterPage({ id }: { id: string }) {
             Stop
           </button>
         ) : keyMissing ? (
-          <p className="small center muted">Add the provider address and key in Settings to update profiles.</p>
+          <NeedAI to="update profiles" className="small center muted" />
         ) : (
           <button type="button" className="update-btn" disabled={!fresh.length || !estimate.ready} onClick={() => void update()}>
             <span>
@@ -418,7 +418,7 @@ export function UpdateSheet({ book, chapters, people, onClose }: { book: Book; c
         )}
 
         {keyMissing ? (
-          <p className="warn small">Add the provider address and key in Settings first.</p>
+          <NeedAI />
         ) : running ? (
           <button type="button" className="btn wide" onClick={() => stop.current?.abort()}>
             Stop
@@ -514,7 +514,7 @@ export function NewPeopleSearch({ book, chapters, known }: { book: Book; chapter
       {!todo.length ? (
         <p className="muted small">Nothing new to read yet. Finish more chapters, then look again.</p>
       ) : keyMissing ? (
-        <p className="warn small">Add the provider address and key in Settings to search the story.</p>
+        <NeedAI to="search the story" />
       ) : running ? (
         <>
           <Working label={status} />
