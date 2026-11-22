@@ -32,7 +32,8 @@ import {
 } from '../logic';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
 import { keepTranslation, loadSettings, modelFor, translateChapter, translateTitle, translateTitles, type ChapterRun } from '../translate/run';
-import type { Book, BookLanguage, BookStyle, Chapter, Shelf, TranslateSettings } from '../types';
+import type { Book, BookLanguage, BookStyle, Chapter, GenreId, Shelf, TranslateSettings } from '../types';
+import { GENRES, guessGenre } from '../genres';
 import { parseSources, sourcesText, webLink } from '../sources';
 
 export function BookPage({ id, sub }: { id: string; sub?: string }) {
@@ -607,12 +608,32 @@ function styleFrom(input: { tone: BookStyle['tone'] | ''; honorifics: BookStyle[
   return Object.keys(style).length ? style : undefined;
 }
 
+/** A free guess at the genre from the first chapters, made on the phone. Undefined while loading or when unclear. */
+function useGenreGuess(bookId: string): GenreId | undefined {
+  const [guess, setGuess] = useState<GenreId>();
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      const first = (await db.chapters.where('bookId').equals(bookId).sortBy('number')).slice(0, 5);
+      const texts = await db.texts.bulkGet(first.map((c) => c.id));
+      const found = guessGenre(texts.map((t) => t?.text ?? '').join('\n'));
+      if (live) setGuess(found);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [bookId]);
+  return guess;
+}
+
 /** Rename a book and fix its details. After an import it asks "Keep this title?". */
 function DetailsSheet({ book, justImported, onClose }: { book: Book; justImported: boolean; onClose: () => void }) {
   const [title, setTitle] = useState(book.title);
   const [author, setAuthor] = useState(book.author);
   const [originalTitle, setOriginalTitle] = useState(book.originalTitle ?? '');
   const [language, setLanguage] = useState<BookLanguage>(book.language);
+  const [genre, setGenre] = useState<GenreId>(book.genre ?? 'general');
+  const guess = useGenreGuess(book.id);
   const [novelUpdates, setNovelUpdates] = useState(book.novelUpdatesUrl ?? '');
   const [sources, setSources] = useState(sourcesText(book.sources));
   const [tone, setTone] = useState<BookStyle['tone'] | ''>(book.style?.tone ?? '');
@@ -650,6 +671,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
       author: author.trim(),
       originalTitle: originalTitle.trim() || undefined,
       language,
+      genre: genre === 'general' ? undefined : genre,
       novelUpdatesUrl: webLink(novelUpdates),
       sources: parseSources(sources),
       style: styleFrom({ tone, honorifics, notes: styleNotes, sample: styleSample }),
@@ -696,6 +718,22 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
             <option value="other">Other</option>
           </select>
         </label>
+        <label>
+          Genre <span className="muted small">(names the world and guides the story search)</span>
+          <select value={genre} onChange={(e) => setGenre(e.target.value as GenreId)}>
+            {GENRES.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+          <span className="muted small">{GENRES.find((g) => g.id === genre)!.blurb}</span>
+        </label>
+        {guess && guess !== genre && (
+          <button type="button" className="link small" onClick={() => setGenre(guess)}>
+            The first chapters read like {GENRES.find((g) => g.id === guess)!.name}. Use it
+          </button>
+        )}
         <label>
           Novel Updates link <span className="muted small">(optional)</span>
           <input inputMode="url" autoCapitalize="off" value={novelUpdates} onChange={(e) => setNovelUpdates(e.target.value)} />

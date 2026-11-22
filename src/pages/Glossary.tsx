@@ -1,4 +1,5 @@
 import { picturePrompt } from '../art';
+import { genreOf, kindLabel, kindsShown } from '../genres';
 import { applyGuide, guideFor, parseGuide, type Guide } from '../guides';
 import { chapterBefore } from '../trail';
 import { Check, Copy, ImagePlus, Lock, Plus, Sparkles, Trash2, Unlock } from 'lucide-react';
@@ -14,8 +15,6 @@ import { NewPeopleSearch, UpdateSheet } from './Character';
 import { loadSettings, modelFor, scanGlossary } from '../translate/run';
 import type { Book, Gender, GlossaryEntry, GlossaryKind } from '../types';
 
-const KIND_LABEL: Record<GlossaryKind, string> = { person: 'People', place: 'Places', god: 'Gods', group: 'Groups', term: 'Terms' };
-const KINDS: GlossaryKind[] = ['person', 'place', 'god', 'group', 'term'];
 
 /** A round face for a glossary person; nothing at all when there is no picture. */
 export function Avatar({ entry, size = 32, onClick }: { entry: GlossaryEntry; size?: number; onClick?: () => void }) {
@@ -110,6 +109,8 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
   }
 
   const count = (k: GlossaryKind) => approved.filter((g) => g.kind === k).length;
+  const genre = genreOf(book);
+  const kinds = kindsShown(genre, list.map((g) => g.kind));
 
   return (
     <>
@@ -144,9 +145,9 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
         </header>
 
         <div className="filter-row" role="group" aria-label="Kind">
-          {KINDS.map((k) => (
+          {kinds.map((k) => (
             <button key={k} type="button" className={`filter-chip${kind === k ? ' on' : ''}`} aria-pressed={kind === k} onClick={() => setKind(k)}>
-              {KIND_LABEL[k]} {count(k)}
+              {kindLabel(genre, k, true)} {count(k)}
             </button>
           ))}
         </div>
@@ -213,7 +214,7 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
             {others.length > 0 ? (
               <WorldList entries={others} onOpen={setOpen} />
             ) : (
-              <p className="muted small center">No {KIND_LABEL[kind].toLowerCase()} yet. "Look for new names and places" below finds them in the chapters you have read.</p>
+              <p className="muted small center">No {kindLabel(genre, kind, true).toLowerCase()} yet. "Look for new names and places" below finds them in the chapters you have read.</p>
             )}
           </section>
         )}
@@ -388,6 +389,7 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
   const [error, setError] = useState('');
   const book = useLive(async () => (await db.books.get(bookId)) ?? null, [bookId]);
   const pictureUrl = usePictureUrl(picture);
+  const genre = genreOf(book);
 
   async function save(approve: boolean) {
     // An English book has one name: it is kept in both places.
@@ -522,11 +524,11 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
           <label>
             Kind
             <select value={kind} onChange={(e) => setKind(e.target.value as GlossaryKind)}>
-              <option value="person">Person</option>
-              <option value="place">Place</option>
-              <option value="god">God</option>
-              <option value="group">Group</option>
-              <option value="term">Term</option>
+              {kindsShown(genre, entry ? [entry.kind] : []).map((k) => (
+                <option key={k} value={k}>
+                  {kindLabel(genre, k)}
+                </option>
+              ))}
             </select>
           </label>
           {kind === 'person' && (

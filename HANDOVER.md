@@ -219,6 +219,13 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   (`src/mascot/retry.ts`); he says when it is done or why it failed. A failure now remembers the chapter id and the
   error (`Trouble.chapterId`, `Trouble.error`), and his cross line names the reason.
 
+- **Genre presets (2026-11-22):** Edit details → Genre: General, Fantasy, Cultivation, Science fiction, Romance &
+  drama, Mystery & thriller (`src/genres.ts`). A preset renames the kinds (Fantasy: Factions, Powers, Lore; Cultivation:
+  Sects & clans, Gods & paths; Mystery: Clues), hides kinds the genre does not use unless the book already has entries
+  of them, and tells "New in the story" what to look for and which links and events matter. Stored kinds are
+  unchanged, so old books and backups need nothing. A book with no genre is "General", exactly as before. The sheet
+  offers a free guess from the first five chapters (counted on the phone).
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless

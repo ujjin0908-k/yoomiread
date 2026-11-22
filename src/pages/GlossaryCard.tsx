@@ -1,17 +1,18 @@
 import { useState } from 'react';
 import { picturePrompt } from '../art';
+import { genreOf, kindLabel } from '../genres';
 import { Sheet } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
 import { usePictureUrl } from '../picture';
-import type { GlossaryEntry, GlossaryKind, ProfileFact } from '../types';
+import type { GlossaryEntry, ProfileFact } from '../types';
 import { ProfileLink } from './Character';
 import { Avatar } from './Glossary';
 
-const KIND: Record<GlossaryKind, string> = { person: 'Person', place: 'Place', god: 'God', group: 'Group', term: 'Term' };
 
 /** A short explanation of a glossary name, opened from the reader: what it is, without leaving the chapter. */
 export function GlossaryCard({ entry, onClose }: { entry: GlossaryEntry; onClose: () => void }) {
+  const book = useLive(() => db.books.get(entry.bookId), [entry.bookId]);
   const p = entry.profile;
   const person = entry.kind === 'person';
   const lead = p?.line ?? entry.note;
@@ -31,7 +32,7 @@ export function GlossaryCard({ entry, onClose }: { entry: GlossaryEntry; onClose
         <div className="g-card-head">
           {person && entry.picture && <Avatar entry={entry} size={64} />}
           <div>
-            <span className="chip">{KIND[entry.kind]}</span>
+            <span className="chip">{kindLabel(genreOf(book), entry.kind)}</span>
             {entry.gender && <span className="chip">{entry.gender}</span>}
             {entry.original !== entry.english && (
               <p className="muted small" lang="zh">

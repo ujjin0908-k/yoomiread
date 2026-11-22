@@ -1,3 +1,4 @@
+import { genreOf, kindLabel, type Genre } from '../genres';
 import { ChevronLeft, Eye, EyeOff, Maximize2, Pause, Play, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from '../components';
@@ -34,7 +35,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'timeline', label: 'Timeline' },
   { id: 'recap', label: 'Recap' },
 ];
-const KIND: Record<GlossaryKind, string> = { person: 'Person', place: 'Place', god: 'God', group: 'Group', term: 'Term' };
 const TONES: { id: Tone; label: string }[] = [
   { id: 'bond', label: 'Bonds' },
   { id: 'faith', label: 'Faith' },
@@ -174,7 +174,7 @@ export function WorldPage({ bookId, tab: firstTab }: { bookId: string; tab?: str
       {tab === 'timeline' && <Timeline data={data} world={full} onOpen={open} />}
       {tab === 'recap' && <Recap data={data} world={full} onOpen={open} />}
 
-      {staged && entry && <EntryCard entry={entry} world={world} tab={tab} onClose={() => setSelected(undefined)} onHop={setSelected} onDetail={() => setDetail(entry)} onOpen={open} />}
+      {staged && entry && <EntryCard entry={entry} genre={genreOf(data.book)} world={world} tab={tab} onClose={() => setSelected(undefined)} onHop={setSelected} onDetail={() => setDetail(entry)} onOpen={open} />}
       {staged && <Scrubber reached={data.reached} line={line} at={at} setAt={setAt} world={world} tab={tab} lifted={!!entry} />}
 
       {searching && (
@@ -209,6 +209,7 @@ export function Face({ entry, size = 44 }: { entry: WorldEntry; size?: number })
 /** The card for the name that is selected: who or what it is at this chapter, and its links, each one a hop away. */
 function EntryCard({
   entry,
+  genre,
   world,
   tab,
   onClose,
@@ -217,6 +218,7 @@ function EntryCard({
   onOpen,
 }: {
   entry: WorldEntry;
+  genre: Genre;
   world: WorldAt;
   tab: Tab;
   onClose: () => void;
@@ -239,7 +241,7 @@ function EntryCard({
         <div className="lb-card-name">
           <h2>{entry.english}</h2>
           <p>
-            <span className="chip">{entry.role === 'main' ? 'Main' : KIND[entry.kind]}</span>
+            <span className="chip">{entry.role === 'main' ? 'Main' : kindLabel(genre, entry.kind)}</span>
             {entry.firstChapter !== undefined && <span className="world-since">since Ch. {entry.firstChapter}</span>}
           </p>
         </div>

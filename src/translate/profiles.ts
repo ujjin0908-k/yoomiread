@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { isRead, needsTranslation, newId } from '../logic';
 import type { Book, Chapter, CharacterProfile, GlossaryEntry, GlossaryKind, ProfileFact, TranslateSettings, WorldEvent, WorldLink } from '../types';
+import { genreOf, kindLabel, kindsShown } from '../genres';
 import { chat } from './api';
 import { costOf, estimateTokens, isRefusal, type ChatMessage } from './prompt';
 import { addSpend, callCost, modelFor } from './run';
@@ -398,15 +399,25 @@ export function chaptersToSearch(chapters: Chapter[], upTo = 0): Chapter[] {
 /** Where the story search starts: the world search, or for a book searched before it existed, nowhere yet. */
 export const searchedTo = (book: Book) => book.worldUpTo ?? 0;
 
+/** The kinds the story search asks for in this book: its genre's, plus any kind it already has entries of. */
+export function searchKinds(book: Pick<Book, 'genre'>, known: GlossaryEntry[]): GlossaryKind[] {
+  return kindsShown(genreOf(book), known.map((g) => g.kind));
+}
+
 export function worldMessages(input: { book: Book; chunk: ReadingPlan['parts']; known: GlossaryEntry[]; linksOnly?: boolean; knownLinks?: string[] }): ChatMessage[] {
+  const genre = genreOf(input.book);
+  const kinds = searchKinds(input.book, input.known);
+  const linked = kinds.filter((k) => k !== 'term').map((k) => kindLabel(genre, k, true).toLowerCase());
+  const named = kinds.map((k) => (k === 'person' ? 'person' : kindLabel(genre, k).toLowerCase()));
+  const either = (words: string[]) => (words.length > 1 ? `${words.slice(0, -1).join(', ')} or ${words[words.length - 1]}` : words.join(''));
   const links = [
-    `${input.linksOnly ? '1' : '3'}. For each relationship between two NAMED people, gods, groups or places that these chapters establish or change, one line:`,
+    `${input.linksOnly ? '1' : '3'}. For each relationship between two NAMED ${either(linked)} that these chapters establish or change, one line:`,
     '{"link": "<name>", "to": "<name>", "label": "<how the first stands to the second>", "ch": 3}',
-    '   The label is 1 to 4 words and reads from the first name to the second: "master of", "sister of", "enemy of", "member of",',
-    '   "follows", "betrayed", "in love with", "leader of". Use names exactly as listed in the guide' + (input.linksOnly ? '.' : ', or as given in a "new" line.'),
+    `   The label is 1 to 4 words and reads from the first name to the second: ${genre.links}.`,
+    '   Use names exactly as listed in the guide' + (input.linksOnly ? '.' : ', or as given in a "new" line.'),
     '   Only lasting relationships the text states or plainly shows. Not "talked to", "met" or "fought beside once". Skip any already listed under Links.',
-    `${input.linksOnly ? '2' : '4'}. For the events a reader would want to be reminded of later (a death, a betrayal, a reveal, a battle won or lost, a journey,`,
-    '   a new power, a vow), at most 2 per chapter, one line:',
+    `${input.linksOnly ? '2' : '4'}. For the events a reader would want to be reminded of later (${genre.events}),`,
+    '   at most 2 per chapter, one line:',
     '{"event": "<what happened, under 14 words, past tense>", "who": ["<name>"], "where": "<place name>", "ch": 3}',
     '   "who" and "where" use names as listed; leave them out when unsure. Skip ordinary scenes.',
   ];
@@ -424,14 +435,11 @@ export function worldMessages(input: { book: Book; chunk: ReadingPlan['parts']; 
     'each marked with its chapter number, and what the guide already holds.',
     'Use ONLY what these chapters say. Never guess, never use outside knowledge of the story, never mention later events.',
     'Write in English, in short plain phrases (under 16 words each).',
-    '1. For every named person, place, god, group or term in these chapters that is NOT in the guide (by any of its names), one line:',
-    '{"new": "<name exactly as written>", "english": "<the name in English>", "kind": "person|place|god|group|term", "gender": "he|she|they|it", "note": "<what or who it is>", "ch": 3}',
-    '   person: a named character. place: a world, realm, country, city, region or named building.',
-    '   god: a god, deity or divine power the story names (and the path or faith that follows it).',
-    '   group: a faction, sect, guild, church, school, team or organisation.',
-    '   term: a named power system, rank, class, title, skill, artifact, item or rule of the world that matters to the story.',
+    `1. For every named ${either(named)} in these chapters that is NOT in the guide (by any of its names), one line:`,
+    `{"new": "<name exactly as written>", "english": "<the name in English>", "kind": "${kinds.join('|')}", "gender": "he|she|they|it", "note": "<what or who it is>", "ch": 3}`,
+    ...kinds.map((k) => `   ${k}: ${genre.scan[k]}`),
     '   "gender" is for people only. Skip ordinary words, unnamed things, and objects seen once.',
-    '2. For each place, god, group or term ALREADY in the guide that these chapters tell something new about, one line:',
+    `2. For each ${either(named.filter((w) => w !== 'person'))} ALREADY in the guide that these chapters tell something new about, one line:`,
     '{"about": "<name exactly as listed>", "facts": [{"text": "...", "ch": 3}]}',
     '   Facts say what it is, who rules or follows it, what it can do, and how it connects to others. Not what happened in a scene.',
     '   At most 3 new facts each. Skip anything already in the guide. Do not write lines about people already in the guide.',
@@ -476,6 +484,8 @@ export interface FoundEvent {
 export function parseWorldReply(
   raw: string,
   chunk: ReadingPlan['parts'],
+  /** The kinds that were asked for. A known kind that was not asked for becomes a term, so the genre's choice holds. */
+  allowed: GlossaryKind[] = ['person', ...WORLD_KINDS],
 ): { fresh: NewThing[]; facts: { name: string; facts: ProfileFact[] }[]; links: FoundLink[]; events: FoundEvent[] } {
   const links: FoundLink[] = [];
   const events: FoundEvent[] = [];
@@ -494,7 +504,8 @@ export function parseWorldReply(
       continue;
     }
     if (typeof row.new === 'string' && row.new.trim()) {
-      const kind = kinds.includes(row.kind as GlossaryKind) ? (row.kind as GlossaryKind) : 'person';
+      const asked = kinds.includes(row.kind as GlossaryKind) ? (row.kind as GlossaryKind) : 'person';
+      const kind: GlossaryKind = allowed.includes(asked) ? asked : 'term';
       const gender = kind === 'person' && ['he', 'she', 'they', 'it'].includes(String(row.gender)) ? (row.gender as NewThing['gender']) : undefined;
       const ch = Number(row.ch);
       fresh.push({
@@ -658,7 +669,7 @@ export async function searchStory(input: {
       await addSpend(book.id, spend.cost, spend.estimated);
       out.cost += spend.cost ?? 0;
       if (isRefusal(reply.text)) throw new Error('The model would not read these chapters. Try the other model.');
-      const { fresh, facts, links, events } = parseWorldReply(reply.text, chunk);
+      const { fresh, facts, links, events } = parseWorldReply(reply.text, chunk, searchKinds(book, all));
       if (!linksOnly) {
         out.updated += await addWorldFacts(facts, all);
         out.added.push(...(await addNewThings(book.id, fresh, all)));
