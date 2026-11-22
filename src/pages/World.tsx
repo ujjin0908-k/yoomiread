@@ -9,7 +9,7 @@ import { usePictureUrl } from '../picture';
 import { chapterBefore } from '../trail';
 import { formatCost } from '../translate/prompt';
 import { chaptersToSearch, readingTexts, searchCost, searchPlan, searchStory } from '../translate/profiles';
-import { loadSettings, modelFor } from '../translate/run';
+import { aiReady, loadSettings, modelFor } from '../translate/run';
 import type { GlossaryKind, TranslateSettings } from '../types';
 import { toneOf, type Tone } from '../world/graph';
 import { loadWorldData, worldOf, worldSignature, type WorldData } from '../world/load';
@@ -475,7 +475,7 @@ function LinkScan({ data }: { data: WorldData }) {
   const model = settings ? modelFor(settings, book.model).id : undefined;
   const ready = !!settings && !!texts;
   const cost = ready && model ? searchCost(searchPlan(chapters, texts!, from), settings!, model, data.entries.length) : undefined;
-  const keyMissing = settings && (!settings.apiKey.trim() || !settings.baseUrl.trim());
+  const keyMissing = settings && !aiReady(settings);
   const span = todo.length ? `Ch. ${todo[0].number}${todo.length > 1 ? `–${todo[todo.length - 1].number}` : ''}` : '';
 
   async function run() {

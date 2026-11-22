@@ -1,3 +1,4 @@
+import { accountToken } from '../account';
 import type { TranslateSettings } from '../types';
 import type { ChatMessage } from './prompt';
 
@@ -72,6 +73,48 @@ function endpoint(baseUrl: string): string {
   return base.endsWith('/chat/completions') ? base : `${base}/chat/completions`;
 }
 
+/**
+ * What a request is for, read from its instructions, so YoomiRead AI can show the owner which features cost what.
+ * Only used for those totals; nothing depends on it.
+ */
+export function kindOf(messages: ChatMessage[]): string {
+  const first = messages[0]?.content ?? '';
+  if (/^You translate (Chinese web novels|the chapter titles)/.test(first)) return 'translate';
+  if (/^You translate Chinese book titles/.test(first)) return 'title';
+  if (/^You (prepare a glossary|list the characters)/.test(first)) return 'glossary';
+  if (/^You keep a reader's guide/.test(first)) return 'world';
+  if (/^You check one line/.test(first)) return 'fix';
+  if (/^You keep character notes/.test(first)) return 'profiles';
+  if (/\bcat\b/i.test(first.slice(0, 300))) return 'chat';
+  return 'other';
+}
+
+/** YoomiRead AI: the request goes to our own server with the reader's sign-in, never with a provider key. */
+async function hostedOnce(model: string, messages: ChatMessage[], settings: TranslateSettings, onText: (piece: string) => void, signal?: AbortSignal): Promise<ChatResult> {
+  const token = await accountToken();
+  if (!token) throw new TranslateError('Sign in to YoomiRead AI in Settings first.', false);
+  let res: Response;
+  try {
+    res = await fetch('/api/ai/chat', {
+      method: 'POST',
+      signal,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ model, messages, temperature: 0.3, kind: kindOf(messages), ...(settings.thinkingOff ? { reasoning_effort: 'none' } : {}) }),
+    });
+  } catch (e) {
+    if (signal?.aborted) throw e;
+    throw new TranslateError('Could not reach YoomiRead AI. Check the internet and try again.', true);
+  }
+  if (!res.ok) {
+    const said = ((await res.json().catch(() => ({}))) as { error?: string }).error;
+    if (res.status === 401) throw new TranslateError('Please sign in again (Settings → AI).', false);
+    if (res.status === 402 || res.status === 400 || res.status === 413 || res.status === 503) throw new TranslateError(said ?? `YoomiRead AI said no (${res.status}).`, false);
+    throw new TranslateError(said ?? `YoomiRead AI had a problem (${res.status}).`, res.status === 429 || res.status >= 500);
+  }
+  if (!res.body) throw new TranslateError('YoomiRead AI sent an empty answer.', true);
+  return readStream(res.body, onText);
+}
+
 async function once(
   settings: TranslateSettings,
   model: string,
@@ -79,6 +122,7 @@ async function once(
   onText: (piece: string) => void,
   signal?: AbortSignal,
 ): Promise<ChatResult> {
+  if (settings.mode === 'hosted') return hostedOnce(model, messages, settings, onText, signal);
   let res: Response;
   try {
     res = await fetch(endpoint(settings.baseUrl), {
@@ -125,8 +169,8 @@ export async function chat(
   signal?: AbortSignal,
   wait: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
 ): Promise<ChatResult> {
-  if (!settings.baseUrl.trim() || !settings.apiKey.trim()) {
-    throw new TranslateError('Add the provider address and API key in Settings first.', false);
+  if (settings.mode !== 'hosted' && (!settings.baseUrl.trim() || !settings.apiKey.trim())) {
+    throw new TranslateError('Set up AI in Settings first.', false);
   }
   let received = false;
   const track = (piece: string) => {

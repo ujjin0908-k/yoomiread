@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { db } from '../db';
 import { needsTranslation } from '../logic';
 import type { Book, Chapter } from '../types';
-import { loadSettings, modelFor, translateChapter } from './run';
+import { aiReady, loadSettings, modelFor, translateChapter } from './run';
 
 /**
  * While a chapter is open, translates the next few chapters in the background and saves them,
@@ -21,7 +21,7 @@ export function useTranslateAhead(chapter: Chapter | null | undefined, book: Boo
     void (async () => {
       const settings = await loadSettings();
       const count = settings.ahead ?? 1;
-      if (count <= 0 || !settings.apiKey.trim() || !settings.baseUrl.trim()) return;
+      if (count <= 0 || !aiReady(settings)) return;
       const current = await db.chapters.get(chapterId);
       if (!current) return;
       const next = (await db.chapters.where('bookId').equals(bookId).sortBy('number')).filter((c) => c.number > current.number).slice(0, count);

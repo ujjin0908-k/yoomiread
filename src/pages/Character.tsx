@@ -11,7 +11,7 @@ import { isRead, needsTranslation } from '../logic';
 import { chaptersToRead, chaptersToSearch, planCost, planReading, readingTexts, searchCost, searchedTo, searchKinds, searchPlan, searchStory, updateProfiles, type UpdateResult } from '../translate/profiles';
 import { genreOf, kindLabel } from '../genres';
 import { formatCost } from '../translate/prompt';
-import { loadSettings, modelFor } from '../translate/run';
+import { aiReady, loadSettings, modelFor } from '../translate/run';
 import type { Book, Chapter, CharacterProfile, GlossaryEntry, ProfileFact, TranslateSettings } from '../types';
 import { EntrySheet, Face } from './Glossary';
 
@@ -97,7 +97,7 @@ export function CharacterPage({ id }: { id: string }) {
   const fresh = chaptersToRead(chapters, entry);
   const readTo = chapters.filter(isRead).reduce((n, c) => Math.max(n, c.number), 0);
   const running = !!status;
-  const keyMissing = estimate.settings && (!estimate.settings.apiKey.trim() || !estimate.settings.baseUrl.trim());
+  const keyMissing = estimate.settings && !aiReady(estimate.settings);
 
   async function save(change: Partial<GlossaryEntry>) {
     await db.glossary.update(id, { ...change, updatedAt: Date.now() });
@@ -331,7 +331,7 @@ export function UpdateSheet({ book, chapters, people, onClose }: { book: Book; c
   const estimate = useEstimate(book, chapters, picked, findNew, model);
   const running = !!status;
   const settings = estimate.settings;
-  const keyMissing = settings && (!settings.apiKey.trim() || !settings.baseUrl.trim());
+  const keyMissing = settings && !aiReady(settings);
 
   useEffect(() => () => stop.current?.abort(), []);
 
@@ -478,7 +478,7 @@ export function NewPeopleSearch({ book, chapters, known }: { book: Book; chapter
   const model = settings ? modelFor(settings, book.model).id : undefined;
   const ready = !!settings && (!todo.length || (!!texts && todo.every((c) => texts.has(c.id))));
   const cost = ready && settings && model && texts ? searchCost(searchPlan(chapters, texts, from), settings, model, known) : undefined;
-  const keyMissing = settings && (!settings.apiKey.trim() || !settings.baseUrl.trim());
+  const keyMissing = settings && !aiReady(settings);
 
   async function run() {
     stop.current = new AbortController();

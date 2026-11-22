@@ -2378,3 +2378,37 @@ body[data-reader='night'] {
     margin-top: 16px;
   }
 }
+
+/* YoomiRead AI in Settings (HostedAI in src/pages/Settings.tsx). */
+.hosted-ai {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hosted-ai .row-2 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hosted-ai .row-2 input {
+  flex: 1;
+  min-width: 0;
+}
+.hosted-usage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hosted-meter {
+  display: block;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--line);
+  overflow: hidden;
+}
+.hosted-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}

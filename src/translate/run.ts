@@ -1,3 +1,5 @@
+import { accountsAvailable, accountToken, signedIn } from '../account';
+import { PUBLIC } from '../edition';
 import { genreNote } from '../genres';
 import { db } from '../db';
 import { newId } from '../logic';
@@ -19,7 +21,7 @@ export const DEFAULT_MODELS: ModelOption[] = [
   { id: 'glm-4.7', label: 'GLM 4.7 (untested, price not set)' },
 ];
 
-export const EMPTY_SETTINGS: TranslateSettings = { baseUrl: '', apiKey: '', models: DEFAULT_MODELS, defaultModel: DEFAULT_MODELS[0].id, ahead: 1, onImport: 3 };
+export const EMPTY_SETTINGS: TranslateSettings = { mode: PUBLIC && accountsAvailable ? 'hosted' : 'own', baseUrl: '', apiKey: '', models: DEFAULT_MODELS, defaultModel: DEFAULT_MODELS[0].id, ahead: 1, onImport: 3 };
 
 /** Names saved by earlier versions, replaced by the provider's ids. */
 const RETIRED_MODEL_IDS = ['MiniMax-M2', 'MiniMax-M3'];
@@ -29,6 +31,12 @@ const KEY = 'translate';
 export async function loadSettings(): Promise<TranslateSettings> {
   const row = await db.settings.get(KEY);
   const saved = { ...EMPTY_SETTINGS, ...((row?.value as Partial<TranslateSettings>) ?? {}) };
+  if (saved.mode === 'hosted') {
+    // YoomiRead AI: the models are the server's, not the ones saved for the reader's own service.
+    // When the server cannot be reached and nothing is kept yet, the list is empty and Settings says so.
+    const models = await hostedModels();
+    return { ...saved, models, defaultModel: models.some((m) => m.id === saved.hostedModel) ? saved.hostedModel! : (models[0]?.id ?? '') };
+  }
   // Models added in a later version are missing from settings saved before it: add them, keep the owner's edits.
   const kept = saved.models.filter((m) => !RETIRED_MODEL_IDS.includes(m.id));
   const have = new Set(kept.map((m) => m.id));
@@ -37,7 +45,56 @@ export async function loadSettings(): Promise<TranslateSettings> {
 }
 
 export async function saveSettings(settings: TranslateSettings): Promise<void> {
+  if (settings.mode === 'hosted') {
+    // The model picked for YoomiRead AI is kept apart, so the reader's own service keeps its own list and choice.
+    const row = await db.settings.get(KEY);
+    const before = { ...EMPTY_SETTINGS, ...((row?.value as Partial<TranslateSettings>) ?? {}) };
+    await db.settings.put({ key: KEY, value: { ...settings, models: before.models, defaultModel: before.defaultModel, hostedModel: settings.defaultModel } });
+    return;
+  }
   await db.settings.put({ key: KEY, value: settings });
+}
+
+/** Switches between YoomiRead AI and the reader's own service. Only the choice changes: each keeps its own models. */
+export async function setAiMode(mode: 'own' | 'hosted'): Promise<void> {
+  const row = await db.settings.get(KEY);
+  await db.settings.put({ key: KEY, value: { ...EMPTY_SETTINGS, ...((row?.value as Partial<TranslateSettings>) ?? {}), mode } });
+}
+
+/** True when AI can be used now: signed in for YoomiRead AI, or an address and key for the reader's own service. */
+export function aiReady(settings: TranslateSettings | undefined): boolean {
+  if (!settings) return false;
+  if (settings.mode === 'hosted') return accountsAvailable && signedIn();
+  return !!(settings.baseUrl.trim() && settings.apiKey.trim());
+}
+
+const HOSTED_KEY = 'hostedModels';
+
+/**
+ * The models YoomiRead AI offers, with their prices. Asked of the server and kept on the phone, so the list is there
+ * offline too; refreshed at most once an hour.
+ */
+export async function hostedModels(force = false): Promise<ModelOption[]> {
+  const row = (await db.settings.get(HOSTED_KEY))?.value as { at: number; models: ModelOption[] } | undefined;
+  if (row && !force && Date.now() - row.at < 3_600_000) return row.models;
+  try {
+    const res = await fetch('/api/ai/models');
+    if (!res.ok) return row?.models ?? [];
+    const data = (await res.json()) as { models?: { id: string; label: string; input: number; output: number }[] };
+    const models = (data.models ?? []).map((m) => ({ id: m.id, label: m.label, inputPrice: m.input, outputPrice: m.output }));
+    await db.settings.put({ key: HOSTED_KEY, value: { at: Date.now(), models } });
+    return models;
+  } catch {
+    return row?.models ?? [];
+  }
+}
+
+/** This month's use of YoomiRead AI, in US$, and the monthly limit. */
+export async function hostedUsage(): Promise<{ spent: number; limit: number }> {
+  const token = await accountToken();
+  const res = await fetch('/api/ai/usage', { headers: { authorization: `Bearer ${token ?? ''}` } });
+  if (!res.ok) throw new Error(res.status === 401 ? 'Please sign in again.' : 'Could not read this month’s use.');
+  return (await res.json()) as { spent: number; limit: number };
 }
 
 /**
