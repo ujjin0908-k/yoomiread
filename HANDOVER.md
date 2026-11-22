@@ -54,7 +54,7 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   marker slides, sheets close with a slide or a drag down, stats count up, the cat's poses are animated pictures, and
   finishing a book drops "Finished.", a READ stamp and confetti. Settings → Look and feel → Animations turns it all
   off; the phone's "Reduce Motion" setting does the same.
-- Translate when a book is added (`src/translate/onImport.ts`): the first chapters (3 by default; Settings → Translation)
+- Translate when a book is added (`src/translate/onImport.ts`): the first chapters (3 by default; Settings → AI)
   are translated in the background right after an import. Chinese books only, and only with a key set and internet.
 - Backup reminder (`src/backupNow.ts`): Home shows a note when the last backup is a week old (weekly, monthly or off in
   Settings). "Save a backup" opens the phone's share sheet, where "Save to Files" keeps it outside the app. A web app

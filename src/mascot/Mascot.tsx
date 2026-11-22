@@ -62,7 +62,7 @@ export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter:
         return;
       }
       if (!settings.apiKey.trim() || !settings.baseUrl.trim()) {
-        setError('Add the provider address and API key in Settings to chat with him.');
+        setError('Set up AI in Settings first to chat with him.');
         return;
       }
 

@@ -201,6 +201,15 @@ export function ProgressBar({ value, label }: { value: number; label?: string })
   );
 }
 
+/** The one message for features that need AI before it is set up, with a way to Settings. */
+export function NeedAI({ to, className = 'warn small' }: { to?: string; className?: string }) {
+  return (
+    <p className={className}>
+      Set up AI in <a href="#/settings">Settings</a> first{to ? ` to ${to}` : ''}.
+    </p>
+  );
+}
+
 /** A button that adds the free sample book and opens it. */
 export function SampleButton({ className = 'btn' }: { className?: string }) {
   const [state, setState] = useState('');

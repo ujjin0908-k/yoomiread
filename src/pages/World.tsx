@@ -1,7 +1,7 @@
 import { genreOf, kindLabel, type Genre } from '../genres';
 import { ChevronLeft, Eye, EyeOff, Maximize2, Pause, Play, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Sheet } from '../components';
+import { NeedAI, Sheet } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
 import { motionOk } from '../motion';
@@ -500,7 +500,7 @@ function LinkScan({ data }: { data: WorldData }) {
       {!todo.length ? (
         <p className="muted small">Nothing new to read. Finish more chapters, then look again.</p>
       ) : keyMissing ? (
-        <p className="warn small">Add the provider address and key in Settings first.</p>
+        <NeedAI />
       ) : status ? (
         <>
           <p className="small" role="status">
