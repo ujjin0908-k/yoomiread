@@ -239,6 +239,12 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   dated by chapter), genre Fantasy, ready offline with no key. The translation prompts no longer say "for a single
   reader". `.json.gz` files (sample, dictionaries) now open whether or not the server unpacks them (`src/gzipJson.ts`).
 
+- **First-run tour (2026-11-22):** `src/pages/Tour.tsx`. Four cards after the welcome screen (bring your books, read
+  with help, a world that grows without spoilers, translate with AI if you want), ending with "Try the free sample
+  book" or "Add my own book" (opens Home with the add sheet). Shown once, only on a device with no books, so the
+  owner's app never shows it; Settings → Getting started → "Show the tour again" brings it back on the next open.
+  Stored in `settings` as `tourSeen` (true, or 'again').
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless
