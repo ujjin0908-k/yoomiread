@@ -1,3 +1,4 @@
+import { genreNote } from '../genres';
 import { db } from '../db';
 import { newId } from '../logic';
 import type { Chapter, GlossaryEntry, ModelOption, TranslateSettings, Translation } from '../types';
@@ -155,6 +156,7 @@ async function runChapter(chapter: Chapter, options: ChapterOptions): Promise<Ch
     glossary,
     previousSummary: previousSummary ?? book?.storySoFar,
     style: book?.style,
+    genre: genreNote(book) || undefined,
   });
   const result = await chat(options.settings, options.model, messages, options.onText, options.signal);
   const { text: english, terms, summary, title } = splitReply(result.text);

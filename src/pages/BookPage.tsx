@@ -32,7 +32,7 @@ import {
 } from '../logic';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
 import { keepTranslation, loadSettings, modelFor, translateChapter, translateTitle, translateTitles, type ChapterRun } from '../translate/run';
-import type { Book, BookLanguage, BookStyle, Chapter, GenreId, Shelf, TranslateSettings } from '../types';
+import type { Book, BookLanguage, BookStyle, Chapter, GenreId, GlossaryKind, Shelf, TranslateSettings } from '../types';
 import { GENRES, guessGenre } from '../genres';
 import { parseSources, sourcesText, webLink } from '../sources';
 
@@ -608,6 +608,22 @@ function styleFrom(input: { tone: BookStyle['tone'] | ''; honorifics: BookStyle[
   return Object.keys(style).length ? style : undefined;
 }
 
+/** What each kind holds, as the label over its rename box. */
+const GENRE_DEFAULTS: Record<'place' | 'god' | 'group' | 'term', string> = {
+  place: 'Places',
+  god: 'Gods and great powers',
+  group: 'Groups',
+  term: 'Terms and things',
+};
+
+/** The reader's kind names, trimmed; undefined when none is set. */
+function cleanKindNames(names: Partial<Record<GlossaryKind, string>>): Book['kindNames'] {
+  const kept = Object.entries(names)
+    .map(([k, v]) => [k, (v ?? '').trim()] as const)
+    .filter(([k, v]) => k !== 'person' && v);
+  return kept.length ? (Object.fromEntries(kept) as Book['kindNames']) : undefined;
+}
+
 /** A free guess at the genre from the first chapters, made on the phone. Undefined while loading or when unclear. */
 function useGenreGuess(bookId: string): GenreId | undefined {
   const [guess, setGuess] = useState<GenreId>();
@@ -634,6 +650,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
   const [language, setLanguage] = useState<BookLanguage>(book.language);
   const [genre, setGenre] = useState<GenreId>(book.genre ?? 'general');
   const guess = useGenreGuess(book.id);
+  const [kindNames, setKindNames] = useState<Partial<Record<GlossaryKind, string>>>(book.kindNames ?? {});
   const [novelUpdates, setNovelUpdates] = useState(book.novelUpdatesUrl ?? '');
   const [sources, setSources] = useState(sourcesText(book.sources));
   const [tone, setTone] = useState<BookStyle['tone'] | ''>(book.style?.tone ?? '');
@@ -672,6 +689,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
       originalTitle: originalTitle.trim() || undefined,
       language,
       genre: genre === 'general' ? undefined : genre,
+      kindNames: cleanKindNames(kindNames),
       novelUpdatesUrl: webLink(novelUpdates),
       sources: parseSources(sources),
       style: styleFrom({ tone, honorifics, notes: styleNotes, sample: styleSample }),
@@ -729,6 +747,21 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
           </select>
           <span className="muted small">{GENRES.find((g) => g.id === genre)!.blurb}</span>
         </label>
+        <details className="kind-names">
+          <summary className="small">Your own names for the kinds</summary>
+          <p className="muted small">Leave a box empty to keep the genre's name. Naming a kind the genre leaves out turns it on.</p>
+          {(['place', 'god', 'group', 'term'] as const).map((k) => (
+            <label key={k}>
+              {GENRE_DEFAULTS[k]}
+              <input
+                value={kindNames[k] ?? ''}
+                maxLength={24}
+                placeholder={GENRES.find((g) => g.id === genre)!.label[k][1]}
+                onChange={(e) => setKindNames({ ...kindNames, [k]: e.target.value })}
+              />
+            </label>
+          ))}
+        </details>
         {guess && guess !== genre && (
           <button type="button" className="link small" onClick={() => setGenre(guess)}>
             The first chapters read like {GENRES.find((g) => g.id === guess)!.name}. Use it

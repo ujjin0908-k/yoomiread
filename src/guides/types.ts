@@ -1,4 +1,4 @@
-import type { Gender, GlossaryKind } from '../types';
+import type { Gender, GenreId, GlossaryKind } from '../types';
 
 /** One name in a book guide: who or what it is, written in advance (no tokens, no chapter). */
 export interface GuideEntry {
@@ -52,6 +52,8 @@ export interface Guide {
   entries: GuideEntry[];
   /** The art style for this book's pictures. */
   style?: string;
+  /** The genre preset for the book (src/genres.ts), set when the book has none. */
+  genre?: GenreId;
   /** The Living Book: links and events (optional). */
   links?: GuideLink[];
   events?: GuideEvent[];

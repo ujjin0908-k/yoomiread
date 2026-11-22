@@ -400,7 +400,7 @@ export function chaptersToSearch(chapters: Chapter[], upTo = 0): Chapter[] {
 export const searchedTo = (book: Book) => book.worldUpTo ?? 0;
 
 /** The kinds the story search asks for in this book: its genre's, plus any kind it already has entries of. */
-export function searchKinds(book: Pick<Book, 'genre'>, known: GlossaryEntry[]): GlossaryKind[] {
+export function searchKinds(book: Pick<Book, 'genre' | 'kindNames'>, known: GlossaryEntry[]): GlossaryKind[] {
   return kindsShown(genreOf(book), known.map((g) => g.kind));
 }
 
