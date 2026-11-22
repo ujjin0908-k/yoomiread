@@ -58,6 +58,8 @@ export function chapterMessages(input: {
   previousSummary?: string;
   /** The book's style settings (tone, honorifics, notes, and a sample paragraph). */
   style?: BookStyle;
+  /** One line about the book's genre (see `genreNote`), when it has one. */
+  genre?: string;
 }): ChatMessage[] {
   // Only entries named in this chapter: the rest would add cost and nothing else.
   const approved = input.glossary.filter((g) => g.status === 'ok' && [g.original, ...(g.aliases ?? [])].some((n) => n && input.text.includes(n)));
@@ -81,6 +83,7 @@ export function chapterMessages(input: {
     '  Only character names. Never places, items, techniques, sects, titles, ordinary words, English words or anything already in the glossary.',
     '  "original" is the Chinese text from the chapter. Give gender only for people. If there are none, write the marker line and nothing after it.',
     ...styleRules(input.style),
+    ...(input.genre ? [input.genre] : []),
   ].join('\n');
   const sample = input.style?.sample?.trim();
   const user = [

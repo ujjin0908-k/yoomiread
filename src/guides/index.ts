@@ -1,5 +1,6 @@
 import { db } from '../db';
 import { newId } from '../logic';
+import { isGenre } from '../genres';
 import { namesOf } from '../translate/profiles';
 import type { Book, CharacterProfile, GlossaryEntry, GlossaryKind, ProfileFact, WorldEvent, WorldLink } from '../types';
 import type { Guide, GuideEntry, GuideEvent, GuideLink } from './types';
@@ -68,6 +69,7 @@ export function parseGuide(text: string): Guide {
     titles: strings(r.titles) ?? [],
     entries,
     style: typeof r.style === 'string' ? r.style.trim() || undefined : undefined,
+    genre: isGenre(r.genre) ? r.genre : undefined,
     links: links.length ? links : undefined,
     events: events.length ? events : undefined,
   };
@@ -165,10 +167,11 @@ export async function applyGuide(bookId: string, guide: Guide, now = Date.now())
   }
   if (fresh.length) await db.glossary.bulkAdd(fresh);
   await applyGuideWorld(bookId, guide, [...all, ...fresh], now);
-  // The guide's art style, unless the owner set one.
-  if (guide.style) {
+  // The guide's art style and genre, unless the owner set them.
+  if (guide.style || guide.genre) {
     const book = await db.books.get(bookId);
-    if (book && !book.artStyle) await db.books.update(bookId, { artStyle: guide.style });
+    if (book && guide.style && !book.artStyle) await db.books.update(bookId, { artStyle: guide.style });
+    if (book && guide.genre && !book.genre) await db.books.update(bookId, { genre: guide.genre });
   }
   return { added, filled };
 }

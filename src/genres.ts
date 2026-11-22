@@ -125,9 +125,33 @@ export const GENRES: Genre[] = [
 
 const BY_ID = new Map(GENRES.map((g) => [g.id, g]));
 
-/** The book's preset. A book that never chose one is "General", which is how every book worked before presets. */
-export function genreOf(book: Pick<Book, 'genre'> | undefined | null): Genre {
-  return BY_ID.get(book?.genre ?? 'general') ?? GENRES[0];
+/** True for a genre id the app knows (guide files are checked with it). */
+export function isGenre(id: unknown): id is GenreId {
+  return typeof id === 'string' && BY_ID.has(id as GenreId);
+}
+
+/**
+ * The book's preset, with the reader's own kind names on top. A book that never chose one is "General", which is how
+ * every book worked before presets. A kind the reader named is used even when the genre leaves it out.
+ */
+export function genreOf(book: Pick<Book, 'genre' | 'kindNames'> | undefined | null): Genre {
+  const base = BY_ID.get(book?.genre ?? 'general') ?? GENRES[0];
+  const names = Object.entries(book?.kindNames ?? {}).filter(([k, v]) => k !== 'person' && typeof v === 'string' && v.trim()) as [GlossaryKind, string][];
+  if (!names.length) return base;
+  const label = { ...base.label };
+  const scan = { ...base.scan };
+  for (const [k, v] of names) {
+    label[k] = [v.trim(), v.trim()];
+    scan[k] = `${base.scan[k]} This book calls them "${v.trim()}".`;
+  }
+  const kinds = [...base.kinds, ...names.map(([k]) => k).filter((k) => !base.kinds.includes(k))];
+  return { ...base, label, scan, kinds };
+}
+
+/** A line for the translator about the book's genre, so it uses the genre's usual English. Empty for General. */
+export function genreNote(book: Pick<Book, 'genre'> | undefined | null): string {
+  const g = genreOf(book);
+  return g.id === 'general' ? '' : `Genre: ${g.name} (${g.blurb.toLowerCase()}). Use the terms readers of this genre expect in English.`;
 }
 
 /** The label for a kind in this genre: singular by default, plural when `many`. */

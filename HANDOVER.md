@@ -225,6 +225,10 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   of them, and tells "New in the story" what to look for and which links and events matter. Stored kinds are
   unchanged, so old books and backups need nothing. A book with no genre is "General", exactly as before. The sheet
   offers a free guess from the first five chapters (counted on the phone).
+  Also (same day): "Your own names for the kinds" in Edit details renames places, gods, groups or terms for one book
+  (`Book.kindNames`); naming a kind the genre leaves out turns it on, and the story search is told the book's word.
+  The translator gets one line about the genre (not for General). A guide file can carry `"genre"`, used when the
+  book has none.
 
 ## Things that do not work or were decided against
 

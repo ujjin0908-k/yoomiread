@@ -2711,3 +2711,24 @@ html[data-reader='night'] { background: #161614; }
 .backdrop-title {
   font-weight: 600;
 }
+.kind-names {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgb(0 0 0 / 0.04);
+}
+.kind-names[open] {
+  padding-bottom: 14px;
+}
+.kind-names summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+.kind-names p {
+  margin: 8px 0;
+}
+.kind-names label + label {
+  margin-top: 10px;
+}

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { GENRES, genreOf, guessGenre, kindLabel, kindsShown } from './genres';
+import { GENRES, genreNote, genreOf, guessGenre, kindLabel, kindsShown } from './genres';
+import { parseGuide } from './guides';
+import { chapterMessages } from './translate/prompt';
 import { parseWorldReply, searchKinds, worldMessages } from './translate/profiles';
 import type { GlossaryEntry } from './types';
 
@@ -82,5 +84,41 @@ describe('guessGenre', () => {
     expect(guessGenre(fill('She walked to the shop and bought some bread.'))).toBeUndefined();
     // Two genres at the same strength: no guess.
     expect(guessGenre(fill('The wizard met the detective.'))).toBeUndefined();
+  });
+});
+
+describe('the reader\'s own kind names', () => {
+  it('renames a kind and tells the story search the book\'s word', () => {
+    const g = genreOf({ genre: 'fantasy', kindNames: { group: 'Houses', term: ' ' } });
+    expect(kindLabel(g, 'group', true)).toBe('Houses');
+    expect(kindLabel(g, 'term', true)).toBe('Lore');
+    const text = worldMessages({ book: { id: 'b', title: 'B', genre: 'fantasy', kindNames: { group: 'Houses' } } as never, chunk, known: [] })[0].content;
+    expect(text).toContain('This book calls them "Houses".');
+  });
+
+  it('turns on a kind the genre leaves out when it is named', () => {
+    const g = genreOf({ genre: 'scifi', kindNames: { god: 'AIs' } });
+    expect(g.kinds).toContain('god');
+    expect(kindLabel(g, 'god', true)).toBe('AIs');
+    expect(searchKinds({ genre: 'scifi', kindNames: { god: 'AIs' } }, [])).toContain('god');
+  });
+
+  it('never renames people', () => {
+    expect(kindLabel(genreOf({ kindNames: { person: 'Folks' } }), 'person', true)).toBe('People');
+  });
+});
+
+describe('genre in guides and translation', () => {
+  it('reads a guide\'s genre, and ignores one the app does not know', () => {
+    expect(parseGuide(JSON.stringify({ entries: [], genre: 'fantasy' })).genre).toBe('fantasy');
+    expect(parseGuide(JSON.stringify({ entries: [], genre: 'western' })).genre).toBeUndefined();
+  });
+
+  it('tells the translator the genre, and says nothing for General', () => {
+    expect(genreNote({ genre: 'cultivation' })).toContain('Genre: Cultivation');
+    expect(genreNote({})).toBe('');
+    const withGenre = chapterMessages({ bookTitle: 'B', chapterTitle: 'C', text: '你好', glossary: [], genre: genreNote({ genre: 'cultivation' }) })[0].content;
+    expect(withGenre).toContain('Genre: Cultivation');
+    expect(chapterMessages({ bookTitle: 'B', chapterTitle: 'C', text: '你好', glossary: [] })[0].content).not.toContain('Genre:');
   });
 });
