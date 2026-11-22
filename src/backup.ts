@@ -9,7 +9,7 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
   return `data:${blob.type || 'application/octet-stream'};base64,${btoa(bin)}`;
 }
 
-function dataUrlToPicture(url: string): Picture {
+export function dataUrlToPicture(url: string): Picture {
   const m = /^data:([^;,]*);base64,(.*)$/.exec(url);
   if (!m) throw new Error('A cover in the backup is damaged.');
   const bin = atob(m[2]);
@@ -19,7 +19,7 @@ function dataUrlToPicture(url: string): Picture {
 }
 
 /** A picture as a data URL; an old Blob that can no longer be read is left out rather than failing the backup. */
-async function pictureToDataUrl(picture: Picture | Blob | undefined): Promise<string | undefined> {
+export async function pictureToDataUrl(picture: Picture | Blob | undefined): Promise<string | undefined> {
   const blob = pictureBlob(picture);
   if (!blob) return undefined;
   try {

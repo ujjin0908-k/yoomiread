@@ -18,7 +18,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has('seed')) {
 }
 
 // A saved sign-in for YoomiRead AI, or one coming back from Google, Apple or the email link.
-void startAccount();
+void startAccount().then(() => import('./syncRun').then(({ startSync }) => startSync()));
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

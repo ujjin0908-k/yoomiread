@@ -257,6 +257,16 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   - Switching modes keeps each mode's own models (`setAiMode`). Ten key checks became one `aiReady`.
   - Setup steps: vault note "YoomiRead AI setup".
 
+- **Sync between devices (2026-11-22, item 3 part 2):** Settings → Account (shown when the build has Supabase):
+  sign in once for both sync and YoomiRead AI; "Sync this phone" on or off, "Sync now", last synced.
+  - Engine: `src/sync.ts`. Every row's fingerprint from the last sync is kept, so changed, new and deleted rows are
+    found without any write in the app knowing about sync. Same row changed on two devices: the newer `updatedAt`
+    wins; an edit beats a delete. Pictures travel as data URLs. Device settings (keys, AI choice) never sync.
+  - Schedule: `src/syncRun.ts`: on open, after sign-in, every 5 minutes while open, when the app is put away, when
+    back online. Signing out forgets the sync record, so another account on the phone starts fresh.
+  - Server: `supabase/sync.sql`, table `sync_rows` (one row per table and id, server-set time, readers see only
+    their own rows) and a size view per reader.
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless
