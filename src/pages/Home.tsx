@@ -11,7 +11,8 @@ import type { Book, Chapter } from '../types';
 import { AddBook } from './AddBook';
 import '../world/world.css';
 
-export function Home() {
+/** `openAdd`: open the add-a-book sheet straight away (from the tour's "Add my own book"). */
+export function Home({ openAdd = false }: { openAdd?: boolean } = {}) {
   const data = useLive(async () => {
     const books = await db.books.toArray();
     const chapters = await db.chapters.toArray();
@@ -25,7 +26,7 @@ export function Home() {
     }
     return { books, byBook, sessions, lines, backup: await loadBackupState() };
   }, [], 'home');
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(openAdd);
   const online = useOnline();
   const { mood } = useMood();
 

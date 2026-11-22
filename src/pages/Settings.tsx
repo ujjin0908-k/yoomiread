@@ -12,6 +12,7 @@ import { EMPTY_SETTINGS, fetchModels, loadSettings, saveSettings } from '../tran
 import type { ModelOption, TranslateSettings } from '../types';
 
 export function Settings() {
+  const [tourNote, setTourNote] = useState('');
   const counts = useLive(
     async () => ({ books: await db.books.count(), chapters: await db.chapters.count(), notes: await db.notes.count() }),
     [],
@@ -123,6 +124,20 @@ export function Settings() {
           </label>
         </section>
         <ReadingBackground />
+        <section className="card">
+          <h3>Getting started</h3>
+          <p className="muted">A short tour of what the app does, shown after the welcome screen.</p>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              void import('./Tour').then(({ setTourSeen }) => setTourSeen(false)).then(() => setTourNote('The tour shows the next time the app opens.'));
+            }}
+          >
+            Show the tour again
+          </button>
+          {tourNote && <p className="muted small">{tourNote}</p>}
+        </section>
         <section className="card">
           <h3>On iPhone</h3>
           <p className="muted">

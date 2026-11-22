@@ -9,6 +9,7 @@ import { QuoteCard, Quotes } from './pages/Quotes';
 import { Settings } from './pages/Settings';
 import { Stats } from './pages/Stats';
 import { Welcome } from './pages/Welcome';
+import { showTour, Tour } from './pages/Tour';
 import { WorldPage } from './pages/World';
 import { useEffect, useState } from 'react';
 import { rememberAhead } from './hooks';
@@ -20,6 +21,14 @@ export function App() {
   const [page, id, sub] = useRoute();
   // The first page shows every time the app is opened, then the app opens as usual.
   const [welcomed, setWelcomed] = useState(false);
+  // The tour, once, for someone new (see showTour), or again when asked for in Settings.
+  const [touring, setTouring] = useState<'check' | 'show' | 'no'>('check');
+  const [addOwn, setAddOwn] = useState(false);
+  useEffect(() => {
+    void (async () => {
+      setTouring((await showTour()) ? 'show' : 'no');
+    })();
+  }, []);
   // A head start for the tabs: their data is read once while nothing else is happening, so each opens complete.
   useEffect(() => {
     const idle = typeof window.requestIdleCallback === 'function';
@@ -55,5 +64,15 @@ export function App() {
       />
     );
   }
-  return <Home />;
+  if (touring === 'show') {
+    return (
+      <Tour
+        onDone={(own) => {
+          setAddOwn(!!own);
+          setTouring('no');
+        }}
+      />
+    );
+  }
+  return <Home openAdd={addOwn} />;
 }
