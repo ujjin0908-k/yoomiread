@@ -64,7 +64,7 @@ export function chapterMessages(input: {
   // Only entries named in this chapter: the rest would add cost and nothing else.
   const approved = input.glossary.filter((g) => g.status === 'ok' && [g.original, ...(g.aliases ?? [])].some((n) => n && input.text.includes(n)));
   const system = [
-    'You translate Chinese web novels into natural, readable English for a single reader.',
+    'You translate Chinese web novels into natural, readable English.',
     'Rules:',
     '- Translate everything. Do not summarize, shorten or add anything.',
     `- If you cannot translate a passage, for any reason (including content you will not write), never drop it silently:`,

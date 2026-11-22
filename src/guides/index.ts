@@ -1,5 +1,6 @@
 import { db } from '../db';
 import { newId } from '../logic';
+import { features } from '../edition';
 import { isGenre } from '../genres';
 import { namesOf } from '../translate/profiles';
 import type { Book, CharacterProfile, GlossaryEntry, GlossaryKind, ProfileFact, WorldEvent, WorldLink } from '../types';
@@ -8,11 +9,17 @@ import type { Guide, GuideEntry, GuideEvent, GuideLink } from './types';
 export type { Guide, GuideEntry, GuideEvent, GuideLink } from './types';
 
 /** Guides that come with the app, by book. Loaded only when asked for, so the app stays small. */
-const BUILT_IN: { titles: string[]; load: () => Promise<Guide> }[] = [
+const BUILT_IN: { titles: string[]; load: () => Promise<Guide>; ownerOnly?: boolean }[] = [
   {
+    titles: ['the wonderful wizard of oz', 'wonderful wizard of oz', 'the wizard of oz', 'wizard of oz'],
+    load: async () => (await import('./oz')).OZ,
+  },
+  // Owner's build only. Written this way so a public build leaves the guide out of the app files entirely.
+  ...(import.meta.env.VITE_EDITION === 'public' ? [] : [{
+    ownerOnly: true,
     titles: ['foolish game of the gods', 'the foolish game of gods', 'foolish game of gods', "gods' foolish play", '诸神愚戏', '諸神愚戲', 'zhu shen yu xi', 'the fool of the gods', 'fool of the gods', 'the foolish play of the gods', 'foolish play of the gods'],
     load: async () => (await import('./foolish-game')).FOOLISH_GAME,
-  },
+  }]),
 ];
 
 const plainTitle = (t: string) => t.toLowerCase().replace(/[“”"'‘’]/g, "'").replace(/^the\s+/, '').replace(/\s+/g, ' ').trim();
@@ -20,7 +27,7 @@ const plainTitle = (t: string) => t.toLowerCase().replace(/[“”"'‘’]/g, "
 /** The built-in guide for this book, if there is one. */
 export function guideFor(book: Book): (() => Promise<Guide>) | undefined {
   const mine = [book.title, book.originalTitle ?? ''].map(plainTitle).filter(Boolean);
-  return BUILT_IN.find((g) => g.titles.some((t) => mine.includes(plainTitle(t))))?.load;
+  return BUILT_IN.filter((g) => features.ownerGuides || !g.ownerOnly).find((g) => g.titles.some((t) => mine.includes(plainTitle(t))))?.load;
 }
 
 const KINDS: GlossaryKind[] = ['person', 'place', 'god', 'group', 'term'];

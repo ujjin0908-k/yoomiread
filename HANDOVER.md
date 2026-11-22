@@ -230,6 +230,15 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   The translator gets one line about the genre (not for General). A guide file can carry `"genre"`, used when the
   book has none.
 
+- **Public build and the sample book (2026-11-22):** `src/edition.ts`. The default build is the owner's app, with
+  everything. `VITE_EDITION=public` at build time leaves out the link reader ("From a web link", "Many from a link",
+  covers from a link), the Foolish Game guide (not even in the files) and the Novel Updates field; the page reader
+  function (`functions/api/fetch.ts`) also refuses when that variable is set on the Cloudflare project. Both builds
+  offer a free sample book on an empty Home or Library: "The Wonderful Wizard of Oz" (public domain, from Standard
+  Ebooks, `public/samples/oz.json.gz`) with its own guide (`src/guides/oz.ts`: cast, places, links and events, each
+  dated by chapter), genre Fantasy, ready offline with no key. The translation prompts no longer say "for a single
+  reader". `.json.gz` files (sample, dictionaries) now open whether or not the server unpacks them (`src/gzipJson.ts`).
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless

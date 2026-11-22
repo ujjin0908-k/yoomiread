@@ -1,6 +1,6 @@
 import { ChevronRight, Plus, Settings as Gear } from 'lucide-react';
 import { useState } from 'react';
-import { Book3D, Empty, Pocket, TabBar } from '../components';
+import { Book3D, Empty, Pocket, SampleButton, TabBar } from '../components';
 import { backupDue, loadBackupState, saveBackupFile, snoozeBackup } from '../backupNow';
 import { db } from '../db';
 import { go, useLive, useOnline } from '../hooks';
@@ -120,7 +120,8 @@ export function Home() {
         {data && !books.length && (
           <div className="home-empty">
             <img src="/mascot/cat-closeup.gif" alt="" width={180} height={180} />
-            <Empty title="Your shelves are empty">Import a PDF or write down a book you have read.</Empty>
+            <Empty title="Your shelves are empty">Import a PDF or ePub, write down a book you have read, or start with a free classic.</Empty>
+            <SampleButton />
           </div>
         )}
 
