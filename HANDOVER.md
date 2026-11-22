@@ -245,6 +245,18 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   owner's app never shows it; Settings → Getting started → "Show the tour again" brings it back on the next open.
   Stored in `settings` as `tourSeen` (true, or 'again').
 
+- **YoomiRead AI (2026-11-22, item 3 part 1):** AI without the reader's own key. Settings → AI → "AI from":
+  YoomiRead or My own service. The owner's build keeps "My own service" as the default, and the choice appears only
+  when the build has accounts (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY).
+  - Sign-in: Supabase (email link, Google, Apple), `src/account.ts`; the library loads only when used.
+  - Server: `src/server/aiGateway.ts`, run by `functions/api/ai/[[path]].ts` (`/api/ai/models`, `/usage`, `/chat`).
+    It checks the sign-in, offers only the models in `AI_MODELS`, caps request size and answer length, applies a
+    monthly safety limit per reader (`AI_MONTHLY_LIMIT_USD`, default $1; not a price), and records every call's
+    tokens and cost in Supabase (`supabase/ai_usage.sql`: table `ai_usage`, views `ai_spend_by_month` and
+    `ai_spend_by_kind` for the expense check). The provider key (`AI_API_KEY`) stays on the server.
+  - Switching modes keeps each mode's own models (`setAiMode`). Ten key checks became one `aiReady`.
+  - Setup steps: vault note "YoomiRead AI setup".
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless

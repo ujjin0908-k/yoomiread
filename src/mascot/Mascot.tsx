@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { db } from '../db';
 import { isRead, needsTranslation, titleOf } from '../logic';
-import { addSpend, callCost, loadSettings, modelFor } from '../translate/run';
+import { addSpend, callCost, aiReady, loadSettings, modelFor } from '../translate/run';
 import { chat } from '../translate/api';
 import { formatCost, type ChatMessage } from '../translate/prompt';
 import type { Book, Chapter, GlossaryEntry } from '../types';
@@ -61,7 +61,7 @@ export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter:
         setAnswer({ text: saved.text, note: 'Remembered from before. Free.' });
         return;
       }
-      if (!settings.apiKey.trim() || !settings.baseUrl.trim()) {
+      if (!aiReady(settings)) {
         setError('Set up AI in Settings first to chat with him.');
         return;
       }

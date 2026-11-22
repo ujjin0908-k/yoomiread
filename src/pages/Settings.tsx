@@ -8,7 +8,8 @@ import { parseBackup } from '../backup';
 import { DEFAULT_BACKUP, loadBackupState, saveBackupFile, saveBackupState } from '../backupNow';
 import { formatDate } from '../logic';
 import { chat } from '../translate/api';
-import { EMPTY_SETTINGS, fetchModels, loadSettings, saveSettings } from '../translate/run';
+import { EMPTY_SETTINGS, fetchModels, hostedUsage, loadSettings, saveSettings, setAiMode } from '../translate/run';
+import { accountsAvailable, signInWith, signInWithEmail, signOut, useAccount } from '../account';
 import type { ModelOption, TranslateSettings } from '../types';
 
 export function Settings() {
@@ -167,6 +168,11 @@ function TranslationSettings() {
     void saveSettings(next);
     setNote('Saved on this phone.');
   };
+  const setMode = (mode: 'own' | 'hosted') => {
+    // The model list belongs to the mode, so the settings are read again after the switch.
+    void setAiMode(mode).then(loadSettings).then(setS);
+    setNote('');
+  };
   const setModel = (i: number, change: Partial<ModelOption>) =>
     update({ models: s.models.map((m, j) => (j === i ? { ...m, ...change } : m)) });
   const price = (v: string) => (v.trim() === '' ? undefined : Number(v));
@@ -198,98 +204,120 @@ function TranslationSettings() {
     <section className="card form translate-settings">
       <h3>AI</h3>
       <p className="muted small">
-        Translation, character profiles, the story search and the cat's chat use an AI service you choose. Reading,
-        notes, the dictionary and book guides work without it. Paste its address (it ends in /v1; any
-        OpenAI-compatible service works) and your key. The key stays on this phone and is never put in a backup. Set a
-        spending limit with the service.
+        Translation, character profiles, the story search and the cat's chat use AI. Reading, notes, the dictionary and
+        book guides work without it.
       </p>
-      <label>
-        Service address
-        <input
-          inputMode="url"
-          autoCapitalize="off"
-          autoCorrect="off"
-          placeholder="https://…/v1"
-          value={s.baseUrl}
-          onChange={(e) => update({ baseUrl: e.target.value })}
-        />
-      </label>
-      <label>
-        API key
-        <span className="key-row">
-          <input
-            type={showKey ? 'text' : 'password'}
-            autoCapitalize="off"
-            autoCorrect="off"
-            autoComplete="off"
-            value={s.apiKey}
-            onChange={(e) => update({ apiKey: e.target.value })}
-          />
-          <button type="button" className="round-btn plain" aria-label={showKey ? 'Hide key' : 'Show key'} onClick={() => setShowKey(!showKey)}>
-            {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
-        </span>
-      </label>
-
-      <div className="models">
-        <span className="label">Models and prices (US$ per million tokens)</span>
-        {s.models.map((m, i) => (
-          <div className="model-row" key={i}>
-            <label className="radio">
+      {accountsAvailable && (
+        <div className="look-row">
+          <span>AI from</span>
+          <div className="seg">
+            <button type="button" className={s.mode === 'hosted' ? 'on' : ''} onClick={() => setMode('hosted')}>
+              YoomiRead
+            </button>
+            <button type="button" className={s.mode !== 'hosted' ? 'on' : ''} onClick={() => setMode('own')}>
+              My own service
+            </button>
+          </div>
+        </div>
+      )}
+      {s.mode === 'hosted' ? (
+        <HostedAI s={s} update={update} />
+      ) : (
+        <>
+          <p className="muted small">
+            Paste your AI service's address (it ends in /v1; any OpenAI-compatible service works) and your key. The key
+            stays on this phone and is never put in a backup. Set a spending limit with the service.
+          </p>
+          <label>
+            Service address
+            <input
+              inputMode="url"
+              autoCapitalize="off"
+              autoCorrect="off"
+              placeholder="https://…/v1"
+              value={s.baseUrl}
+              onChange={(e) => update({ baseUrl: e.target.value })}
+            />
+          </label>
+          <label>
+            API key
+            <span className="key-row">
               <input
-                type="radio"
-                name="default-model"
-                checked={s.defaultModel === m.id}
-                onChange={() => update({ defaultModel: m.id })}
-                aria-label={`Use ${m.label} by default`}
-              />
-            </label>
-            <div className="model-fields">
-              <input aria-label="Name" value={m.label} onChange={(e) => setModel(i, { label: e.target.value })} />
-              <input
-                aria-label="Model id"
-                className="mono"
+                type={showKey ? 'text' : 'password'}
                 autoCapitalize="off"
                 autoCorrect="off"
-                value={m.id}
-                onChange={(e) => {
-                  const wasDefault = s.defaultModel === m.id;
-                  const models = s.models.map((x, j) => (j === i ? { ...x, id: e.target.value } : x));
-                  update({ models, defaultModel: wasDefault ? e.target.value : s.defaultModel });
-                }}
+                autoComplete="off"
+                value={s.apiKey}
+                onChange={(e) => update({ apiKey: e.target.value })}
               />
-              <span className="row-2">
-                <input aria-label="Input price" inputMode="decimal" placeholder="in" value={m.inputPrice ?? ''} onChange={(e) => setModel(i, { inputPrice: price(e.target.value) })} />
-                <input aria-label="Output price" inputMode="decimal" placeholder="out" value={m.outputPrice ?? ''} onChange={(e) => setModel(i, { outputPrice: price(e.target.value) })} />
-              </span>
-            </div>
-            {s.models.length > 1 && (
-              <button
-                type="button"
-                className="round-btn plain"
-                aria-label={`Remove ${m.label}`}
-                onClick={() => {
-                  const models = s.models.filter((_, j) => j !== i);
-                  update({ models, defaultModel: s.defaultModel === m.id ? models[0].id : s.defaultModel });
-                }}
-              >
-                <Trash2 size={16} />
+              <button type="button" className="round-btn plain" aria-label={showKey ? 'Hide key' : 'Show key'} onClick={() => setShowKey(!showKey)}>
+                {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
-            )}
+            </span>
+          </label>
+
+          <div className="models">
+            <span className="label">Models and prices (US$ per million tokens)</span>
+            {s.models.map((m, i) => (
+              <div className="model-row" key={i}>
+                <label className="radio">
+                  <input
+                    type="radio"
+                    name="default-model"
+                    checked={s.defaultModel === m.id}
+                    onChange={() => update({ defaultModel: m.id })}
+                    aria-label={`Use ${m.label} by default`}
+                  />
+                </label>
+                <div className="model-fields">
+                  <input aria-label="Name" value={m.label} onChange={(e) => setModel(i, { label: e.target.value })} />
+                  <input
+                    aria-label="Model id"
+                    className="mono"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    value={m.id}
+                    onChange={(e) => {
+                      const wasDefault = s.defaultModel === m.id;
+                      const models = s.models.map((x, j) => (j === i ? { ...x, id: e.target.value } : x));
+                      update({ models, defaultModel: wasDefault ? e.target.value : s.defaultModel });
+                    }}
+                  />
+                  <span className="row-2">
+                    <input aria-label="Input price" inputMode="decimal" placeholder="in" value={m.inputPrice ?? ''} onChange={(e) => setModel(i, { inputPrice: price(e.target.value) })} />
+                    <input aria-label="Output price" inputMode="decimal" placeholder="out" value={m.outputPrice ?? ''} onChange={(e) => setModel(i, { outputPrice: price(e.target.value) })} />
+                  </span>
+                </div>
+                {s.models.length > 1 && (
+                  <button
+                    type="button"
+                    className="round-btn plain"
+                    aria-label={`Remove ${m.label}`}
+                    onClick={() => {
+                      const models = s.models.filter((_, j) => j !== i);
+                      update({ models, defaultModel: s.defaultModel === m.id ? models[0].id : s.defaultModel });
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
+            <div className="row between">
+              <button type="button" className="link" onClick={() => update({ models: [...s.models, { id: '', label: 'New model' }] })}>
+                <Plus size={16} /> Add model
+              </button>
+              <button type="button" className="link" onClick={() => void refreshModels()}>
+                Refresh from provider
+              </button>
+              <button type="button" className="link" onClick={() => update({ models: EMPTY_SETTINGS.models })}>
+                Reset prices
+              </button>
+            </div>
           </div>
-        ))}
-        <div className="row between">
-          <button type="button" className="link" onClick={() => update({ models: [...s.models, { id: '', label: 'New model' }] })}>
-            <Plus size={16} /> Add model
-          </button>
-          <button type="button" className="link" onClick={() => void refreshModels()}>
-            Refresh from provider
-          </button>
-          <button type="button" className="link" onClick={() => update({ models: EMPTY_SETTINGS.models })}>
-            Reset prices
-          </button>
-        </div>
-      </div>
+
+        </>
+      )}
 
       <div className="look-row">
         <span>Model thinking (on is slower, off is faster)</span>
@@ -340,5 +368,93 @@ function ReadingBackground() {
       <h3>Reading background</h3>
       <p className="muted small">Each book can have its own picture behind the pages: open the book, then Edit details, or tap T while reading it.</p>
     </section>
+  );
+}
+
+/** YoomiRead AI: sign in (email link, Google or Apple), this month's use, and which model to use. */
+function HostedAI({ s, update }: { s: TranslateSettings; update: (change: Partial<TranslateSettings>) => void }) {
+  const account = useAccount();
+  const [email, setEmail] = useState('');
+  const [said, setSaid] = useState('');
+  const [usage, setUsage] = useState<{ spent: number; limit: number }>();
+
+  useEffect(() => {
+    if (!account.signedIn) return;
+    void hostedUsage().then(setUsage).catch((e: unknown) => setSaid(e instanceof Error ? e.message : ''));
+  }, [account.signedIn]);
+
+  async function go(run: () => Promise<void>, done?: string) {
+    setSaid('');
+    try {
+      await run();
+      if (done) setSaid(done);
+    } catch (e) {
+      setSaid(e instanceof Error ? e.message : 'That did not work. Try again.');
+    }
+  }
+
+  if (!account.signedIn) {
+    return (
+      <div className="hosted-ai">
+        <p className="muted small">Sign in to use YoomiRead AI. No key or AI account of your own is needed.</p>
+        <button type="button" className="btn wide" onClick={() => void go(() => signInWith('apple'))}>
+          Continue with Apple
+        </button>
+        <button type="button" className="btn wide" onClick={() => void go(() => signInWith('google'))}>
+          Continue with Google
+        </button>
+        <form
+          className="row-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void go(() => signInWithEmail(email), `A sign-in link is on its way to ${email.trim()}. Open it on this phone.`);
+          }}
+        >
+          <input type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
+          <button type="submit" className="btn">
+            Email me a link
+          </button>
+        </form>
+        {said && <p className="small">{said}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="hosted-ai">
+      <div className="row between">
+        <span className="small">
+          Signed in as <b>{account.email ?? 'you'}</b>
+        </span>
+        <button type="button" className="link small" onClick={() => void go(signOut)}>
+          Sign out
+        </button>
+      </div>
+      {usage && (
+        <div className="hosted-usage">
+          <span className="small">This month</span>
+          <span className="hosted-meter" aria-hidden="true">
+            <i style={{ width: `${Math.min(100, (usage.spent / Math.max(usage.limit, 0.0001)) * 100)}%` }} />
+          </span>
+          <span className="muted small">
+            {Math.round(Math.min(100, (usage.spent / Math.max(usage.limit, 0.0001)) * 100))}% of your monthly AI used. It starts again on the 1st.
+          </span>
+        </div>
+      )}
+      {s.models.length > 1 && (
+        <label>
+          Model
+          <select value={s.defaultModel} onChange={(e) => update({ defaultModel: e.target.value })}>
+            {s.models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {!s.models.length && <p className="warn small">YoomiRead AI is not available right now. Try again later.</p>}
+      {said && <p className="small">{said}</p>}
+    </div>
   );
 }

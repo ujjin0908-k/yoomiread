@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { db } from '../db';
 import { needsTranslation } from '../logic';
-import { loadSettings, modelFor, translateChapter } from './run';
+import { aiReady, loadSettings, modelFor, translateChapter } from './run';
 
 /** How a "translate the first chapters" run is going for one book. Kept in memory only. */
 export interface ImportJob {
@@ -40,7 +40,7 @@ export async function translateFirstChapters(bookId: string): Promise<void> {
   if (jobs.get(bookId) && !jobs.get(bookId)!.finished) return;
   const settings = await loadSettings();
   const count = settings.onImport ?? 3;
-  if (count <= 0 || !settings.apiKey.trim() || !settings.baseUrl.trim()) return;
+  if (count <= 0 || !aiReady(settings)) return;
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
   const book = await db.books.get(bookId);
   if (!book || !needsTranslation(book)) return;

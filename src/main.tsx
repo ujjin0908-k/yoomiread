@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { initMotion } from './motion';
+import { startAccount } from './account';
 import './styles.css';
 import './motion.css';
 import './loud.css';
@@ -15,6 +16,9 @@ void import('./backdrop').then(({ movePhoneBackdropToBook }) => movePhoneBackdro
 if (import.meta.env.DEV && new URLSearchParams(location.search).has('seed')) {
   void import('./dev/seedWorld').then(({ seedWorld }) => seedWorld()).then((id) => console.info('Test book added:', id));
 }
+
+// A saved sign-in for YoomiRead AI, or one coming back from Google, Apple or the email link.
+void startAccount();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

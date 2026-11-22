@@ -32,7 +32,7 @@ import {
   progress,
 } from '../logic';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
-import { keepTranslation, loadSettings, modelFor, translateChapter, translateTitle, translateTitles, type ChapterRun } from '../translate/run';
+import { keepTranslation, aiReady, loadSettings, modelFor, translateChapter, translateTitle, translateTitles, type ChapterRun } from '../translate/run';
 import type { Book, BookLanguage, BookStyle, Chapter, GenreId, GlossaryKind, Shelf, TranslateSettings } from '../types';
 import { GENRES, guessGenre } from '../genres';
 import { parseSources, sourcesText, webLink } from '../sources';
@@ -870,7 +870,7 @@ function TranslateSheet({ book, chapters, done, onClose }: { book: Book; chapter
     input += t.input;
     output += t.output;
   }
-  const ready = settings.baseUrl.trim() && settings.apiKey.trim();
+  const ready = aiReady(settings);
 
   async function run() {
     setRunning(true);

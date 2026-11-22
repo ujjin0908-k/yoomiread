@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { needsTranslation, titleOf } from '../logic';
-import { loadSettings, modelFor, translateChapter } from '../translate/run';
+import { aiReady, loadSettings, modelFor, translateChapter } from '../translate/run';
 import type { Book, Chapter, TranslateSettings } from '../types';
 import type { Trouble } from './mood';
 
@@ -38,7 +38,7 @@ const jobs = new Map<string, Promise<string>>();
  */
 export async function retryTranslation(input: { book: Book; current: Chapter; trouble?: Trouble; message: string }): Promise<{ now: string; later?: Promise<string> }> {
   const settings = await loadSettings();
-  if (!settings.apiKey.trim() || !settings.baseUrl.trim()) return { now: 'I would, but there is no API key in Settings yet.' };
+  if (!aiReady(settings)) return { now: 'I would, but AI is not set up in Settings yet.' };
   const target = (input.trouble?.chapterId && ((await db.chapters.get(input.trouble.chapterId)) as Chapter | undefined)) || input.current;
   const book = target.bookId === input.book.id ? input.book : ((await db.books.get(target.bookId)) as Book | undefined) ?? input.book;
   const text = (await db.texts.get(target.id))?.text;

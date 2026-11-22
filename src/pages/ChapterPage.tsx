@@ -20,7 +20,7 @@ import { Mascot } from '../mascot/Mascot';
 import { CENSORED } from '../translate/prompt';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
-import { keepTranslation, loadSettings, modelFor, translateChapter, type ChapterRun } from '../translate/run';
+import { keepTranslation, aiReady, loadSettings, modelFor, translateChapter, type ChapterRun } from '../translate/run';
 import { useTranslateAhead } from '../translate/ahead';
 import type { Book, Chapter, GlossaryEntry, HighlightColor, Note, TranslateSettings } from '../types';
 
@@ -1021,7 +1021,7 @@ function TranslateChapterSheet({
   useEffect(() => () => stop.current?.abort(), []);
   if (!settings) return null;
 
-  const ready = settings.baseUrl.trim() && settings.apiKey.trim();
+  const ready = aiReady(settings);
   const tokens = estimateTokens(text);
   const estimate = (id: string) => formatCost(costOf(modelFor(settings, id), tokens.input, tokens.output));
   const shownCost = (r?: ChapterRun) => (r?.translation.cost !== undefined ? formatCost(r.translation.cost) : undefined);

@@ -295,6 +295,10 @@ export interface ModelOption {
 
 /** Translation settings. Stored on this device only and never put in a backup. */
 export interface TranslateSettings {
+  /** 'hosted': YoomiRead AI (sign in, no key; src/server/aiGateway.ts). 'own': the reader's own AI service. */
+  mode?: 'own' | 'hosted';
+  /** The model picked for YoomiRead AI (the reader's own service keeps `defaultModel`). */
+  hostedModel?: string;
   baseUrl: string;
   apiKey: string;
   models: ModelOption[];
