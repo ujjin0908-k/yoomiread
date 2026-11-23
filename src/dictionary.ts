@@ -38,7 +38,7 @@ async function load(file: DictFile): Promise<Dict> {
 }
 
 /** Languages a word can be looked up in from the reader. */
-export type LookupLanguage = 'en' | 'zh' | 'ja' | 'ko';
+export type LookupLanguage = 'en' | 'zh' | 'ja' | 'ko' | 'es' | 'fr';
 
 /**
  * Dictionary forms a conjugated Japanese word could come from, nearest first (つぶやいた → つぶやく, 開けて → 開ける,
@@ -99,6 +99,8 @@ export async function lookup(lang: LookupLanguage, word: string): Promise<Entry 
     const hit = (await load(lang))[lang === 'en' ? word.toLowerCase() : word];
     return hit ? entryOf(hit) : undefined;
   }
+  // Spanish and French: no offline dictionary yet (the word sheet links to RAE and Larousse).
+  if (lang === 'es' || lang === 'fr') return undefined;
   if (lang === 'ko') {
     const dict = await load('ko');
     for (const base of koreanBases(word)) {

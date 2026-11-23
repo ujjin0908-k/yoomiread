@@ -58,7 +58,9 @@ export function WordSheet({ word, bookId, lang, onClose }: { word: string; bookI
           {defs?.pron ? ` · ${defs.pron}` : ''}
         </p>
         {defs === undefined && <p className="small">Looking up…</p>}
-        {defs === null && <p className="small">Not in the dictionary.</p>}
+        {defs === null && (
+          <p className="small">{lang === 'es' ? 'No offline Spanish dictionary yet.' : lang === 'fr' ? 'No offline French dictionary yet.' : 'Not in the dictionary.'}</p>
+        )}
         {defs?.text.split('\n').map((line, i) => (
           <p key={i} className="small">
             {line}
@@ -72,6 +74,16 @@ export function WordSheet({ word, bookId, lang, onClose }: { word: string; bookI
         {lang === 'ja' && (
           <a className="btn ghost" href={`https://jisho.org/search/${encodeURIComponent(word)}`} target="_blank" rel="noopener noreferrer">
             Open in Jisho dictionary
+          </a>
+        )}
+        {lang === 'es' && (
+          <a className="btn ghost" href={`https://dle.rae.es/${encodeURIComponent(word)}`} target="_blank" rel="noopener noreferrer">
+            Open in the RAE dictionary
+          </a>
+        )}
+        {lang === 'fr' && (
+          <a className="btn ghost" href={`https://www.larousse.fr/dictionnaires/francais/${encodeURIComponent(word)}`} target="_blank" rel="noopener noreferrer">
+            Open in Larousse
           </a>
         )}
         {lang === 'ko' && (

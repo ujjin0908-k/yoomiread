@@ -10,6 +10,8 @@ export interface LanguageInfo {
   id: SourceLanguage;
   /** As readers call it. */
   name: string;
+  /** Its own name, for the reader's Original / Translation switch. */
+  native: string;
   /** For the HTML lang attribute (picks the right font and glyph shapes). */
   htmlLang: string;
   /** Characters only this language's text uses (kana for Japanese, hangul for Korean, Han for Chinese). */
@@ -30,6 +32,7 @@ export const LANGUAGES: Record<SourceLanguage, LanguageInfo> = {
   zh: {
     id: 'zh',
     name: 'Chinese',
+    native: '中文',
     htmlLang: 'zh',
     script: new RegExp(`[${HAN}]`),
     novel: 'Chinese web novel',
@@ -39,6 +42,7 @@ export const LANGUAGES: Record<SourceLanguage, LanguageInfo> = {
   ja: {
     id: 'ja',
     name: 'Japanese',
+    native: '日本語',
     htmlLang: 'ja',
     script: new RegExp(`[${KANA}${HAN}]`),
     novel: 'Japanese light novel or web novel',
@@ -49,6 +53,7 @@ export const LANGUAGES: Record<SourceLanguage, LanguageInfo> = {
   ko: {
     id: 'ko',
     name: 'Korean',
+    native: '한국어',
     htmlLang: 'ko',
     script: new RegExp(`[${HANGUL}]`),
     novel: 'Korean web novel',
@@ -113,3 +118,28 @@ export const BOOK_LANGUAGES: { id: BookLanguage; label: string }[] = [
   { id: 'en', label: 'English' },
   { id: 'other', label: 'Other' },
 ];
+
+/** The languages a book can be translated into. English unless the book says otherwise. */
+export type TargetLanguage = 'en' | 'es' | 'fr';
+
+export interface TargetInfo {
+  id: TargetLanguage;
+  /** As readers call it, and as the translator is told. */
+  name: string;
+  htmlLang: string;
+  /** Short label for chips ("EN"). */
+  short: string;
+  /** Its own name ("Español"). */
+  native: string;
+}
+
+export const TARGETS: Record<TargetLanguage, TargetInfo> = {
+  en: { id: 'en', name: 'English', htmlLang: 'en', short: 'EN', native: 'English' },
+  es: { id: 'es', name: 'Spanish', htmlLang: 'es', short: 'ES', native: 'Español' },
+  fr: { id: 'fr', name: 'French', htmlLang: 'fr', short: 'FR', native: 'Français' },
+};
+
+/** The language a book is translated into (English when not set). */
+export function targetOf(book: { target?: TargetLanguage } | undefined | null): TargetInfo {
+  return TARGETS[book?.target ?? 'en'] ?? TARGETS.en;
+}

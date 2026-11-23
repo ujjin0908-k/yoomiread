@@ -1,4 +1,4 @@
-import { LANGUAGES, sourceOf, type LanguageInfo } from '../languages';
+import { LANGUAGES, sourceOf, targetOf, TARGETS, type LanguageInfo, type TargetInfo } from '../languages';
 import { db } from '../db';
 import { newId, paragraphs } from '../logic';
 import type { GlossaryEntry, GlossaryKind } from '../types';
@@ -47,17 +47,18 @@ export interface FixAnswer {
   kind?: GlossaryKind;
 }
 
-export function fixMessages(input: { original: string; english: string; quote: string; neighbours?: string; source?: LanguageInfo }): ChatMessage[] {
+export function fixMessages(input: { original: string; english: string; quote: string; neighbours?: string; source?: LanguageInfo; target?: TargetInfo }): ChatMessage[] {
   const src = input.source ?? LANGUAGES.zh;
+  const into = (input.target ?? TARGETS.en).name;
   return [
     {
       role: 'system',
       content:
-        `You check one line of a ${src.novel} translated into English. The reader selected words in the English that look wrong. ` +
-        `Find the ${src.name} words in the original paragraph that became the selected English, and say what they really mean in this line. ` +
+        `You check one line of a ${src.novel} translated into ${into}. The reader selected words in the ${into} that look wrong. ` +
+        `Find the ${src.name} words in the original paragraph that became the selected ${into}, and say what they really mean in this line. ` +
         `Reply with one JSON object and nothing else: {"original": "the ${src.name} words, copied exactly from the paragraph", ` +
         '"literal": "word-for-word meaning", "meaning": "what it means here, in one short sentence", ' +
-        '"suggestion": "the English to use instead in this line, short, in the same voice", ' +
+        `"suggestion": "the ${into} to use instead in this line, short, in the same voice", ` +
         '"kind": "person|place|god|group|term"} (kind: term for an expression, catchphrase, item or rule).',
     },
     {
@@ -99,7 +100,7 @@ export async function askOriginal(bookId: string, pair: ParagraphPair, quote: st
   const settings = await loadSettings();
   const book = await db.books.get(bookId);
   const model = modelFor(settings, book?.model);
-  const messages = fixMessages({ original: pair.original, english: pair.english, quote, source: sourceOf(book) });
+  const messages = fixMessages({ original: pair.original, english: pair.english, quote, source: sourceOf(book), target: targetOf(book) });
   const result = await chat(settings, model.id, messages);
   const spend = callCost(model, messages, result);
   await addSpend(bookId, spend.cost, spend.estimated);

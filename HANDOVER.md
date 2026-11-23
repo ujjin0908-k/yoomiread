@@ -305,6 +305,15 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
     먹다), and particles are dropped (도시를 → 도시).
   - Credits: `public/dict/NOTICE.txt` and Settings → Dictionaries. Rebuild: `scripts/dictionaries/`.
 
+- **Translate into Spanish or French (2026-11-23):** Edit details → "Translate into" (Chinese, Japanese and Korean
+  books): English (default), Spanish or French (`Book.target`, `TARGETS` in `src/languages.ts`).
+  - Uses the book's language: the translator, tone and honorific rules, chapter titles, "Check the original", the
+    reader's switch (日本語 / Español), the word sheet (RAE and Larousse links; no offline Spanish or French dictionary
+    yet), and the chapter chip (ES).
+  - Each translation records its language (`Translation.lang`; older ones are English), so changing a book's language
+    never mislabels chapters already translated.
+  - The story-so-far summary, profiles and the world stay English, like the app.
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless

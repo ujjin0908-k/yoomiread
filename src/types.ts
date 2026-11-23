@@ -51,6 +51,8 @@ export interface Book {
   language: BookLanguage;
   /** Names the world's kinds and tells the story search what to look for (src/genres.ts). */
   genre?: GenreId;
+  /** The language chapters are translated into (src/languages.ts). English when not set. */
+  target?: 'en' | 'es' | 'fr';
   /** The free public-domain sample book (src/sample.ts): its text always syncs. */
   sample?: boolean;
   /** The reader's own names for the kinds ("Houses" for groups). A name also turns on a kind the genre leaves out. */
@@ -122,6 +124,8 @@ export interface Translation {
   warnings?: string[];
   /** The story so far, up to and including this chapter; the next chapter starts from it. */
   summary?: string;
+  /** The language of `text` (English when not set: every translation before Spanish and French). */
+  lang?: 'en' | 'es' | 'fr';
   /** The chapter title in English, from the same reply. */
   title?: string;
   createdAt: number;
