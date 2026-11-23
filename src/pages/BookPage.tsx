@@ -680,6 +680,11 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
   const [styleNotes, setStyleNotes] = useState(book.style?.notes ?? '');
   const [styleSample, setStyleSample] = useState(book.style?.sample ?? '');
   const [storySoFar, setStorySoFar] = useState(book.storySoFar ?? '');
+  const [narrator, setNarrator] = useState(book.narrator ?? '');
+  const cast = useLive(
+    async () => (await db.glossary.where('bookId').equals(book.id).toArray()).filter((g) => g.kind === 'person' && g.status === 'ok').sort((a, b) => a.english.localeCompare(b.english)),
+    [book.id],
+  );
   const [naming, setNaming] = useState('');
   const hasChinese = ANY_SOURCE.test(title);
 
@@ -718,6 +723,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
       sources: parseSources(sources),
       style: styleFrom({ tone, honorifics, notes: styleNotes, sample: styleSample }),
       storySoFar: storySoFar.trim() || undefined,
+      narrator: narrator || undefined,
       updatedAt: Date.now(),
     });
     onClose();
@@ -773,6 +779,20 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
           </select>
           <span className="muted small">{GENRES.find((g) => g.id === genre)!.blurb}</span>
         </label>
+        {!!cast?.length && (
+          <label>
+            Who is “I”? <span className="muted small">(for a book told in the first person)</span>
+            <select value={narrator} onChange={(e) => setNarrator(e.target.value)}>
+              <option value="">Nobody: not told as “I”</option>
+              {cast.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.english}
+                </option>
+              ))}
+            </select>
+            <span className="muted small">Lines like “I said” then show this person’s face.</span>
+          </label>
+        )}
         <details className="kind-names">
           <summary className="small">Your own names for the kinds</summary>
           <p className="muted small">Leave a box empty to keep the genre's name. Naming a kind the genre leaves out turns it on.</p>
