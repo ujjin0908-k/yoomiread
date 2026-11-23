@@ -86,6 +86,9 @@ export function chapterMessages(input: {
     `- Keep the paragraph breaks: one paragraph of the original becomes one paragraph in ${into}, separated by a blank line.`,
     '- Use the glossary exactly for every name and term in it. Use each person\'s pronouns as given.',
     '- Keep the tone of the original. Dialogue should sound like real speech.',
+    '- Mark who speaks: start every paragraph that has spoken words in it with the speaker\'s name in double square brackets and a space,',
+    '  like [[Lin Feng]] “Let\'s go.” Write the name as in the glossary (or as you translate it). For a narrator who speaks as "I", write [[I]].',
+    '  If you cannot tell who speaks, write [[?]]. Paragraphs with no speech get no mark. The mark is only a label, not part of the text.',
     '- Output only the translation, with no notes, no title line and no commentary.',
     `- After the translation, write a line "${TITLE}" and then the chapter title in ${into} on one line, using the glossary for names.`,
     '  Leave out the chapter number ("第589章 入梦" becomes "Into the Dream"); keep words like "Side Story".',
@@ -204,7 +207,19 @@ export function isRefusal(reply: string): boolean {
   return REFUSAL.test(reply.trim().slice(0, 200));
 }
 
-export function splitReply(reply: string, source: LanguageInfo = LANGUAGES.zh): { text: string; terms: ProposedTerm[]; summary?: string; title?: string; world?: string } {
+/** The speaker label the translator puts at the start of a paragraph with speech: "[[Hu Yu]] “…”". */
+// [[CENSORED]] is the skipped-passage marker, not a speaker.
+const SPEAKER_TAG = /^\s*\[\[(?!\s*censored\s*\]\])([^[\]\n]{1,60})\]\]\s*/i;
+
+/** Text with the translator's speaker labels taken out, for showing a reply while it is still arriving. */
+export function withoutSpeakerTags(text: string): string {
+  return text.replace(/(^|\n)[ \t]*\[\[(?!\s*censored\s*\]\])[^[\]\n]{0,60}\]\][ \t]*/gi, '$1').replace(/\[\[[^[\]\n]{0,60}$/, '');
+}
+
+export function splitReply(
+  reply: string,
+  source: LanguageInfo = LANGUAGES.zh,
+): { text: string; terms: ProposedTerm[]; summary?: string; title?: string; world?: string; speakers?: (string | null)[] } {
   // The Living Book's lines come last; older replies (and books with it off) have none.
   const worldAt = reply.indexOf(WORLD);
   const world = worldAt >= 0 ? reply.slice(worldAt + WORLD.length).trim() : '';
@@ -220,15 +235,35 @@ export function splitReply(reply: string, source: LanguageInfo = LANGUAGES.zh): 
   const body = titleAt >= 0 ? beforeSummary.slice(0, titleAt) : beforeSummary;
   const title = titleAt >= 0 ? cleanChapterTitle(beforeSummary.slice(titleAt + TITLE.length)) : undefined;
   // Normalise paragraph breaks to the blank-line form the reader expects.
-  const text = body
+  const paras = body
     .replace(/\r\n/g, '\n')
     // Any spelling of the marker the model writes becomes its own paragraph.
     .replace(CENSORED_ANY, `\n\n${CENSORED}\n\n`)
     .split(/\n\s*\n|\n/)
     .map((p) => p.trim())
-    .filter(Boolean)
-    .join('\n\n');
-  return { text, terms, summary: summary || undefined, title, world: world || undefined };
+    .filter(Boolean);
+  // Who speaks each paragraph, from the labels: a name, '?' when the translator could not tell, null for no label.
+  const speakers: (string | null)[] = [];
+  const kept: string[] = [];
+  for (const p of paras) {
+    const m = p.match(SPEAKER_TAG);
+    const rest = m ? p.slice(m[0].length).trim() : p;
+    // A label on a line of its own belongs to the next paragraph.
+    if (m && !rest) {
+      speakers.push(m[1].trim());
+      kept.push('');
+      continue;
+    }
+    if (kept.length && kept[kept.length - 1] === '') {
+      kept[kept.length - 1] = rest;
+      continue;
+    }
+    speakers.push(m ? m[1].trim() : null);
+    kept.push(rest);
+  }
+  const text = kept.filter(Boolean).join('\n\n');
+  const labelled = speakers.some((x) => x !== null) && kept.every(Boolean);
+  return { text, terms, summary: summary || undefined, title, world: world || undefined, speakers: labelled ? speakers : undefined };
 }
 
 /** One clean line of title: no quotes, no "Chapter 589:" in front, no markdown. */
@@ -253,11 +288,13 @@ export function estimateTokens(text: string, glossaryCount = 0, world = false): 
   const cjk = (text.match(CJK) ?? []).length;
   const other = text.length - cjk;
   // About one token per Chinese, Japanese or Korean character, plus the instructions and the glossary.
+  // The speaker labels add about 90 tokens of instructions.
   // The Living Book's links and events add about 120 tokens of instructions going in and 150 coming out.
-  const input = Math.round(cjk * 1.1 + other / 4 + 450 + glossaryCount * 12 + (world ? 120 : 0));
+  const input = Math.round(cjk * 1.1 + other / 4 + 450 + 90 + glossaryCount * 12 + (world ? 120 : 0));
   // English comes out a little shorter in tokens than the Chinese characters going in.
   // The story-so-far summary adds about 200 tokens of output per chapter.
-  const output = Math.round(cjk * 0.9 + other / 4 + 60 + 200 + (world ? 150 : 0));
+  // The speaker labels add a few tokens on each paragraph with speech: about 5% more.
+  const output = Math.round((cjk * 0.9 + other / 4) * 1.05 + 60 + 200 + (world ? 150 : 0));
   return { input, output };
 }
 

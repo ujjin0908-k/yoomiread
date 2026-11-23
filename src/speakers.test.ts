@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { speakersOfChapter, type CastMember } from './logic';
+import { fromLabels, speakersOfChapter, type CastMember } from './logic';
+import { splitReply, withoutSpeakerTags } from './translate/prompt';
 
 const cast: CastMember[] = [
   { id: 'hu', names: ['Hu Yu', '胡羽'], gender: 'he' },
@@ -78,5 +79,43 @@ describe('speakersOfChapter: not guessing when someone outside the cast talks', 
   it('knows places and groups are not strangers', () => {
     const paras = ['Hu Yu reached the Azure Sect.', 'In the Azure Sect he said, “We rest here.”'];
     expect(speakersOfChapter(paras, cast, undefined, ['Azure Sect'])).toEqual([undefined, 'hu']);
+  });
+});
+
+describe('speaker labels from the translator', () => {
+  it('takes the labels out of the text and keeps them per paragraph', () => {
+    const reply = ['Snow fell on the hall.', '', '[[Hu Yu]] “We go now.”', '', '[[?]] “Wait!” someone shouted.', '', '[[Lin Xue]] “No.”', '===TITLE===', 'The Hall', '===SUMMARY===', 'Hu Yu left.'].join('\n');
+    const out = splitReply(reply);
+    expect(out.text).toBe('Snow fell on the hall.\n\n“We go now.”\n\n“Wait!” someone shouted.\n\n“No.”');
+    expect(out.speakers).toEqual([null, 'Hu Yu', '?', 'Lin Xue']);
+  });
+
+  it('joins a label written on a line of its own to the paragraph after it', () => {
+    const out = splitReply('[[Hu Yu]]\n“Go.”\n\nThe door shut.');
+    expect(out.text).toBe('“Go.”\n\nThe door shut.');
+    expect(out.speakers).toEqual(['Hu Yu', null]);
+  });
+
+  it('has no labels for a reply without any', () => {
+    expect(splitReply('“Go,” he said.\n\nThe door shut.').speakers).toBeUndefined();
+  });
+
+  it('hides labels in a reply still arriving', () => {
+    expect(withoutSpeakerTags('The hall.\n\n[[Hu Yu]] “We go.”\n\n[[Lin')).toBe('The hall.\n\n“We go.”\n\n');
+  });
+
+  it('matches labels to the cast, with the conversation as a fallback for unlabelled paragraphs', () => {
+    const labels = ['Hu Yu', '?', null, 'lin xue', 'I', 'Boq'];
+    const followed = [undefined, 'chen', 'chen', undefined, undefined, 'hu'];
+    expect(fromLabels(labels, cast, 'chen', followed)).toEqual(['hu', undefined, 'chen', 'lin', 'chen', undefined]);
+  });
+});
+
+describe('speaker labels and the skipped-passage marker', () => {
+  it('does not take [[CENSORED]] for a speaker', () => {
+    const out = splitReply('[[Hu Yu]] “Go.”\n\n[[CENSORED]]\n\nThe end.');
+    expect(out.text.split('\n\n')).toEqual(['“Go.”', '[[CENSORED]]', 'The end.']);
+    expect(out.speakers).toEqual(['Hu Yu', null, null]);
+    expect(withoutSpeakerTags('[[CENSORED]]\n[[Hu Yu]] “Go.”')).toBe('[[CENSORED]]\n“Go.”');
   });
 });

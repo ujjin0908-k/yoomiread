@@ -517,6 +517,22 @@ export function speakersOfChapter(paras: string[], cast: CastMember[], narrator?
   return out;
 }
 
+/**
+ * Who speaks each paragraph, from the translator's labels (`Translation.speakers`): a label's name is matched to the
+ * cast by any of their names ("I" is the book's narrator). A paragraph without a label keeps what following the
+ * conversation found; "?", or a name not in the cast, gets no face.
+ */
+export function fromLabels(labels: (string | null)[], cast: Speaker[], narrator: string | undefined, followed: (string | undefined)[]): (string | undefined)[] {
+  const byName = new Map<string, string>();
+  for (const c of cast) for (const n of c.names) byName.set(n.toLowerCase(), c.id);
+  return labels.map((label, i) => {
+    if (label === null) return followed[i];
+    const name = label.trim().toLowerCase().replace(/^the\s+/, '');
+    if (name === 'i' || name === 'me') return narrator;
+    return byName.get(name) ?? byName.get(`the ${name}`);
+  });
+}
+
 /** A chapter's title to show: the English one when the book is translated and it has one, else the original. */
 export function titleOf(c: { title: string; titleEn?: string }): string {
   return c.titleEn || c.title;

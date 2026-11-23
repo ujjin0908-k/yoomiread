@@ -139,6 +139,11 @@ export interface Translation {
   lang?: 'en' | 'es' | 'fr';
   /** The chapter title in English, from the same reply. */
   title?: string;
+  /**
+   * Who speaks each paragraph of `text`, as the translator labelled it: a name, '?' when it could not tell, null for a
+   * paragraph without speech. Older translations have none (the reader then follows the conversation itself).
+   */
+  speakers?: (string | null)[];
   createdAt: number;
 }
 

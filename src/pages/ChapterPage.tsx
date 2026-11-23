@@ -10,7 +10,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { OrderToggle, ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
-import { titleOf, bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakersFrom, speakersOfChapter, type Speaker } from '../logic';
+import { titleOf, bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakersFrom, speakersOfChapter, fromLabels, type Speaker } from '../logic';
 import { QuickDefinition, WordSheet } from './WordSheet';
 import { GlossaryCard, StoryPicture } from './GlossaryCard';
 import { FixLine } from './FixLine';
@@ -20,7 +20,7 @@ import { scenesFor } from '../scenes';
 import { glossaryFor } from '../glossaryMatch';
 import { Mascot } from '../mascot/Mascot';
 import { BuddyChapter } from '../buddy/BuddyChapter';
-import { CENSORED } from '../translate/prompt';
+import { CENSORED, withoutSpeakerTags } from '../translate/prompt';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
 import { keepTranslation, aiReady, worldNotesOn, loadSettings, modelFor, translateChapter, type ChapterRun } from '../translate/run';
@@ -181,12 +181,16 @@ export function ChapterPage({ id }: { id: string }) {
   const scenes = shown && prefs.storyPictures ? scenesFor(paragraphs(shown).map((x) => x.text), glossary ?? []) : [];
   // Who speaks each paragraph, reading the chapter in order so "he said" and back-and-forth lines find their speaker.
   const shownParas = shown ? paragraphs(shown) : [];
-  const speakerIds = speakersOfChapter(
+  const followed = speakersOfChapter(
     shownParas.map((x) => x.text),
     speakers.map((s) => ({ ...s, gender: people.find((g) => g.id === s.id)?.gender })),
     book?.narrator,
     (glossary ?? []).filter((g) => g.kind !== 'person').flatMap((g) => [g.english, ...(g.aliases ?? [])]),
   );
+  // The translator's labels, when this translation has them: they line up with the original's paragraphs too, as
+  // long as the counts match (one paragraph of the original becomes one of the translation).
+  const labels = translation?.speakers?.length === shownParas.length ? translation.speakers : undefined;
+  const speakerIds = labels ? fromLabels(labels, speakers, book?.narrator, followed) : followed;
   const faces = speakerIds.map((sid) => people.find((g) => g.id === sid && g.picture));
   const comments = (notes ?? []).filter((n) => n.kind === 'chapter');
   // A name in the glossary was selected: the bar offers its short explanation instead of the dictionary.
@@ -1105,7 +1109,7 @@ function TranslateChapterSheet({
     </label>
   );
 
-  const preview = mode === 'translate' ? live.a : tab === 'a' ? runs.a?.translation.text ?? live.a : runs.b?.translation.text ?? live.b;
+  const preview = withoutSpeakerTags(mode === 'translate' ? live.a : tab === 'a' ? runs.a?.translation.text ?? live.a : runs.b?.translation.text ?? live.b);
 
   return (
     <Sheet title={mode === 'compare' ? 'Compare two models' : 'Translate this chapter'} locked={running} onClose={onClose}>
