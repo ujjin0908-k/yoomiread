@@ -453,3 +453,11 @@ npm run dev       # local dev server
 
 Built with Claude Code over many sessions, on the owner's requests. Project notes and decisions are in the vault.
 Read `CLAUDE.md` before changing anything: it asks to keep the vault status note up to date.
+
+- **Quotes moved to each book; the Ask tab (2026-11-23):**
+  - The Quotes tab mixed every book's lines and confused the owner. Each book's page now has its own Quotes section
+    (`BookQuotes` in `src/pages/Quotes.tsx`: newest first, first 4 then "Show all", search and folders when there are
+    more). A quote's big card goes back to its book. Old `#/quotes` links open the Library.
+  - The tab is now **Ask** (`src/pages/Ask.tsx`): pick a book, ask the cat (same spoiler-safe answers as his bubble,
+    now shared in `src/mascot/ask.ts`), starter questions, and "Pick up where you left off": the free recap for the
+    books being read (story so far from translations, or the latest big moments), with a link to the full recap.
