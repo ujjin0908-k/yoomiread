@@ -2785,15 +2785,9 @@ body[data-reader='night'] {
   gap: 8px;
 }
 
-/* A book's quotes, on its page (src/pages/Quotes.tsx BookQuotes). */
-.book-quotes {
-  margin: 18px 0;
-}
+/* A book's quotes, on their own page (src/pages/Quotes.tsx BookQuotesPage). */
 .book-quotes .search {
   margin-bottom: 10px;
-}
-.book-quotes .btn {
-  margin-top: 8px;
 }
 
 /* The Ask tab (src/pages/Ask.tsx): a conversation with the cat about one book. */
