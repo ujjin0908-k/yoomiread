@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { accountsAvailable, currentUserId, onAccountChange, signedIn, supabaseClient } from './account';
+import { PUBLIC } from './edition';
+import { SAMPLE_TITLE } from './sample';
 import { db } from './db';
 import { newId } from './logic';
 import { batches, keepBooks, lastSyncUndo, loadSyncState, syncOnce, undoLastSync, type Remote, type SyncRow } from './sync';
@@ -25,6 +27,8 @@ export interface SyncStatus {
   otherAccount?: boolean;
   /** When the last sync that changed this phone ran, if it can be undone. */
   undoAt?: number;
+  /** Sync has not started yet: the reader is asked once whether book text syncs too. */
+  askText?: boolean;
 }
 
 let status: SyncStatus = { running: false };
@@ -42,13 +46,25 @@ export async function setSyncOn(on: boolean): Promise<void> {
   if (on) void syncNow();
 }
 
-/** Whether book text and translations sync too (on unless the reader turned it off). */
+/**
+ * Whether book text and translations sync too. The public app asks once (undefined until then, "off" preselected);
+ * the owner's app syncs them without asking.
+ */
+export async function syncTextChoice(): Promise<boolean | undefined> {
+  return ((await db.settings.get(TEXT_KEY))?.value as boolean | undefined) ?? (PUBLIC ? undefined : true);
+}
 export async function syncText(): Promise<boolean> {
-  return ((await db.settings.get(TEXT_KEY))?.value as boolean | undefined) ?? true;
+  return (await syncTextChoice()) ?? false;
 }
 export async function setSyncText(on: boolean): Promise<void> {
   await db.settings.put({ key: TEXT_KEY, value: on });
+  tell({ askText: false });
   void syncNow();
+}
+
+/** Books whose text always syncs: the free public-domain sample. */
+async function sampleBookIds(): Promise<string[]> {
+  return (await db.books.toArray()).filter((b) => b.sample || b.title === SAMPLE_TITLE).map((b) => b.id);
 }
 
 /** This phone's own name for the server, so it never takes back its own changes. */
@@ -99,9 +115,15 @@ export async function syncNow(opts: { allowBookDeletes?: boolean } = {}): Promis
     tell({ otherAccount: true });
     return;
   }
-  tell({ running: true, error: undefined, held: undefined, otherAccount: false });
+  // The first sync waits until the reader has said whether book text goes too, so nothing is sent before that.
+  const text = await syncTextChoice();
+  if (text === undefined) {
+    tell({ askText: true });
+    return;
+  }
+  tell({ running: true, error: undefined, held: undefined, otherAccount: false, askText: false });
   try {
-    const r = await syncOnce(db, await supabaseRemote(), { allowBookDeletes: opts.allowBookDeletes, noBookText: !(await syncText()) });
+    const r = await syncOnce(db, await supabaseRemote(), { allowBookDeletes: opts.allowBookDeletes, noBookText: !text, textAlways: await sampleBookIds() });
     if (me) await db.settings.put({ key: OWNER_KEY, value: me });
     const undo = await lastSyncUndo(db);
     tell({ running: false, lastAt: r.held ? status.lastAt : Date.now(), held: r.held?.books, undoAt: undo?.at });

@@ -29,6 +29,7 @@ export async function addSampleBook(now = Date.now()): Promise<string> {
     author: file.author,
     language: 'en',
     genre: 'fantasy',
+    sample: true,
     shelf: 'reading',
     source: 'manual',
     startedAt: now,

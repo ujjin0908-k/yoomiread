@@ -485,7 +485,8 @@ function AccountCard() {
             </span>
             <input type="checkbox" className="switch" checked={on ?? true} onChange={(e) => void setSyncOn(e.target.checked)} />
           </label>
-          {(on ?? true) && (
+          {sync.askText && <AskBookText />}
+          {(on ?? true) && !sync.askText && (
             <label className="row between">
               <span>
                 Include book text
@@ -557,6 +558,30 @@ function AccountCard() {
       {account.signedIn && <DeleteAccount onDone={setSaid} />}
       {said && <p className="small">{said}</p>}
     </section>
+  );
+}
+
+/**
+ * Asked once, before the first sync of the public app: does book text sync too? "Off" is preselected, so nothing but
+ * notes and progress leaves the phone unless the reader chooses it.
+ */
+function AskBookText() {
+  const [text, setText] = useState(false);
+  return (
+    <div className="sync-ask" role="region" aria-label="Sync book text?">
+      <p className="small">
+        <b>Also sync your books' text?</b> Your notes, highlights and progress always sync. With book text, your books open on
+        your other devices without importing them again, and a private copy is kept on YoomiRead's server. Without it, the
+        text stays on this phone; on another device you pick the same file once to fill it in.
+      </p>
+      <label className="row between">
+        <span className="small">Sync book text and translations</span>
+        <input id="ask-book-text" type="checkbox" className="switch" checked={text} onChange={(e) => setText(e.target.checked)} />
+      </label>
+      <button type="button" className="btn primary" onClick={() => void setSyncText(text)}>
+        Start syncing
+      </button>
+    </div>
   );
 }
 

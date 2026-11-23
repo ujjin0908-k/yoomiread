@@ -51,6 +51,8 @@ export interface Book {
   language: BookLanguage;
   /** Names the world's kinds and tells the story search what to look for (src/genres.ts). */
   genre?: GenreId;
+  /** The free public-domain sample book (src/sample.ts): its text always syncs. */
+  sample?: boolean;
   /** The reader's own names for the kinds ("Houses" for groups). A name also turns on a kind the genre leaves out. */
   kindNames?: Partial<Record<GlossaryKind, string>>;
   shelf: Shelf;
