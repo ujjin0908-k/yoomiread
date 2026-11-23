@@ -1,29 +1,48 @@
 # YoomiRead
 
-My personal reading journal and (soon) Chinese novel translator. iPhone first, works on PC.
-Plans and decisions live in the Obsidian vault
+A reading companion: a reading journal, a reader for your own books, a Chinese-to-English novel translator, and
+"The Living Book", a spoiler-free guide to each book's people, places and events that only shows what you have
+reached. iPhone first (installed from Safari), works on a computer too.
+
+Plans, decisions and dated logs of every change live in the Obsidian vault
 (`ujjin0908-k/obsidian-vault`, `skeloton/ai_workspace_skeleton/Obsidian/Projects/YoomiRead/`).
 
-## What it does now (v0.2)
+## Where your data lives
 
-Look: cream paper, serif titles, dark pill buttons, olive accents and arched covers
-(inspired by the owner's reference shots; our own build).
+- **On your device, always.** Books, notes, highlights, progress, translations and the guide are stored in the
+  browser's database (IndexedDB) and work offline. A backup file (Settings → Your data) holds everything.
+- **In your account, only if you sign in** (builds with accounts only). Sync keeps your library the same on all your
+  devices. It stores your library rows on the app's Supabase project, readable only by your account. You can leave
+  book text and translations on the device ("Include book text" off). Keys and device settings never sync.
+  Safeguards: "Undo last sync", a question before a sync removes several books, and a question before a
+  different account takes over a phone's library.
+- **AI, only when you use it.** Translation, character profiles, the story search and the cat's chat send the text
+  they need to an AI service:
+  - **YoomiRead AI** (signed in): requests go through the app's server (`functions/api/ai`), which holds the
+    provider key, checks the sign-in, and applies a per-reader monthly limit and a daily ceiling for everyone. Every
+    call's cost is recorded.
+  - **Your own service:** requests go to the address and key you enter. The key stays on your device and is never
+    in a backup.
 
-- **Home:** "Continue Reading" card with cover, % read and minutes left; recent books.
-- **Library:** shelves (Reading, Want to read, Read, Dropped), arched cover grid, search.
-- **Import a PDF:** cover from the first page (white margins trimmed), title and author from the cover,
-  chapters split at headings (第一章, Chapter 1, 楔子 …), contents pages skipped. Scanned PDFs keep the cover
-  and say OCR is needed.
-- **Covers:** add or change a cover photo on any book.
-- **Reader:** chapter label, big title, drop cap, highlights with notes, chapter comments,
-  progress bar with % and minutes left, remembers where I stopped, chapter list.
-  Settings sheet: text size, paper / sepia / night, serif or sans, line spacing, drop cap.
-- **Finish a book:** half-star rating and review, shown on the Read shelf.
-- **Quotes:** every highlight across books, grouped by book; tap one for a big quote card.
-- **Stats:** reading time, sessions, day streak, books read this year, average rating, minutes per day.
-- **Backup:** one file with everything, covers included (Settings).
+## What it does
 
-Everything is saved on the device (IndexedDB). Nothing leaves the phone.
+- **Library and journal:** shelves, ratings, reviews, quotes, reading stats, chapter comments, highlights with notes.
+- **Import:** PDF (cover, title, chapters), ePub, pasted chapters, or a book written down by hand. A free sample
+  book: *The Wonderful Wizard of Oz* (public domain).
+- **Reader:** themes, fonts, offline dictionaries (English and Chinese), read aloud, faces of who is speaking, scene
+  pictures.
+- **Translation (Chinese → English):** a glossary that keeps names the same, genre-aware, translate ahead, cost shown
+  first.
+- **The Living Book:** people web, places map, timeline and "Previously on…", hidden past your reading line. Genre
+  presets (Fantasy, Cultivation, Science fiction, Romance & drama, Mystery & thriller) name the world to fit the book.
+
+## Editions
+
+- **Owner's build** (default): every feature, including reading from web links.
+- **Public build** (`VITE_EDITION=public`): leaves out the link reader, built-in guides for other people's novels,
+  and the Novel Updates field. Accounts, YoomiRead AI and sync appear when `VITE_SUPABASE_URL` and
+  `VITE_SUPABASE_ANON_KEY` are set. Server setup: the vault note "YoomiRead AI setup", plus
+  `supabase/ai_usage.sql` and `supabase/sync.sql`.
 
 ## Run it
 
@@ -34,12 +53,5 @@ npm test         # unit tests
 npm run build    # production build in dist/
 ```
 
-Deploy: Netlify reads `netlify.toml` (build `npm run build`, publish `dist`).
-On iPhone: open the site in Safari, Share, "Add to Home Screen".
-
-## Next
-
-1. Import ePub and chapter links; OCR for scanned PDFs.
-2. Chinese to English translation with a glossary.
-
-Build check on main: 2026-10-20.
+Deploy: Cloudflare Pages builds `main` (functions in `functions/`). On iPhone: open the site in Safari, Share,
+"Add to Home Screen".

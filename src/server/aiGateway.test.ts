@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { costOf, handleAi, limitOf, monthStart, type GatewayEnv, type UsageRow } from './aiGateway';
+import { costOf, dailyLimitOf, handleAi, limitOf, monthStart, type GatewayEnv } from './aiGateway';
 import { kindOf } from '../translate/api';
 
 const ENV: GatewayEnv = {
@@ -15,24 +15,45 @@ const ENV: GatewayEnv = {
 const sse = (...lines: string[]) =>
   new Response(new ReadableStream({ start(c) { for (const l of lines) c.enqueue(new TextEncoder().encode(l)); c.close(); } }), { status: 200 });
 
-/** A fake Supabase and AI provider; records what the gateway sent. */
-function world(opts: { spent?: number; user?: string | null; upstream?: () => Response } = {}) {
-  const rows: UsageRow[] = [];
+interface Row { id: number; user_id: string; model: string; kind: string; input_tokens: number; output_tokens: number; cost_usd: number; estimated: boolean; pending: boolean }
+
+/**
+ * A fake Supabase and AI provider. `ai_reserve` behaves like the SQL function: it checks the limits and inserts a
+ * pending row in one step (JavaScript runs it without interruption, like the database lock).
+ */
+function world(opts: { spentBefore?: number; user?: { confirmed?: boolean } | null; upstream?: () => Response } = {}) {
+  const rows: Row[] = [];
+  let nextId = 1;
+  if (opts.spentBefore) rows.push({ id: nextId++, user_id: 'u1', model: 'cheap', kind: 'other', input_tokens: 0, output_tokens: 0, cost_usd: opts.spentBefore, estimated: false, pending: false });
   const upstreamBodies: Record<string, unknown>[] = [];
   const upstreamAuth: string[] = [];
   const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const headers = new Headers(init?.headers);
     if (url.endsWith('/auth/v1/user')) {
-      return opts.user === null || headers.get('authorization') !== 'Bearer good-token'
-        ? new Response('no', { status: 401 })
-        : new Response(JSON.stringify({ id: opts.user ?? 'u1' }));
+      if (opts.user === null || headers.get('authorization') !== 'Bearer good-token') return new Response('no', { status: 401 });
+      return new Response(JSON.stringify({ id: 'u1', email_confirmed_at: opts.user?.confirmed === false ? null : '2026-11-01T00:00:00Z' }));
     }
-    if (url.startsWith('https://db.example/rest/v1/ai_usage?select')) return new Response(JSON.stringify(opts.spent ? [{ cost_usd: opts.spent }] : []));
-    if (url === 'https://db.example/rest/v1/ai_usage' && init?.method === 'POST') {
-      rows.push(JSON.parse(String(init.body)));
-      return new Response(null, { status: 201 });
+    if (url.endsWith('/rest/v1/rpc/ai_reserve')) {
+      const b = JSON.parse(String(init?.body)) as { p_user: string; p_amount: number; p_month_limit: number; p_day_limit: number; p_model: string; p_kind: string };
+      const all = rows.reduce((n, r) => n + r.cost_usd, 0);
+      if (all + b.p_amount > b.p_day_limit) return new Response(JSON.stringify({ error: 'day' }));
+      const mine = rows.filter((r) => r.user_id === b.p_user).reduce((n, r) => n + r.cost_usd, 0);
+      if (mine + b.p_amount > b.p_month_limit) return new Response(JSON.stringify({ error: 'month' }));
+      const id = nextId++;
+      rows.push({ id, user_id: b.p_user, model: b.p_model, kind: b.p_kind, input_tokens: 0, output_tokens: 0, cost_usd: b.p_amount, estimated: true, pending: true });
+      return new Response(JSON.stringify({ id }));
     }
+    const byId = /\/rest\/v1\/ai_usage\?id=eq\.(\d+)$/.exec(url);
+    if (byId && init?.method === 'PATCH') {
+      Object.assign(rows.find((r) => r.id === Number(byId[1]))!, JSON.parse(String(init.body)));
+      return new Response(null, { status: 204 });
+    }
+    if (byId && init?.method === 'DELETE') {
+      rows.splice(rows.findIndex((r) => r.id === Number(byId[1])), 1);
+      return new Response(null, { status: 204 });
+    }
+    if (url.startsWith('https://db.example/rest/v1/ai_usage?select')) return new Response(JSON.stringify(rows.map((r) => ({ cost_usd: r.cost_usd }))));
     if (url === 'https://ai.example/v1/chat/completions') {
       upstreamBodies.push(JSON.parse(String(init?.body)));
       upstreamAuth.push(headers.get('authorization') ?? '');
@@ -62,7 +83,7 @@ describe('YoomiRead AI gateway', () => {
     await Promise.all(w.waits);
     expect(w.upstreamAuth).toEqual(['Bearer server-secret']);
     expect(w.upstreamBodies[0]).toMatchObject({ model: 'cheap', stream: true, max_tokens: 16000 });
-    expect(w.rows).toEqual([{ user_id: 'u1', model: 'cheap', kind: 'translate', input_tokens: 1000, output_tokens: 500, cost_usd: costOf({ id: 'cheap', label: '', input: 1, output: 2 }, 1000, 500), estimated: false }]);
+    expect(w.rows).toEqual([{ id: 1, user_id: 'u1', model: 'cheap', kind: 'translate', input_tokens: 1000, output_tokens: 500, cost_usd: costOf({ id: 'cheap', label: '', input: 1, output: 2 }, 1000, 500), estimated: false, pending: false }]);
     expect(w.rows[0].cost_usd).toBeCloseTo(0.002);
   });
 
@@ -81,7 +102,7 @@ describe('YoomiRead AI gateway', () => {
   });
 
   it('stops at the monthly limit', async () => {
-    const w = world({ spent: 0.5 });
+    const w = world({ spentBefore: 0.5 });
     const res = await handleAi(chatRequest(ok), ENV, w.waitUntil, w.f);
     expect(res.status).toBe(402);
     expect(((await res.json()) as { error: string }).error).toMatch(/allowance/);
@@ -111,7 +132,7 @@ describe('YoomiRead AI gateway', () => {
   });
 
   it('tells a reader their own use this month', async () => {
-    const w = world({ spent: 0.12 });
+    const w = world({ spentBefore: 0.12 });
     const res = await handleAi(new Request('https://app.example/api/ai/usage', { headers: { authorization: 'Bearer good-token' } }), ENV, w.waitUntil, w.f);
     expect(await res.json()).toEqual({ spent: 0.12, limit: 0.5 });
   });
@@ -120,6 +141,56 @@ describe('YoomiRead AI gateway', () => {
     expect(monthStart(new Date('2026-11-22T15:00:00Z'))).toBe('2026-11-01T00:00:00.000Z');
     expect(limitOf({})).toBe(1);
     expect(limitOf({ AI_MONTHLY_LIMIT_USD: '0' })).toBe(0);
+  });
+});
+
+describe('YoomiRead AI gateway: trust step', () => {
+  it('records a cancelled answer instead of letting it go free', async () => {
+    const enc = new TextEncoder();
+    let push!: ReadableStreamDefaultController<Uint8Array>;
+    const w = world({ upstream: () => new Response(new ReadableStream<Uint8Array>({ start: (c) => void (push = c) })) });
+    const res = await handleAi(chatRequest(ok), ENV, w.waitUntil, w.f);
+    push.enqueue(enc.encode('data: {"choices":[{"delta":{"content":"' + 'x'.repeat(30) + '"}}]}\n\n'));
+    const reader = res.body!.getReader();
+    await reader.read();
+    await reader.cancel();
+    await Promise.all(w.waits);
+    expect(w.rows).toHaveLength(1);
+    expect(w.rows[0]).toMatchObject({ pending: false, estimated: true, output_tokens: 10 });
+    expect(w.rows[0].input_tokens).toBeGreaterThan(0);
+  });
+
+  it('lets only as many requests through at once as the limit allows', async () => {
+    // Each call reserves its input plus 8,000 answer tokens at $2 per million: about $0.016. A $0.02 limit fits one.
+    const w = world();
+    const env = { ...ENV, AI_MONTHLY_LIMIT_USD: '0.02' };
+    const results = await Promise.all([1, 2, 3].map(() => handleAi(chatRequest(ok), env, w.waitUntil, w.f)));
+    expect(results.map((r) => r.status).sort()).toEqual([200, 402, 402]);
+    expect(w.upstreamBodies).toHaveLength(1);
+  });
+
+  it('stops everyone at the daily ceiling', async () => {
+    const w = world({ spentBefore: 5 });
+    const res = await handleAi(chatRequest(ok), { ...ENV, AI_MONTHLY_LIMIT_USD: '100', AI_DAILY_LIMIT_USD: '5' }, w.waitUntil, w.f);
+    expect(res.status).toBe(503);
+    expect(((await res.json()) as { error: string }).error).toMatch(/resting for today/);
+    expect(w.upstreamBodies).toHaveLength(0);
+    expect(dailyLimitOf({})).toBe(20);
+  });
+
+  it('needs a confirmed email before any AI', async () => {
+    const w = world({ user: { confirmed: false } });
+    const res = await handleAi(chatRequest(ok), ENV, w.waitUntil, w.f);
+    expect(res.status).toBe(403);
+    expect(w.upstreamBodies).toHaveLength(0);
+    expect(w.rows).toHaveLength(0);
+  });
+
+  it('gives the reservation back when the AI call fails', async () => {
+    const w = world({ upstream: () => new Response('down', { status: 503 }) });
+    await handleAi(chatRequest(ok), ENV, w.waitUntil, w.f);
+    await Promise.all(w.waits);
+    expect(w.rows).toHaveLength(0);
   });
 });
 

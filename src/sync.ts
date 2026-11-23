@@ -119,19 +119,81 @@ export interface SyncResult {
   received: number;
   /** Rows changed on both sides; the newer one was kept. */
   conflicts: number;
+  /**
+   * Set when the sync stopped before changing anything because it would remove many books from this phone. Nothing
+   * was applied or sent; run again with `allowBookDeletes` (the reader agreed) or call `keepBooks` (they did not).
+   */
+  held?: { books: { id: string; title: string }[] };
+}
+
+export interface SyncOptions {
+  /** The reader agreed that the books in `held` may be removed. */
+  allowBookDeletes?: boolean;
+  /** Leave out chapter text and translations (book text stays on this phone only). Default false. */
+  noBookText?: boolean;
+}
+
+/** More than this many books, or a quarter of the library, removed in one sync needs the reader's OK. */
+export const MANY_BOOKS = 2;
+
+/** The tables that carry book text. */
+const TEXT_TABLES: SyncTable[] = ['texts', 'translations'];
+
+const UNDO_KEY = 'syncUndo';
+
+/** What the last sync changed on this phone: each row as it was before (null: it did not exist). */
+export interface SyncUndo {
+  at: number;
+  rows: { tbl: SyncTable; id: string; before: Record<string, unknown> | null }[];
+}
+
+export async function lastSyncUndo(db: YoomiDB): Promise<SyncUndo | undefined> {
+  const u = (await db.settings.get(UNDO_KEY))?.value as SyncUndo | undefined;
+  return u && u.rows.length ? u : undefined;
+}
+
+/**
+ * Puts back what the last sync changed on this phone. The next sync then sees those rows as changed here and sends
+ * them, so the server and the other devices get them back too.
+ */
+export async function undoLastSync(db: YoomiDB): Promise<number> {
+  const u = await lastSyncUndo(db);
+  if (!u) return 0;
+  for (const r of u.rows) {
+    if (r.before) await table(db, r.tbl).put(decodeRow(r.before));
+    else await table(db, r.tbl).delete(r.id);
+  }
+  await db.settings.delete(UNDO_KEY);
+  return u.rows.length;
+}
+
+/** The reader said no to removing these books: they are sent again, so the server has them back. */
+export async function keepBooks(db: YoomiDB, bookIds: string[]): Promise<void> {
+  const state = await loadSyncState(db);
+  const hashes = { ...state.hashes };
+  // Forgetting what was synced for these books makes the next sync see them as changed here, and send them.
+  const drop = new Set(bookIds);
+  for (const tbl of Object.keys(SYNC_TABLES) as SyncTable[]) {
+    for (const row of await table(db, tbl).toArray()) {
+      const bookId = tbl === 'books' ? row.id : row.bookId;
+      if (drop.has(String(bookId))) delete hashes[keyOf(tbl, String(row[SYNC_TABLES[tbl]]))];
+    }
+  }
+  await db.settings.put({ key: STATE_KEY, value: { ...state, hashes } satisfies SyncState });
 }
 
 /**
  * One sync: read what changed here, take what changed elsewhere, send what changed here. Safe to run again at any
  * time; a run cut short leaves nothing half done that the next run does not finish.
  */
-export async function syncOnce(db: YoomiDB, remote: Remote): Promise<SyncResult> {
+export async function syncOnce(db: YoomiDB, remote: Remote, opts: SyncOptions = {}): Promise<SyncResult> {
   const state = await loadSyncState(db);
   const hashes = { ...state.hashes };
 
   // 1. This device: every row, encoded, with its fingerprint.
   const local = new Map<string, { tbl: SyncTable; id: string; data: Record<string, unknown>; hash: string }>();
-  for (const tbl of Object.keys(SYNC_TABLES) as SyncTable[]) {
+  const tables = (Object.keys(SYNC_TABLES) as SyncTable[]).filter((t) => !(opts.noBookText && TEXT_TABLES.includes(t)));
+  for (const tbl of tables) {
     const pk = SYNC_TABLES[tbl];
     for (const row of await table(db, tbl).toArray()) {
       const id = String(row[pk]);
@@ -140,10 +202,26 @@ export async function syncOnce(db: YoomiDB, remote: Remote): Promise<SyncResult>
     }
   }
   const changedHere = new Set([...local].filter(([k, r]) => hashes[k] !== r.hash).map(([k]) => k));
-  const deletedHere = new Set(Object.keys(hashes).filter((k) => !local.has(k)));
+  const skipped = (k: string) => opts.noBookText && TEXT_TABLES.some((t) => k.startsWith(`${t}:`));
+  const deletedHere = new Set(Object.keys(hashes).filter((k) => !local.has(k) && !skipped(k)));
 
   // 2. Elsewhere: rows changed since the last sync.
-  const incoming = await remote.pull(state.cursor);
+  const incoming = (await remote.pull(state.cursor)).filter((r) => !skipped(keyOf(r.tbl, r.id)));
+
+  // Many books about to be removed from this phone: stop before changing anything, and ask.
+  if (!opts.allowBookDeletes) {
+    const going = incoming.filter((r) => r.tbl === 'books' && (r.deleted || !r.data) && local.has(keyOf('books', r.id)) && !changedHere.has(keyOf('books', r.id)));
+    const books = local.size ? [...local.values()].filter((r) => r.tbl === 'books').length : 0;
+    if (going.length > MANY_BOOKS || (books >= 4 && going.length * 4 >= books)) {
+      return {
+        sent: 0,
+        received: 0,
+        conflicts: 0,
+        held: { books: going.map((r) => ({ id: r.id, title: String(local.get(keyOf('books', r.id))?.data.title ?? 'A book') })) },
+      };
+    }
+  }
+  const undo: SyncUndo['rows'] = [];
   let cursor = state.cursor;
   let received = 0;
   let conflicts = 0;
@@ -170,6 +248,7 @@ export async function syncOnce(db: YoomiDB, remote: Remote): Promise<SyncResult>
       changedHere.delete(k);
     }
     deletedHere.delete(k);
+    undo.push({ tbl: r.tbl, id: r.id, before: mine?.data ?? null });
     if (r.deleted || !r.data) {
       await table(db, r.tbl).delete(r.id);
       delete hashes[k];
@@ -196,6 +275,8 @@ export async function syncOnce(db: YoomiDB, remote: Remote): Promise<SyncResult>
   for (const k of deletedHere) delete hashes[k];
 
   await db.settings.put({ key: STATE_KEY, value: { cursor, hashes, lastAt: Date.now() } satisfies SyncState });
+  // What this sync changed here, so it can be undone. A sync that changed nothing keeps the earlier undo.
+  if (undo.length) await db.settings.put({ key: UNDO_KEY, value: { at: Date.now(), rows: undo } satisfies SyncUndo });
   return { sent: out.length, received, conflicts };
 }
 
