@@ -1,3 +1,4 @@
+import { AI_OFF_FOR_FAN_WORK, aiAllowedFor } from '../import/ao3Book';
 import { useState } from 'react';
 import { db } from '../db';
 import { isRead, needsTranslation, titleOf } from '../logic';
@@ -63,6 +64,10 @@ export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter:
       }
       if (!aiReady(settings)) {
         setError('Set up AI in Settings first to chat with him.');
+        return;
+      }
+      if (!aiAllowedFor(book)) {
+        setError(AI_OFF_FOR_FAN_WORK);
         return;
       }
 

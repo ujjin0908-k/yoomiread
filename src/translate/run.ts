@@ -1,3 +1,4 @@
+import { AI_OFF_FOR_FAN_WORK, aiAllowedFor } from '../import/ao3Book';
 import { accountsAvailable, accountToken, signedIn } from '../account';
 import { PUBLIC } from '../edition';
 import { genreNote } from '../genres';
@@ -201,7 +202,10 @@ export async function translateChapter(chapter: Chapter, options: ChapterOptions
 
 async function runChapter(chapter: Chapter, options: ChapterOptions): Promise<ChapterRun> {
   const [book, text, glossary, previousSummary] = await Promise.all([
-    db.books.get(chapter.bookId),
+    db.books.get(chapter.bookId).then((b) => {
+      if (!aiAllowedFor(b)) throw new Error(AI_OFF_FOR_FAN_WORK);
+      return b;
+    }),
     db.texts.get(chapter.id),
     db.glossary.where('bookId').equals(chapter.bookId).toArray(),
     summaryBefore(chapter),
@@ -287,7 +291,10 @@ export async function keepTranslation(run: ChapterRun): Promise<number> {
 /** Reads the first chapters and proposes a glossary. Returns how many entries were added for review. */
 export async function scanGlossary(bookId: string, settings: TranslateSettings, model: string, signal?: AbortSignal): Promise<number> {
   const [book, chapters, known] = await Promise.all([
-    db.books.get(bookId),
+    db.books.get(bookId).then((b) => {
+      if (!aiAllowedFor(b)) throw new Error(AI_OFF_FOR_FAN_WORK);
+      return b;
+    }),
     db.chapters.where('bookId').equals(bookId).sortBy('number'),
     db.glossary.where('bookId').equals(bookId).toArray(),
   ]);
@@ -374,6 +381,7 @@ export function parseTitleBatch(reply: string, count: number): Map<number, strin
 export async function translateTitles(bookId: string, onProgress?: (done: number, total: number) => void, signal?: AbortSignal): Promise<number> {
   const settings = await loadSettings();
   const book = await db.books.get(bookId);
+  if (!aiAllowedFor(book)) throw new Error(AI_OFF_FOR_FAN_WORK);
   const model = modelFor(settings, book?.model);
   const glossary = (await db.glossary.where('bookId').equals(bookId).toArray()) as GlossaryEntry[];
   const todo = ((await db.chapters.where('bookId').equals(bookId).sortBy('number')) as Chapter[])

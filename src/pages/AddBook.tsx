@@ -1,7 +1,9 @@
 import { BOOK_LANGUAGES, htmlLangOfText } from '../languages';
 import { features } from '../edition';
+import { type Ao3Work, ao3DownloadUrl } from '../import/ao3';
+import { addNewAo3Chapters, bookForAo3, setUpAo3Book } from '../import/ao3Book';
 import { translateFirstChapters } from '../translate/onImport';
-import { BookOpen, ClipboardPaste, FileText, Globe, PenLine } from 'lucide-react';
+import { BookHeart, BookOpen, ClipboardPaste, FileText, Globe, PenLine } from 'lucide-react';
 import { useState } from 'react';
 import { Sheet } from '../components';
 import { db } from '../db';
@@ -18,16 +20,17 @@ import { sameNovel } from '../world/copyWorld';
 import type { Book, BookLanguage, Shelf } from '../types';
 
 export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose: () => void }) {
-  const [mode, setMode] = useState<'pick' | 'manual' | 'link' | 'paste'>('pick');
+  const [mode, setMode] = useState<'pick' | 'manual' | 'link' | 'paste' | 'ao3'>('pick');
   const [pasteTitle, setPasteTitle] = useState('');
   const [pasteText, setPasteText] = useState('');
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [link, setLink] = useState('');
+  const [ao3Link, setAo3Link] = useState('');
 
   /** Saves an imported book with its chapters, then asks "Keep this title?". */
   async function save(
-    result: { title: string; author: string; language: BookLanguage; cover?: Blob; chapters: DraftChapter[]; scanned?: boolean; sources?: Book['sources'] },
+    result: { title: string; author: string; language: BookLanguage; cover?: Blob; chapters: DraftChapter[]; scanned?: boolean; sources?: Book['sources']; ao3?: Ao3Work },
     source: 'pdf' | 'epub' | 'web' | 'paste',
     after?: string,
   ) {
@@ -43,7 +46,8 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
         language: result.language,
         shelf: 'want',
         cover,
-        sources: result.sources,
+        sources: result.ao3?.url ? [{ name: 'AO3', url: result.ao3.url }] : result.sources,
+        ao3: result.ao3,
         source,
         createdAt: now,
         updatedAt: now,
@@ -67,6 +71,8 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
         })),
       );
     });
+    // An AO3 work: its cast and relationships from the tags, for free, before anything else.
+    if (result.ao3) await setUpAo3Book(book.id, result.ao3, book.title);
     // Not awaited: the first chapters are translated in the background while the book page opens.
     if (!twin) void translateFirstChapters(book.id);
     onClose();
@@ -159,6 +165,15 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
         // Smaller covers keep the phone light; keep the original if it cannot be shrunk.
         cover = await shrinkImage(raw).catch(() => raw);
       }
+      // A newer download of an AO3 work already in the library: add its new chapters instead of a second copy.
+      const same = await bookForAo3(parsed.ao3?.url);
+      if (same && parsed.ao3) {
+        setStatus('Adding new chapters…');
+        const added = await addNewAo3Chapters(same, parsed.chapters, parsed.ao3);
+        onClose();
+        go(`book/${same.id}/${added ? 'updated' : 'uptodate'}`);
+        return;
+      }
       await save({ ...parsed, title: parsed.title || file.name.replace(/\.epub$/i, ''), cover }, 'epub');
     } catch (e) {
       console.error(e);
@@ -168,6 +183,50 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
   }
 
   if (mode === 'manual') return <ManualBook shelf={shelf} onClose={onClose} />;
+  if (mode === 'ao3') {
+    const download = ao3DownloadUrl(ao3Link);
+    return (
+      <Sheet title="From AO3" onClose={onClose}>
+        <div className="form">
+          <ol className="ao3-steps small">
+            <li>
+              On the work's page on Archive of Our Own, tap <b>Download</b>, then <b>EPUB</b>, and save the file.
+            </li>
+            <li>Choose that file here. The tags, cast, relationships and summary come with it.</li>
+          </ol>
+          <label>
+            Work link <span className="muted small">(optional: for a download button)</span>
+            <input inputMode="url" autoCapitalize="off" autoCorrect="off" placeholder="https://archiveofourown.org/works/…" value={ao3Link} onChange={(e) => setAo3Link(e.target.value)} />
+          </label>
+          {download && (
+            <a className="btn ghost" href={download} target="_blank" rel="noopener noreferrer">
+              Download the EPUB from AO3
+            </a>
+          )}
+          <label className={`btn primary${status ? ' busy' : ''}`}>
+            Choose the AO3 EPUB
+            <input
+              type="file"
+              accept="application/epub+zip,.epub"
+              hidden
+              disabled={!!status}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void fromEpub(f);
+                e.target.value = '';
+              }}
+            />
+          </label>
+          <p className="muted small">
+            A newer download of a work you already have adds its new chapters, and keeps your notes. Fan works keep AI off
+            unless you turn it on for that work. YoomiRead never fetches anything from AO3 itself.
+          </p>
+          {status && <p className="muted small center">{status}</p>}
+          {error && <p className="warn small center">{error}</p>}
+        </div>
+      </Sheet>
+    );
+  }
   if (mode === 'paste') {
     return (
       <Sheet title="Paste a chapter" onClose={onClose}>
@@ -260,6 +319,13 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
             }}
           />
         </label>
+        <button type="button" className="add-option" disabled={!!status} onClick={() => setMode('ao3')}>
+          <BookHeart size={26} strokeWidth={1.5} />
+          <span>
+            <strong>From AO3</strong>
+            <span className="muted small">A fan work's EPUB, with its tags, cast and relationships</span>
+          </span>
+        </button>
         {features.links && (
           <button type="button" className="add-option" disabled={!!status} onClick={() => setMode('link')}>
             <Globe size={26} strokeWidth={1.5} />

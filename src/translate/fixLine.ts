@@ -1,3 +1,4 @@
+import { AI_OFF_FOR_FAN_WORK, aiAllowedFor } from '../import/ao3Book';
 import { LANGUAGES, sourceOf, targetOf, TARGETS, type LanguageInfo, type TargetInfo } from '../languages';
 import { db } from '../db';
 import { newId, paragraphs } from '../logic';
@@ -99,6 +100,7 @@ export function parseFix(reply: string, paragraph: string): FixAnswer | undefine
 export async function askOriginal(bookId: string, pair: ParagraphPair, quote: string): Promise<FixAnswer> {
   const settings = await loadSettings();
   const book = await db.books.get(bookId);
+  if (!aiAllowedFor(book)) throw new Error(AI_OFF_FOR_FAN_WORK);
   const model = modelFor(settings, book?.model);
   const messages = fixMessages({ original: pair.original, english: pair.english, quote, source: sourceOf(book), target: targetOf(book) });
   const result = await chat(settings, model.id, messages);

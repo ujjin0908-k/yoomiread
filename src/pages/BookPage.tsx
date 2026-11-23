@@ -11,6 +11,7 @@ import { features } from '../edition';
 import { ChapterLinks } from './ChapterLinks';
 import { ChapterFile } from './ChapterFile';
 import { FillText } from './FillText';
+import { Ao3Card } from './Ao3Card';
 import { CopyWorld } from './CopyWorld';
 import { sameNovel, worldSources } from '../world/copyWorld';
 import { celebrate } from '../motion';
@@ -202,6 +203,8 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
               : `Translating the first ${job.total === 1 ? 'chapter' : `${job.total} chapters`} in the background: ${job.done} done.`}
           </div>
         )}
+
+        {book.ao3 && <Ao3Card work={book.ao3} notice={sub === 'updated' || sub === 'uptodate' ? sub : undefined} />}
 
         {sub === 'scanned' && (
           <div className="card warn-card">
@@ -656,6 +659,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
   const [originalTitle, setOriginalTitle] = useState(book.originalTitle ?? '');
   const [language, setLanguage] = useState<BookLanguage>(book.language);
   const [target, setTarget] = useState<TargetLanguage>(book.target ?? 'en');
+  const [aiOk, setAiOk] = useState(!!book.aiOk);
   const [genre, setGenre] = useState<GenreId>(book.genre ?? 'general');
   const guess = useGenreGuess(book.id);
   const [kindNames, setKindNames] = useState<Partial<Record<GlossaryKind, string>>>(book.kindNames ?? {});
@@ -698,6 +702,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
       language,
       genre: genre === 'general' ? undefined : genre,
       target: target === 'en' ? undefined : target,
+      aiOk: book.ao3 ? aiOk : undefined,
       kindNames: cleanKindNames(kindNames),
       novelUpdatesUrl: webLink(novelUpdates),
       sources: parseSources(sources),
@@ -788,6 +793,19 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
           Where to read <span className="muted small">(one per line: name | link)</span>
           <textarea rows={3} value={sources} onChange={(e) => setSources(e.target.value)} />
         </label>
+        {book.ao3 && (
+          <label className="row between">
+            <span>
+              Allow AI for this fan work
+              <br />
+              <span className="muted small">
+                Off by default: many fan authors do not want their work sent to AI. On allows translation, profiles, the story
+                search and the cat's chat for this work.
+              </span>
+            </span>
+            <input id="ai-ok" type="checkbox" className="switch" checked={aiOk} onChange={(e) => setAiOk(e.target.checked)} />
+          </label>
+        )}
         {sourceOf({ language }) && (
           <label>
             Translate into

@@ -1,3 +1,4 @@
+import { isAo3Afterword, isAo3Preface, parseAo3Preface, withoutAo3Preface, type Ao3Work } from './ao3';
 import { unzipSync } from 'fflate';
 import { guessLanguage } from '../logic';
 import type { BookLanguage } from '../types';
@@ -9,6 +10,8 @@ export interface ParsedEpub {
   language: BookLanguage;
   cover?: { bytes: Uint8Array; type: string };
   chapters: DraftChapter[];
+  /** Set for a work from Archive of Our Own (read from AO3's preface page). */
+  ao3?: Ao3Work;
 }
 
 export class EpubError extends Error {}
@@ -125,10 +128,17 @@ export function readEpub(bytes: Uint8Array): ParsedEpub {
   const chapters: DraftChapter[] = [];
   let allText = '';
   const spine = spineEl ? named(spineEl, 'itemref').map((r) => items.get(r.getAttribute('idref') ?? '')) : [];
+  let ao3: Ao3Work | undefined;
   spine.forEach((item, index) => {
     if (!item || item === navItem || !/html/.test(item.type)) return;
-    const html = text(item.path);
+    let html = text(item.path);
     if (!html) return;
+    // AO3: the preface gives the work's details and the afterword is AO3's own note; neither is a chapter.
+    if (!ao3 && isAo3Preface(html)) {
+      ao3 = parseAo3Preface(html);
+      html = withoutAo3Preface(html);
+    }
+    if (ao3 && isAo3Afterword(html)) return;
     const { paragraphs, heading } = pageParagraphs(html);
     const body = paragraphs.join('');
     // Cover pages, blank pages and title pages with a word or two are skipped.
@@ -162,5 +172,6 @@ export function readEpub(bytes: Uint8Array): ParsedEpub {
     language: lang.startsWith('zh') ? 'zh' : lang.startsWith('ja') ? 'ja' : lang.startsWith('ko') ? 'ko' : lang.startsWith('en') ? 'en' : guessLanguage(allText),
     cover: coverItem && files[coverItem.path] ? { bytes: files[coverItem.path], type: coverItem.type } : undefined,
     chapters,
+    ao3,
   };
 }

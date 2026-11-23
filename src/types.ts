@@ -53,6 +53,13 @@ export interface Book {
   genre?: GenreId;
   /** The language chapters are translated into (src/languages.ts). English when not set. */
   target?: 'en' | 'es' | 'fr';
+  /** A work from Archive of Our Own: its details from AO3's preface (src/import/ao3.ts). */
+  ao3?: import('./import/ao3').Ao3Work;
+  /**
+   * Fan works keep AI off unless the reader turns it on for this work (many authors object to AI use). Only read for
+   * books with `ao3`.
+   */
+  aiOk?: boolean;
   /** The free public-domain sample book (src/sample.ts): its text always syncs. */
   sample?: boolean;
   /** The reader's own names for the kinds ("Houses" for groups). A name also turns on a kind the genre leaves out. */
