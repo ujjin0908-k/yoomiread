@@ -63,6 +63,11 @@ export function onAccountChange(listener: () => void): () => void {
   return () => void listeners.delete(listener);
 }
 
+/** The signed-in reader's id, or undefined. */
+export function currentUserId(): string | undefined {
+  return session?.user.id;
+}
+
 /** True while someone is signed in on this phone (as far as this page knows right now). */
 export function signedIn(): boolean {
   return !!session;

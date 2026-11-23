@@ -10,7 +10,7 @@ import { formatDate } from '../logic';
 import { chat } from '../translate/api';
 import { EMPTY_SETTINGS, fetchModels, hostedUsage, loadSettings, saveSettings, setAiMode } from '../translate/run';
 import { accountsAvailable, signInWith, signInWithEmail, signOut, useAccount } from '../account';
-import { setSyncOn, syncNow, syncOn, useSyncStatus } from '../syncRun';
+import { answerHeld, answerOtherAccount, setSyncOn, setSyncText, syncNow, syncOn, syncText, undoSync, useSyncStatus } from '../syncRun';
 import type { ModelOption, TranslateSettings } from '../types';
 
 export function Settings() {
@@ -426,6 +426,7 @@ function AccountCard() {
   const [email, setEmail] = useState('');
   const [said, setSaid] = useState('');
   const on = useLive(() => syncOn(), [], 'syncOn');
+  const text = useLive(() => syncText(), [], 'syncText');
 
   async function go(run: () => Promise<void>, done?: string) {
     setSaid('');
@@ -484,12 +485,69 @@ function AccountCard() {
             <input type="checkbox" className="switch" checked={on ?? true} onChange={(e) => void setSyncOn(e.target.checked)} />
           </label>
           {(on ?? true) && (
+            <label className="row between">
+              <span>
+                Include book text
+                <br />
+                <span className="muted small">Chapters and translations. Off keeps them on this phone; notes and progress still sync.</span>
+              </span>
+              <input type="checkbox" className="switch" checked={text ?? true} onChange={(e) => void setSyncText(e.target.checked)} />
+            </label>
+          )}
+          {sync.otherAccount && (
+            <div className="sync-ask" role="alert">
+              <p className="small">
+                <b>This phone's library was synced with a different account.</b> Add it to {account.email ?? 'this account'} too, or keep
+                it off this account?
+              </p>
+              <div className="row-btns">
+                <button type="button" className="btn" onClick={() => void answerOtherAccount(true)}>
+                  Add it to this account
+                </button>
+                <button type="button" className="btn" onClick={() => void answerOtherAccount(false)}>
+                  Don't sync this phone
+                </button>
+              </div>
+            </div>
+          )}
+          {sync.held && (
+            <div className="sync-ask" role="alert">
+              <p className="small">
+                <b>
+                  Sync wants to remove {sync.held.length} books from this phone
+                </b>{' '}
+                because they were deleted on another device: {sync.held.slice(0, 4).map((b) => b.title).join(', ')}
+                {sync.held.length > 4 ? '…' : ''}. Nothing has been removed yet.
+              </p>
+              <div className="row-btns">
+                <button type="button" className="btn" onClick={() => void answerHeld(false)}>
+                  Keep them
+                </button>
+                <button type="button" className="btn danger" onClick={() => void answerHeld(true)}>
+                  Remove them
+                </button>
+              </div>
+            </div>
+          )}
+          {(on ?? true) && (
             <div className="row between">
               <span className={sync.error ? 'warn small' : 'muted small'}>
                 {sync.running ? 'Syncing…' : sync.error ? `Sync stopped: ${sync.error}` : sync.lastAt ? `Last synced ${formatAgo(sync.lastAt)}.` : 'Not synced yet.'}
               </span>
               <button type="button" className="link small" disabled={sync.running} onClick={() => void syncNow()}>
                 Sync now
+              </button>
+            </div>
+          )}
+          {sync.undoAt && !sync.running && (
+            <div className="row between">
+              <span className="muted small">The last sync changed this phone {formatAgo(sync.undoAt)}.</span>
+              <button
+                type="button"
+                className="link small"
+                onClick={() => void go(async () => void (await undoSync()), 'Put back what the last sync changed. The other devices get it back on their next sync.')}
+              >
+                Undo last sync
               </button>
             </div>
           )}
