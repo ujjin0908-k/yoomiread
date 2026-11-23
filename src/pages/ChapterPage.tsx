@@ -22,7 +22,7 @@ import { Mascot } from '../mascot/Mascot';
 import { CENSORED } from '../translate/prompt';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
-import { keepTranslation, aiReady, loadSettings, modelFor, translateChapter, type ChapterRun } from '../translate/run';
+import { keepTranslation, aiReady, worldNotesOn, loadSettings, modelFor, translateChapter, type ChapterRun } from '../translate/run';
 import { useTranslateAhead } from '../translate/ahead';
 import type { Book, Chapter, GlossaryEntry, HighlightColor, Note, TranslateSettings } from '../types';
 
@@ -471,7 +471,7 @@ export function ChapterPage({ id }: { id: string }) {
         />
       )}
       {lookup && <WordSheet word={lookup.word} lang={lookup.lang} bookId={chapter.bookId} onClose={() => setLookup(undefined)} />}
-      {book && <Mascot book={book} chapter={chapter} chapters={siblings ?? []} away={barsAway} />}
+      {book && <Mascot book={book} chapter={chapter} away={barsAway} />}
       {sheet === 'look' && <LookSheet book={book} prefs={prefs} setPrefs={setPrefs} onClose={() => setSheet(undefined)} />}
       {sheet === 'chapters' && (
         <Sheet title="Chapters" onClose={() => setSheet(undefined)}>
@@ -1036,7 +1036,7 @@ function TranslateChapterSheet({
   if (!settings) return null;
 
   const ready = aiReady(settings);
-  const tokens = estimateTokens(text);
+  const tokens = estimateTokens(text, 0, worldNotesOn(settings));
   const estimate = (id: string) => formatCost(costOf(modelFor(settings, id), tokens.input, tokens.output));
   const shownCost = (r?: ChapterRun) => (r?.translation.cost !== undefined ? formatCost(r.translation.cost) : undefined);
 

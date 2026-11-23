@@ -9,7 +9,8 @@ import type { Chapter, GlossaryEntry, ModelOption, TranslateSettings, Translatio
 import { chat, type ChatResult } from './api';
 import { needsTranslation } from '../logic';
 import { clearTrouble, noteTrouble } from '../mascot/trouble';
-import { CENSORED, chapterMessages, cleanChapterTitle, cleanTitle, glossaryLines, costOf, estimateTokens, glossaryScanMessages, isRefusal, parseTerms, pronounWarnings, splitReply, titleMessages, type ChatMessage, type ProposedTerm } from './prompt';
+import { addWorldLinks, parseWorldReply, type FoundEvent, type FoundLink } from './profiles';
+import { CENSORED, MAX_CHAPTER_EVENTS, MAX_CHAPTER_LINKS, chapterMessages, cleanChapterTitle, cleanTitle, glossaryLines, costOf, estimateTokens, glossaryScanMessages, isRefusal, parseTerms, pronounWarnings, splitReply, titleMessages, type ChatMessage, type ProposedTerm } from './prompt';
 import { paragraphs } from '../logic';
 
 /** Prices and ids as the owner's provider lists them on 2026-10-24 (change them in Settings when they move). */
@@ -165,6 +166,42 @@ export interface ChapterRun {
   /** Names the model proposed (added for review when saved). */
   terms: ProposedTerm[];
   newTerms: number;
+  /** The chapter's links and events for the Living Book (added when saved). */
+  world?: { links: FoundLink[]; events: FoundEvent[] };
+}
+
+/** Whether translations also note links and events for the Living Book. On unless turned off in Settings. */
+export function worldNotesOn(settings: Pick<TranslateSettings, 'worldNotes'>): boolean {
+  return settings.worldNotes !== false;
+}
+
+/**
+ * Reads the Living Book lines at the end of a chapter's reply. They are about that chapter only, so each one is given
+ * the chapter's number here (the model is not asked for it), which keeps the no-spoiler rule exact.
+ */
+export function chapterWorld(raw: string | undefined, chapterNumber: number): { links: FoundLink[]; events: FoundEvent[] } {
+  if (!raw) return { links: [], events: [] };
+  const lines = raw.split('\n').flatMap((line) => {
+    const at = line.indexOf('{');
+    if (at < 0) return [];
+    try {
+      const row = JSON.parse(line.slice(at, line.lastIndexOf('}') + 1)) as Record<string, unknown>;
+      // Only links and events: new names come from the list before, and facts from "Update profiles".
+      if (typeof row.link !== 'string' && typeof row.event !== 'string') return [];
+      return [JSON.stringify({ ...row, ch: chapterNumber })];
+    } catch {
+      return [];
+    }
+  });
+  const found = parseWorldReply(lines.join('\n'), [{ chapter: chapterNumber, text: '' }]);
+  return { links: found.links.slice(0, MAX_CHAPTER_LINKS), events: found.events.slice(0, MAX_CHAPTER_EVENTS) };
+}
+
+/** Keeps a chapter's links and events. Names must already be in the glossary (new ones were just added for review). */
+async function keepWorld(bookId: string, world: ChapterRun['world']): Promise<void> {
+  if (!world || (!world.links.length && !world.events.length)) return;
+  const all = await db.glossary.where('bookId').equals(bookId).toArray();
+  await addWorldLinks(bookId, world, all);
 }
 
 /**
@@ -221,9 +258,11 @@ async function runChapter(chapter: Chapter, options: ChapterOptions): Promise<Ch
     genre: genreNote(book) || undefined,
     source: sourceOf(book),
     target: targetOf(book),
+    world: worldNotesOn(options.settings),
   });
   const result = await chat(options.settings, options.model, messages, options.onText, options.signal);
-  const { text: english, terms, summary, title } = splitReply(result.text, sourceOf(book));
+  const { text: english, terms, summary, title, world: worldLines } = splitReply(result.text, sourceOf(book));
+  const world = worldNotesOn(options.settings) ? chapterWorld(worldLines, chapter.number) : undefined;
   const option = modelFor(options.settings, options.model);
   const spend = callCost(option, messages, result);
   // A refusal is not a translation: show it as an error and keep the chapter untranslated.
@@ -260,8 +299,10 @@ async function runChapter(chapter: Chapter, options: ChapterOptions): Promise<Ch
     await db.translations.put(translation);
     if (title) await db.chapters.update(chapter.id, { titleEn: title });
     newTerms = await addProposals(chapter.bookId, terms);
+    // The Living Book is a bonus: a problem saving it never loses the translation.
+    await keepWorld(chapter.bookId, world).catch(() => {});
   }
-  return { translation, terms, newTerms };
+  return { translation, terms, newTerms, world };
 }
 
 /**
@@ -285,7 +326,9 @@ export function translationWarnings(original: string, english: string, glossary:
 export async function keepTranslation(run: ChapterRun): Promise<number> {
   await db.translations.put(run.translation);
   if (run.translation.title) await db.chapters.update(run.translation.chapterId, { titleEn: run.translation.title });
-  return addProposals(run.translation.bookId, run.terms);
+  const added = await addProposals(run.translation.bookId, run.terms);
+  await keepWorld(run.translation.bookId, run.world).catch(() => {});
+  return added;
 }
 
 /** Reads the first chapters and proposes a glossary. Returns how many entries were added for review. */
