@@ -2564,3 +2564,93 @@ body[data-reader='night'] {
   flex-direction: column;
   gap: 6px;
 }
+
+/* The cat's pitch (src/pages/Tour.tsx): the cat beside his speech bubble, then the points. */
+.tour-speaker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 460px;
+  /* With the buttons' own auto margin, the pitch sits in the middle of the screen. */
+  margin-top: auto;
+  animation: tour-in 360ms ease-out;
+}
+.tour-speaker .tour-cat {
+  flex: 0 0 auto;
+  margin: 0;
+  width: auto;
+  height: min(150px, 34vw, 20dvh);
+  animation: none;
+}
+.tour-says {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 15px;
+  line-height: 1.4;
+  text-align: left;
+}
+.tour-says::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  background: inherit;
+  transform: rotate(45deg);
+  border-radius: 3px;
+}
+.tour-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+.tour-points li {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 8px;
+  align-items: start;
+  font-size: 16px;
+  line-height: 1.4;
+}
+.tour-points svg {
+  margin-top: 2px;
+  color: var(--accent);
+}
+@media (max-height: 700px) {
+  .tour-speaker .tour-cat {
+    height: min(110px, 16dvh);
+  }
+  .tour-says {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+  .tour-points li {
+    font-size: 14px;
+  }
+  .tour-points {
+    gap: 6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-speaker {
+    animation: none;
+  }
+}
+:root[data-motion='off'] .tour-speaker {
+  animation: none;
+}
