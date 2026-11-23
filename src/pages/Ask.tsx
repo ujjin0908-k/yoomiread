@@ -1,52 +1,84 @@
-import { ChevronRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ArrowUp } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { Cover, Empty, PageTitle, TabBar } from '../components';
 import { db } from '../db';
 import { useLive } from '../hooks';
-import { isRead } from '../logic';
 import { motionOk } from '../motion';
 import { askTheCat } from '../mascot/ask';
+import { bareTitle, leftOff, type LeftOff } from '../mascot/leftOff';
 import type { Book } from '../types';
-import { loadWorldData, worldOf } from '../world/load';
-import { freeRecap, type FreeRecap } from '../world/recap';
 
 /** Questions to start from, for someone who does not know what to ask. */
-const STARTERS = ['Remind me what just happened', 'Who are the main people so far?', 'Where are we right now?', 'What is everyone after?'];
+const STARTERS = ['What just happened?', 'Who are the main people?', 'Where are we now?', 'What is everyone after?'];
 
-/** The books I am in the middle of, most recently read first: the ones worth asking about. */
-async function booksToAsk(): Promise<{ book: Book; read: number }[]> {
+/** The books worth asking about: ones I have opened or am reading, most recently read first. Book rows only. */
+async function booksToAsk(): Promise<Book[]> {
   const books = await db.books.toArray();
-  const out: { book: Book; read: number }[] = [];
-  for (const book of books) {
-    const read = (await db.chapters.where('bookId').equals(book.id).toArray()).filter(isRead).length;
-    if (read || book.lastChapterId || book.shelf === 'reading') out.push({ book, read });
-  }
-  return out.sort((a, b) => (b.book.lastReadAt ?? b.book.updatedAt) - (a.book.lastReadAt ?? a.book.updatedAt));
+  return books
+    .filter((b) => b.lastChapterId || b.shelf === 'reading')
+    .sort((a, b) => (b.lastReadAt ?? b.updatedAt) - (a.lastReadAt ?? a.updatedAt));
 }
 
+interface Turn {
+  q: string;
+  a?: string;
+  note?: string;
+  error?: boolean;
+}
+
+/** This visit's conversation per book, so leaving the tab and coming back keeps it. */
+const talks = new Map<string, Turn[]>();
+let lastBook: string | undefined;
+
+const cat = (pose: string) => `/mascot/cat-${pose}.${motionOk() ? 'gif' : 'png'}`;
+
 /**
- * The Ask tab: the cat answers about any book I am reading, from what I have read only, and reminds me where each
- * book stands ("Previously on…", the free part, built on the phone from what is saved).
+ * The Ask tab: talk to the cat about a book. He only knows what I have read (src/mascot/askContext.ts), and he
+ * remembers where I left off. Opening the tab reads book rows only; the rest loads for the one book shown.
  */
 export function Ask() {
   const books = useLive(booksToAsk, [], 'ask-books');
-  const [bookId, setBookId] = useState<string>();
+  const [bookId, setBookId] = useState<string | undefined>(lastBook);
+  const book = books?.find((b) => b.id === bookId) ?? books?.[0];
+  const [turns, setTurns] = useState<Turn[]>([]);
   const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState<{ text: string; note: string; q: string }>();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const book = books?.find((b) => b.book.id === bookId)?.book ?? books?.[0]?.book;
+  const [where, setWhere] = useState<LeftOff>();
+  const end = useRef<HTMLDivElement>(null);
 
-  async function ask(q: string) {
-    if (!book || !q.trim()) return;
+  useEffect(() => {
+    if (!book) return;
+    lastBook = book.id;
+    setTurns(talks.get(book.id) ?? []);
+    setWhere(undefined);
+    let live = true;
+    void leftOff(book).then((w) => live && setWhere(w));
+    return () => {
+      live = false;
+    };
+  }, [book?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (turns.length) end.current?.scrollIntoView({ block: 'nearest', behavior: motionOk() ? 'smooth' : 'auto' });
+  }, [turns.length, busy]);
+
+  async function ask(text: string) {
+    const q = text.trim();
+    if (!book || !q || busy) return;
+    const id = book.id;
+    const add = (t: Turn[]) => {
+      talks.set(id, t);
+      if (lastBook === id) setTurns(t);
+    };
+    const before = talks.get(id) ?? [];
+    add([...before, { q }]);
+    setQuestion('');
     setBusy(true);
-    setError('');
-    setAnswer(undefined);
     try {
-      setAnswer({ ...(await askTheCat({ book, question: q.trim() })), q: q.trim() });
-      setQuestion('');
+      const { text: a, note } = await askTheCat({ book, question: q });
+      add([...before, { q, a, note }]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'He could not answer just now.');
+      add([...before, { q, a: e instanceof Error ? e.message : 'He could not answer just now.', error: true }]);
     } finally {
       setBusy(false);
     }
@@ -55,118 +87,101 @@ export function Ask() {
   return (
     <>
       <main className="page tabs-page ask-page">
-        <PageTitle title="Ask the cat" sub="About anything you’ve read. Never a spoiler." />
+        <PageTitle title="Ask" sub="The cat has read what you’ve read. Nothing more." />
         {books && !books.length ? (
-          <Empty title="Nothing to ask about yet">Start reading a book, and the cat will read along with you.</Empty>
+          <Empty title="Nothing to ask about yet">Open a book and start reading. The cat reads along with you.</Empty>
         ) : (
           <>
-            <section className="card ask-card">
-              <div className="ask-top">
-                <img className="ask-cat" src={`/mascot/cat-sly.${motionOk() ? 'gif' : 'png'}`} alt="" width={76} height={76} draggable={false} />
-                <label className="ask-book">
-                  <span className="muted small">Which book?</span>
-                  <select
-                    value={book?.id ?? ''}
-                    onChange={(e) => {
-                      setBookId(e.target.value);
-                      setAnswer(undefined);
-                      setError('');
-                    }}
-                  >
-                    {(books ?? []).map(({ book: b }) => (
-                      <option key={b.id} value={b.id}>
-                        {b.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <form
-                className="ask-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void ask(question);
-                }}
-              >
-                <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Who is this again?" disabled={busy || !book} />
-                <button type="submit" className="btn" disabled={busy || !question.trim() || !book}>
-                  {busy ? '…' : 'Ask'}
-                </button>
-              </form>
-              {!answer && !busy && (
-                <div className="folder-chips ask-starters">
-                  {STARTERS.map((s) => (
-                    <button key={s} type="button" onClick={() => void ask(s)} disabled={!book}>
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {busy && <p className="muted small ask-answer">The cat is flipping back through the pages…</p>}
-              {answer && (
-                <div className="ask-answer">
-                  <p className="muted small">“{answer.q}”</p>
-                  <p>{answer.text}</p>
-                  {answer.note && <p className="muted small">{answer.note}</p>}
-                </div>
-              )}
-              {error && <p className="warn small ask-answer">{error}</p>}
-            </section>
-
-            {books && books.length > 0 && (
-              <section className="ask-recaps">
-                <div className="section-head">
-                  <h2>Pick up where you left off</h2>
-                </div>
-                {books.slice(0, 5).map(({ book: b }) => (
-                  <RecapCard key={b.id} book={b} />
+            {books && books.length > 1 && (
+              <div className="ask-shelf" role="radiogroup" aria-label="Which book">
+                {books.map((b) => (
+                  <button key={b.id} type="button" role="radio" aria-checked={b.id === book?.id} className={b.id === book?.id ? 'on' : ''} onClick={() => setBookId(b.id)}>
+                    <Cover book={b} size="xs" />
+                    <span>{b.title}</span>
+                  </button>
                 ))}
+              </div>
+            )}
+
+            {book && (
+              <section className="ask-chat" aria-live="polite">
+                <div className="ask-turn cat">
+                  <img className="ask-face" src={cat(busy ? 'working' : 'sly')} alt="" width={56} height={56} draggable={false} />
+                  <div className="ask-bubble">
+                    <p>
+                      {where?.chapter
+                        ? `You’re in chapter ${where.chapter.number}${bareTitle(where.chapter) ? `, “${bareTitle(where.chapter)}”` : ''} of ${book.title}.`
+                        : `Ask me anything about ${book.title}.`}
+                      {where?.daysAway && where.daysAway > 1 ? ` It’s been ${where.daysAway} days.` : ''}
+                    </p>
+                    {where && (where.soFar || where.moments.length > 0) && (
+                      <p className="ask-sofar">{where.soFar ?? `${where.moments.join('. ')}.`}</p>
+                    )}
+                    <a className="ask-link" href={`#/world/${book.id}/recap`}>
+                      Full recap
+                    </a>
+                  </div>
+                </div>
+
+                {turns.map((t, i) => (
+                  <div key={i} className="ask-pair">
+                    <div className="ask-turn me">
+                      <p className="ask-bubble">{t.q}</p>
+                    </div>
+                    {t.a !== undefined ? (
+                      <div className="ask-turn cat">
+                        <span className="ask-face-gap" aria-hidden="true" />
+                        <div className={`ask-bubble${t.error ? ' warn' : ''}`}>
+                          <p>{t.a}</p>
+                          {t.note && <p className="ask-note">{t.note}</p>}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="ask-turn cat">
+                        <span className="ask-face-gap" aria-hidden="true" />
+                        <p className="ask-bubble ask-typing">
+                          <span />
+                          <span />
+                          <span />
+                          <span className="sr-only">The cat is thinking</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div ref={end} />
               </section>
+            )}
+
+            {book && (
+              <div className="ask-bottom">
+                {!turns.length && (
+                  <div className="ask-starters">
+                    {STARTERS.map((s) => (
+                      <button key={s} type="button" onClick={() => void ask(s)} disabled={busy}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <form
+                  className="ask-compose"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void ask(question);
+                  }}
+                >
+                  <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Who is this again?" aria-label={`Ask about ${book.title}`} enterKeyHint="send" />
+                  <button type="submit" aria-label="Ask" disabled={busy || !question.trim()}>
+                    <ArrowUp size={20} />
+                  </button>
+                </form>
+              </div>
             )}
           </>
         )}
       </main>
       <TabBar active="ask" />
     </>
-  );
-}
-
-/** One book's "Previously on…", the free part: the story so far, or the latest big moments, up to where I am. */
-function RecapCard({ book }: { book: Book }) {
-  const [recap, setRecap] = useState<FreeRecap | null>();
-  useEffect(() => {
-    let live = true;
-    void (async () => {
-      const data = await loadWorldData(book.id);
-      const r = data ? await freeRecap(data, worldOf(data)) : undefined;
-      if (live) setRecap(r ?? null);
-    })();
-    return () => {
-      live = false;
-    };
-  }, [book.id]);
-  if (recap === undefined) return null;
-  // Many chapter titles carry their own number ("6. The Cowardly Lion"): shown once.
-  const title = (recap?.chapter?.titleEn ?? recap?.chapter?.title ?? '').replace(/^\s*(?:chapter\s*)?\d+\s*[.:\-–—]?\s*/i, '');
-  const where = recap?.chapter ? `Ch. ${recap.chapter.number}${title ? ` · ${title}` : ''}` : 'Not started';
-  // The story so far from a translation, or else the latest big moments, oldest first so they read as a story.
-  const told = recap?.soFar?.text ?? (recap?.events.length ? [...recap.events].reverse().map((e) => e.title.replace(/[.!]$/, '')).join('. ') + '.' : '');
-  return (
-    <article className="card ask-recap">
-      <a className="ask-recap-head" href={`#/book/${book.id}`}>
-        <Cover book={book} size="xs" />
-        <span>
-          <strong>{book.title}</strong>
-          <span className="muted small">
-            {where}
-            {recap?.daysAway ? ` · ${recap.daysAway === 1 ? 'yesterday' : `${recap.daysAway} days ago`}` : ''}
-          </span>
-        </span>
-      </a>
-      {told ? <p className="small ask-told">{told.length > 320 ? `${told.slice(0, 320).trimEnd()}…` : told}</p> : <p className="muted small">No recap yet: it fills in as you read and translate.</p>}
-      <a className="link small ask-more" href={`#/world/${book.id}/recap`}>
-        Full recap <ChevronRight size={14} />
-      </a>
-    </article>
   );
 }
