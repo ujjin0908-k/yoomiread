@@ -8,6 +8,12 @@ export const allChapters = () => db.chapters.toArray();
 
 export const readingStats = async () => computeStats(await db.books.toArray(), await db.sessions.toArray());
 
+/** Everything the Stats tab works from (src/stats.ts): books, reading sessions and chapters (no chapter text). */
+export const statsInput = async () => {
+  const [books, sessions, chapters] = await Promise.all([db.books.toArray(), db.sessions.toArray(), db.chapters.toArray()]);
+  return { books, sessions, chapters };
+};
+
 export const aiSpent = async () => {
   const books = await db.books.toArray();
   return { total: books.reduce((sum, b) => sum + (b.spent ?? 0), 0), estimated: books.some((b) => b.spentEstimated) };

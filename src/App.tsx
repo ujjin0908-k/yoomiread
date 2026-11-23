@@ -15,7 +15,7 @@ import { showTour, Tour } from './pages/Tour';
 import { WorldPage } from './pages/World';
 import { useEffect, useState } from 'react';
 import { rememberAhead } from './hooks';
-import { aiSpent, allBooks, allChapters, allQuotes, readingStats } from './queries';
+import { aiSpent, allBooks, allChapters, allQuotes, statsInput } from './queries';
 import { animatePage, markIntent } from './motion';
 
 
@@ -39,7 +39,7 @@ export function App() {
       void (async () => {
         await rememberAhead('books', allBooks);
         await rememberAhead('chapters', allChapters);
-        await rememberAhead('stats', readingStats);
+        await rememberAhead('stats-input', statsInput);
         await rememberAhead('spent', aiSpent);
         await rememberAhead('quotes', allQuotes);
       })();
