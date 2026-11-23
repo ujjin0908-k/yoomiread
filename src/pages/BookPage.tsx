@@ -12,6 +12,7 @@ import { ChapterLinks } from './ChapterLinks';
 import { ChapterFile } from './ChapterFile';
 import { FillText } from './FillText';
 import { Ao3Card } from './Ao3Card';
+import { BuddyCard } from '../buddy/BuddyCard';
 import { CopyWorld } from './CopyWorld';
 import { sameNovel, worldSources } from '../world/copyWorld';
 import { celebrate } from '../motion';
@@ -313,6 +314,8 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
             <span className="muted small">Who is who, the map, the timeline and a recap, up to where you are</span>
           </button>
         </div>
+
+        <BuddyCard book={book} chapters={chapters} />
 
         {book.shelf === 'finished' || book.shelf === 'dropped' ? (
           <section className="card review-card">

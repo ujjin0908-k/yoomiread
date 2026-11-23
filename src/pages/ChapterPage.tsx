@@ -19,6 +19,7 @@ import { loadReadAloud, notice as readAloudNotice, startReading, stop as stopRea
 import { scenesFor } from '../scenes';
 import { glossaryFor } from '../glossaryMatch';
 import { Mascot } from '../mascot/Mascot';
+import { BuddyChapter } from '../buddy/BuddyChapter';
 import { CENSORED } from '../translate/prompt';
 import { FONT_SIZES, useReaderPrefs, type ReaderPrefs } from '../prefs';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
@@ -353,6 +354,7 @@ export function ChapterPage({ id }: { id: string }) {
               ))}
             </ul>
           )}
+          {book && <BuddyChapter book={book} chapter={chapter} chapters={siblings} />}
           <nav className="chapter-nav">
             {prev ? (
               <a className="round-btn" href={`#/chapter/${prev.id}`} aria-label={`Previous: ${prev.title}`}>

@@ -42,7 +42,8 @@ Plans, decisions and dated logs of every change live in the Obsidian vault
 - **Public build** (`VITE_EDITION=public`): leaves out the link reader, built-in guides for other people's novels,
   and the Novel Updates field. Accounts, YoomiRead AI and sync appear when `VITE_SUPABASE_URL` and
   `VITE_SUPABASE_ANON_KEY` are set. Server setup: the vault note "YoomiRead AI setup", plus
-  `supabase/ai_usage.sql` and `supabase/sync.sql`.
+  `supabase/ai_usage.sql`, `supabase/sync.sql` and `supabase/buddy.sql` (buddy reads). `supabase/test/run.sh`
+  checks the buddy-read rules on a throwaway local Postgres.
 
 ## Run it
 

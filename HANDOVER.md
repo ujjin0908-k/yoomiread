@@ -268,6 +268,22 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   - Server: `supabase/sync.sql`, table `sync_rows` (one row per table and id, server-set time, readers see only
     their own rows) and a size view per reader.
 
+- **Buddy reads with chapter-locked comments (2026-11-23):**
+  - Friends read the same book, each in their own copy. Start one on the book page (an 8-letter invite code and a
+    link `#/join/CODE`), or join with a code and pick which of your books to read along in. Up to 12 readers.
+  - The lock is on the server (`supabase/buddy.sql`, row level security): a comment on chapter N is sent to a reader
+    only once their line (last chapter finished, `myLine` = `catLine`) is N or more. Before that `buddy_waiting` gives
+    counts only. You can comment up to the chapter you are reading (line + 1).
+  - The owner can remove readers and comments, and ending the read deletes it for everyone. Deleting an account removes
+    that reader's buddy reads, membership and comments (cascade). 60 comments an hour per reader at most.
+  - Names are chosen per reader (remembered on the phone as `buddy-name`), never the email address.
+  - Code: `src/buddy/` (buddy.ts for the server calls and helpers, BuddyCard on the book page, BuddyChapter at the
+    end of each chapter, JoinPage). `book.buddy` holds the link only.
+  - Test: `supabase/test/run.sh` runs 30 checks as four readers on a local Postgres (stub of Supabase's auth in
+    `supabase/test/supabase_stub.sql`).
+  - The cat: `cat-sly` (paw raised) guards locked comments and shows while he answers a question; `cat-resting`
+    (lying on a book) shows when you are ahead of everyone.
+
 - **Trust step (2026-11-23, after an outside review):**
   - **AI:** stopped answers are recorded; each call reserves its likely cost first in one locked step (`ai_reserve`),
     so calls at the same moment cannot pass the limits; a daily ceiling for everyone (`AI_DAILY_LIMIT_USD`); a
