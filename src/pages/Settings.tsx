@@ -10,6 +10,7 @@ import { formatDate } from '../logic';
 import { chat } from '../translate/api';
 import { EMPTY_SETTINGS, fetchModels, hostedUsage, loadSettings, saveSettings, setAiMode } from '../translate/run';
 import { accountsAvailable, signInWith, signInWithEmail, signOut, useAccount } from '../account';
+import { setSyncOn, syncNow, syncOn, useSyncStatus } from '../syncRun';
 import type { ModelOption, TranslateSettings } from '../types';
 
 export function Settings() {
@@ -104,6 +105,7 @@ export function Settings() {
             </div>
           </div>
         </section>
+        {accountsAvailable && <AccountCard />}
         <TranslationSettings />
         <section className="card">
           <h3>Look and feel</h3>
@@ -374,7 +376,6 @@ function ReadingBackground() {
 /** YoomiRead AI: sign in (email link, Google or Apple), this month's use, and which model to use. */
 function HostedAI({ s, update }: { s: TranslateSettings; update: (change: Partial<TranslateSettings>) => void }) {
   const account = useAccount();
-  const [email, setEmail] = useState('');
   const [said, setSaid] = useState('');
   const [usage, setUsage] = useState<{ spent: number; limit: number }>();
 
@@ -383,53 +384,12 @@ function HostedAI({ s, update }: { s: TranslateSettings; update: (change: Partia
     void hostedUsage().then(setUsage).catch((e: unknown) => setSaid(e instanceof Error ? e.message : ''));
   }, [account.signedIn]);
 
-  async function go(run: () => Promise<void>, done?: string) {
-    setSaid('');
-    try {
-      await run();
-      if (done) setSaid(done);
-    } catch (e) {
-      setSaid(e instanceof Error ? e.message : 'That did not work. Try again.');
-    }
-  }
-
   if (!account.signedIn) {
-    return (
-      <div className="hosted-ai">
-        <p className="muted small">Sign in to use YoomiRead AI. No key or AI account of your own is needed.</p>
-        <button type="button" className="btn wide" onClick={() => void go(() => signInWith('apple'))}>
-          Continue with Apple
-        </button>
-        <button type="button" className="btn wide" onClick={() => void go(() => signInWith('google'))}>
-          Continue with Google
-        </button>
-        <form
-          className="row-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void go(() => signInWithEmail(email), `A sign-in link is on its way to ${email.trim()}. Open it on this phone.`);
-          }}
-        >
-          <input type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
-          <button type="submit" className="btn">
-            Email me a link
-          </button>
-        </form>
-        {said && <p className="small">{said}</p>}
-      </div>
-    );
+    return <p className="muted small">Sign in under Account above to use YoomiRead AI. No key or AI account of your own is needed.</p>;
   }
 
   return (
     <div className="hosted-ai">
-      <div className="row between">
-        <span className="small">
-          Signed in as <b>{account.email ?? 'you'}</b>
-        </span>
-        <button type="button" className="link small" onClick={() => void go(signOut)}>
-          Sign out
-        </button>
-      </div>
       {usage && (
         <div className="hosted-usage">
           <span className="small">This month</span>
@@ -457,4 +417,94 @@ function HostedAI({ s, update }: { s: TranslateSettings; update: (change: Partia
       {said && <p className="small">{said}</p>}
     </div>
   );
+}
+
+/** The reader's account: sign in (email link, Google or Apple), sync between devices, sign out. */
+function AccountCard() {
+  const account = useAccount();
+  const sync = useSyncStatus();
+  const [email, setEmail] = useState('');
+  const [said, setSaid] = useState('');
+  const on = useLive(() => syncOn(), [], 'syncOn');
+
+  async function go(run: () => Promise<void>, done?: string) {
+    setSaid('');
+    try {
+      await run();
+      if (done) setSaid(done);
+    } catch (e) {
+      setSaid(e instanceof Error ? e.message : 'That did not work. Try again.');
+    }
+  }
+
+  return (
+    <section className="card form account-card">
+      <h3>Account</h3>
+      {!account.signedIn ? (
+        <div className="hosted-ai">
+          <p className="muted small">
+            Sign in to keep your library in step on all your devices and to use YoomiRead AI. Without an account,
+            everything stays on this phone.
+          </p>
+          <button type="button" className="btn wide" onClick={() => void go(() => signInWith('apple'))}>
+            Continue with Apple
+          </button>
+          <button type="button" className="btn wide" onClick={() => void go(() => signInWith('google'))}>
+            Continue with Google
+          </button>
+          <form
+            className="row-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void go(() => signInWithEmail(email), `A sign-in link is on its way to ${email.trim()}. Open it on this phone.`);
+            }}
+          >
+            <input type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
+            <button type="submit" className="btn">
+              Email me a link
+            </button>
+          </form>
+        </div>
+      ) : (
+        <div className="hosted-ai">
+          <div className="row between">
+            <span className="small">
+              Signed in as <b>{account.email ?? 'you'}</b>
+            </span>
+            <button type="button" className="link small" onClick={() => void go(signOut)}>
+              Sign out
+            </button>
+          </div>
+          <label className="row between">
+            <span>
+              Sync this phone
+              <br />
+              <span className="muted small">Books, chapters, notes, highlights, progress, translations and the world. Keys and settings stay here.</span>
+            </span>
+            <input type="checkbox" className="switch" checked={on ?? true} onChange={(e) => void setSyncOn(e.target.checked)} />
+          </label>
+          {(on ?? true) && (
+            <div className="row between">
+              <span className={sync.error ? 'warn small' : 'muted small'}>
+                {sync.running ? 'Syncing…' : sync.error ? `Sync stopped: ${sync.error}` : sync.lastAt ? `Last synced ${formatAgo(sync.lastAt)}.` : 'Not synced yet.'}
+              </span>
+              <button type="button" className="link small" disabled={sync.running} onClick={() => void syncNow()}>
+                Sync now
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {said && <p className="small">{said}</p>}
+    </section>
+  );
+}
+
+/** "just now", "5 minutes ago", "at 14:05" (today) or the date. */
+function formatAgo(at: number, now = Date.now()): string {
+  const min = Math.round((now - at) / 60_000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min} minute${min === 1 ? '' : 's'} ago`;
+  const d = new Date(at);
+  return d.toDateString() === new Date(now).toDateString() ? `at ${d.toTimeString().slice(0, 5)}` : formatDate(at);
 }

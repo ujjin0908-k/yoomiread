@@ -52,6 +52,17 @@ function hasSavedSession(): boolean {
   }
 }
 
+/** The Supabase client, for sync (src/syncRun.ts). */
+export function supabaseClient(): Promise<SupabaseClient> {
+  return supabase();
+}
+
+/** Called after every change of sign-in (for sync to start once signed in). */
+export function onAccountChange(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => void listeners.delete(listener);
+}
+
 /** True while someone is signed in on this phone (as far as this page knows right now). */
 export function signedIn(): boolean {
   return !!session;
