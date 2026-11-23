@@ -106,7 +106,7 @@ export function Ask() {
             {book && (
               <section className="ask-chat" aria-live="polite">
                 <div className="ask-turn cat">
-                  <img className="ask-face" src={cat(busy ? 'working' : 'sly')} alt="" width={56} height={56} draggable={false} />
+                  <img className="ask-face" src={cat(busy ? 'working' : 'sly')} alt="" width={96} height={96} draggable={false} />
                   <div className="ask-bubble">
                     <p>
                       {where?.chapter

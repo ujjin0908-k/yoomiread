@@ -2859,9 +2859,16 @@ body[data-reader='night'] {
 .ask-face,
 .ask-face-gap {
   flex: none;
-  width: 48px;
-  height: 48px;
+  width: 96px;
+  height: 96px;
   object-fit: contain;
+}
+.ask-face-gap {
+  /* Later replies only need the indent, not the cat's height. */
+  height: 0;
+}
+.ask-turn.cat {
+  gap: 4px;
 }
 .ask-bubble {
   margin: 0;
