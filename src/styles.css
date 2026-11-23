@@ -1380,7 +1380,8 @@ button {
   left: 14px;
   right: 14px;
   bottom: calc(env(safe-area-inset-bottom) + 14px);
-  z-index: 10;
+  /* Above the cat (18), below sheets (20). */
+  z-index: 19;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2428,8 +2429,9 @@ blockquote {
   position: fixed;
   left: 12px;
   bottom: 96px;
-  /* Below the sheets (z-index 20), so an open settings sheet covers him instead of sitting on top of it. */
-  z-index: 19;
+  /* Below the sheets (z-index 20), so an open settings sheet covers him instead of sitting on top of it, and below
+     the selection bar (19), so he never hides a word's meaning. */
+  z-index: 18;
 }
 .mascot-btn {
   background: none;

@@ -305,6 +305,24 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
     먹다), and particles are dropped (도시를 → 도시).
   - Credits: `public/dict/NOTICE.txt` and Settings → Dictionaries. Rebuild: `scripts/dictionaries/`.
 
+- **Translate into Spanish or French (2026-11-23):** Edit details → "Translate into" (Chinese, Japanese and Korean
+  books): English (default), Spanish or French (`Book.target`, `TARGETS` in `src/languages.ts`).
+  - Uses the book's language: the translator, tone and honorific rules, chapter titles, "Check the original", the
+    reader's switch (日本語 / Español), the word sheet (RAE and Larousse links; no offline Spanish or French dictionary
+    yet), and the chapter chip (ES).
+  - Each translation records its language (`Translation.lang`; older ones are English), so changing a book's language
+    never mislabels chapters already translated.
+  - The story-so-far summary, profiles and the world stay English, like the app.
+
+- **English dictionary like Kindle (2026-11-23):** the old English file (ECDICT) explained English words in Chinese.
+  It is replaced by WordNet 3.0 English definitions, with ECDICT pronunciations kept.
+  - Two files: common words (`en.json.gz`, 1.8 MB) first, rare ones (`en-more.json.gz`, 3.1 MB) on a miss.
+  - Story forms are traced back (windows, murmured, jumped, quieter, tower's); irregular forms (ran, mice) come from
+    WordNet's lists.
+  - Selecting a single word shows its meaning at once above the selection bar (`QuickDefinition`); tapping it opens
+    the full sheet. This works for every language with a dictionary.
+  - The selection bar now sits above the cat. The WordNet license is in `public/dict/WORDNET-LICENSE.txt`.
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless

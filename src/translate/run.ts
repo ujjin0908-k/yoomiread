@@ -1,7 +1,7 @@
 import { accountsAvailable, accountToken, signedIn } from '../account';
 import { PUBLIC } from '../edition';
 import { genreNote } from '../genres';
-import { ANY_SOURCE, guessSource, LANGUAGES, sourceOf, type LanguageInfo } from '../languages';
+import { ANY_SOURCE, guessSource, LANGUAGES, sourceOf, targetOf, TARGETS, type LanguageInfo, type TargetInfo } from '../languages';
 import { db } from '../db';
 import { newId } from '../logic';
 import type { Chapter, GlossaryEntry, ModelOption, TranslateSettings, Translation } from '../types';
@@ -216,6 +216,7 @@ async function runChapter(chapter: Chapter, options: ChapterOptions): Promise<Ch
     style: book?.style,
     genre: genreNote(book) || undefined,
     source: sourceOf(book),
+    target: targetOf(book),
   });
   const result = await chat(options.settings, options.model, messages, options.onText, options.signal);
   const { text: english, terms, summary, title } = splitReply(result.text, sourceOf(book));
@@ -246,6 +247,7 @@ async function runChapter(chapter: Chapter, options: ChapterOptions): Promise<Ch
     costEstimated: spend.estimated,
     warnings: translationWarnings(text.text, english, glossary),
     summary,
+    lang: targetOf(book).id,
     title,
     createdAt: Date.now(),
   };
@@ -334,13 +336,13 @@ export async function translateTitle(
 const TITLES_PER_CALL = 120;
 
 /** The request for a batch of chapter titles: numbered lines in, numbered lines out. */
-export function titleBatchMessages(titles: string[], glossary: GlossaryEntry[], source: LanguageInfo = LANGUAGES.zh): ChatMessage[] {
+export function titleBatchMessages(titles: string[], glossary: GlossaryEntry[], source: LanguageInfo = LANGUAGES.zh, target: TargetInfo = TARGETS.en): ChatMessage[] {
   const named = glossary.filter((g) => g.status === 'ok' && [g.original, ...(g.aliases ?? [])].some((n) => n && titles.some((t) => t.includes(n))));
   return [
     {
       role: 'system',
       content:
-        `You translate the chapter titles of a ${source.novel} into English. Use the glossary exactly for names. ` +
+        `You translate the chapter titles of a ${source.novel} into ${target.name}. Use the glossary exactly for names. ` +
         'Leave out the chapter number ("第589章 入梦" becomes "Into the Dream", "第12話 旅立ち" becomes "Departure", "제3화 각성" becomes "Awakening"); ' +
         'keep words like "Side Story". Keep the tone of each title. ' +
         'Reply with the same numbered lines and nothing else: "1. Title".',
@@ -385,6 +387,7 @@ export async function translateTitles(bookId: string, onProgress?: (done: number
       batch.map((c) => c.title),
       glossary,
       sourceOf(book),
+      targetOf(book),
     );
     const result = await chat(settings, model.id, messages, undefined, signal);
     const spend = callCost(model, messages, result);

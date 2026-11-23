@@ -1,4 +1,4 @@
-import { BOOK_LANGUAGES, htmlLangOf, htmlLangOfText, ANY_SOURCE } from '../languages';
+import { BOOK_LANGUAGES, htmlLangOf, htmlLangOfText, ANY_SOURCE, sourceOf, targetOf, TARGETS, type TargetLanguage } from '../languages';
 import { BackdropPicker } from './BackdropPicker';
 import { inOrder, useChapterOrder } from '../chapterOrder';
 import '../world/world.css';
@@ -344,16 +344,16 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
                   className="link"
                   disabled={!!titling && !titling.startsWith('Done') && !titling.startsWith('Could')}
                   onClick={async () => {
-                    setTitling('Putting titles into English…');
+                    setTitling(`Putting titles into ${targetOf(book).name}…`);
                     try {
-                      const done = await translateTitles(id, (at, total) => setTitling(`Putting titles into English: ${at} of ${total}…`));
-                      setTitling(`Done: ${done} titles in English.`);
+                      const done = await translateTitles(id, (at, total) => setTitling(`Putting titles into ${targetOf(book).name}: ${at} of ${total}…`));
+                      setTitling(`Done: ${done} titles in ${targetOf(book).name}.`);
                     } catch (e) {
                       setTitling(`Could not translate the titles: ${e instanceof Error ? e.message : 'failed'}`);
                     }
                   }}
                 >
-                  English titles
+                  {targetOf(book).name} titles
                 </button>
               )}
               {features.links && (
@@ -403,7 +403,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
                     ) : (c.position ?? 0) > 0.02 ? (
                       <span className="chip">{Math.round((c.position ?? 0) * 100)}%</span>
                     ) : null}
-                    {needsTranslation(book) && translated?.has(c.id) && <span className="chip">EN</span>}
+                    {needsTranslation(book) && translated?.has(c.id) && <span className="chip">{targetOf(book).short}</span>}
                     {notesFor(c.id) > 0 && (
                       <span className="chip">
                         <MessageCircle size={12} /> {notesFor(c.id)}
@@ -655,6 +655,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
   const [author, setAuthor] = useState(book.author);
   const [originalTitle, setOriginalTitle] = useState(book.originalTitle ?? '');
   const [language, setLanguage] = useState<BookLanguage>(book.language);
+  const [target, setTarget] = useState<TargetLanguage>(book.target ?? 'en');
   const [genre, setGenre] = useState<GenreId>(book.genre ?? 'general');
   const guess = useGenreGuess(book.id);
   const [kindNames, setKindNames] = useState<Partial<Record<GlossaryKind, string>>>(book.kindNames ?? {});
@@ -696,6 +697,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
       originalTitle: originalTitle.trim() || undefined,
       language,
       genre: genre === 'general' ? undefined : genre,
+      target: target === 'en' ? undefined : target,
       kindNames: cleanKindNames(kindNames),
       novelUpdatesUrl: webLink(novelUpdates),
       sources: parseSources(sources),
@@ -786,13 +788,26 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
           Where to read <span className="muted small">(one per line: name | link)</span>
           <textarea rows={3} value={sources} onChange={(e) => setSources(e.target.value)} />
         </label>
+        {sourceOf({ language }) && (
+          <label>
+            Translate into
+            <select value={target} onChange={(e) => setTarget(e.target.value as TargetLanguage)}>
+              {Object.values(TARGETS).map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            <span className="muted small">Chapters translated before keep their language; translate one again to change it.</span>
+          </label>
+        )}
         <fieldset className="style-fields">
-          <legend>How it should read in English</legend>
+          <legend>How it should read in {TARGETS[target].name}</legend>
           <label>
             Tone
             <select value={tone} onChange={(e) => setTone(e.target.value as BookStyle['tone'] | '')}>
               <option value="">Default (natural)</option>
-              <option value="natural">Natural, easy modern English</option>
+              <option value="natural">Natural, easy and modern</option>
               <option value="literary">Literary, richer wording</option>
               <option value="punchy">Punchy, fast action</option>
               <option value="formal">Formal, measured</option>
@@ -803,7 +818,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
             <select value={honorifics} onChange={(e) => setHonorifics(e.target.value as BookStyle['honorifics'] | '')}>
               <option value="">Default</option>
               <option value="romanised">Keep as in the original (Senior Brother, -san, sunbae)</option>
-              <option value="english">Translate into English</option>
+              <option value="english">Translate into {TARGETS[target].name}</option>
             </select>
           </label>
           <label>
@@ -811,7 +826,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
             <textarea rows={2} value={styleNotes} onChange={(e) => setStyleNotes(e.target.value)} />
           </label>
           <label>
-            Style sample <span className="muted small">(optional: one or two paragraphs of English you like; stays on this phone)</span>
+            Style sample <span className="muted small">(optional: one or two paragraphs of {TARGETS[target].name} you like; stays on this phone)</span>
             <textarea rows={4} value={styleSample} onChange={(e) => setStyleSample(e.target.value)} />
           </label>
           <label>

@@ -58,7 +58,9 @@ export function WordSheet({ word, bookId, lang, onClose }: { word: string; bookI
           {defs?.pron ? ` · ${defs.pron}` : ''}
         </p>
         {defs === undefined && <p className="small">Looking up…</p>}
-        {defs === null && <p className="small">Not in the dictionary.</p>}
+        {defs === null && (
+          <p className="small">{lang === 'es' ? 'No offline Spanish dictionary yet.' : lang === 'fr' ? 'No offline French dictionary yet.' : 'Not in the dictionary.'}</p>
+        )}
         {defs?.text.split('\n').map((line, i) => (
           <p key={i} className="small">
             {line}
@@ -72,6 +74,16 @@ export function WordSheet({ word, bookId, lang, onClose }: { word: string; bookI
         {lang === 'ja' && (
           <a className="btn ghost" href={`https://jisho.org/search/${encodeURIComponent(word)}`} target="_blank" rel="noopener noreferrer">
             Open in Jisho dictionary
+          </a>
+        )}
+        {lang === 'es' && (
+          <a className="btn ghost" href={`https://dle.rae.es/${encodeURIComponent(word)}`} target="_blank" rel="noopener noreferrer">
+            Open in the RAE dictionary
+          </a>
+        )}
+        {lang === 'fr' && (
+          <a className="btn ghost" href={`https://www.larousse.fr/dictionnaires/francais/${encodeURIComponent(word)}`} target="_blank" rel="noopener noreferrer">
+            Open in Larousse
           </a>
         )}
         {lang === 'ko' && (
@@ -110,5 +122,42 @@ export function WordSheet({ word, bookId, lang, onClose }: { word: string; bookI
         )}
       </div>
     </Sheet>
+  );
+}
+
+/**
+ * Kindle-style: the meaning of a selected word, shown at once above the selection bar (headword, pronunciation, first
+ * sense). Tapping it opens the full sheet. Says nothing for a word the dictionary does not have.
+ */
+export function QuickDefinition({ word, lang, onMore }: { word: string; lang: LookupLanguage; onMore: () => void }) {
+  const [entry, setEntry] = useState<Entry | null>();
+  useEffect(() => {
+    let live = true;
+    setEntry(undefined);
+    lookup(lang, word)
+      .then((e) => live && setEntry(e ?? null))
+      .catch(() => live && setEntry(null));
+    return () => {
+      live = false;
+    };
+  }, [word, lang]);
+  if (!entry) return null;
+  const first = entry.text.split('\n')[0];
+  return (
+    <button
+      type="button"
+      className="quick-def"
+      // Keep the selection on iPhone while reading the card.
+      onPointerDown={(e) => e.preventDefault()}
+      onClick={onMore}
+      aria-label={`More about ${word}`}
+    >
+      <span className="quick-def-head">
+        <b>{entry.headword ?? word}</b>
+        {entry.pron && !entry.pron.startsWith('=') && <span className="muted"> {entry.pron}</span>}
+      </span>
+      <span className="quick-def-text">{first}</span>
+      <span className="quick-def-more muted">More</span>
+    </button>
   );
 }

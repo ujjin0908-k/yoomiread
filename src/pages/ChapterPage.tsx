@@ -1,4 +1,4 @@
-import { sourceOf } from '../languages';
+import { LANGUAGES, sourceOf, TARGETS } from '../languages';
 import type { LookupLanguage } from '../dictionary';
 import { inOrder, useChapterOrder } from '../chapterOrder';
 import { mix, topColour } from '../backdrop';
@@ -11,7 +11,7 @@ import { OrderToggle, ProgressBar, Sheet, TopBar, Working } from '../components'
 import { db } from '../db';
 import { go, useLive } from '../hooks';
 import { titleOf, bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakerOf, speakersFrom, type Speaker } from '../logic';
-import { WordSheet } from './WordSheet';
+import { QuickDefinition, WordSheet } from './WordSheet';
 import { GlossaryCard, StoryPicture } from './GlossaryCard';
 import { FixLine } from './FixLine';
 import { ReadAloudBar, usePlayer } from '../speech/ReadAloud';
@@ -193,6 +193,8 @@ export function ChapterPage({ id }: { id: string }) {
   const bookPct = book ? bookProgress(book, live) : 0;
   const minutesLeft = shown ? readingMinutes(shown, scroll) : 0;
   const zh = !!source && !english;
+  // The language the translation shown is in (older translations are English).
+  const readIn = TARGETS[translation?.lang ?? 'en'];
 
   async function finishChapter() {
     await db.chapters.update(id, { read: true, position: 1 });
@@ -266,10 +268,10 @@ export function ChapterPage({ id }: { id: string }) {
         {translation && needsTranslation(book, text) && (
           <div className="view-toggle seg" role="group" aria-label="Show">
             <button type="button" className={view === 'original' ? 'on' : ''} aria-pressed={view === 'original'} onClick={() => setView('original')}>
-              中文
+              {(source ?? LANGUAGES.zh).native}
             </button>
             <button type="button" className={view === 'translation' ? 'on' : ''} aria-pressed={view === 'translation'} onClick={() => setView('translation')}>
-              English
+              {readIn.native}
             </button>
           </div>
         )}
@@ -285,7 +287,7 @@ export function ChapterPage({ id }: { id: string }) {
           <div
             className={`reader ${prefs.dropCap ? 'drop' : ''}`}
             ref={textRef}
-            lang={zh ? source!.htmlLang : 'en'}
+            lang={zh ? source!.htmlLang : readIn.htmlLang}
             onClick={(e) => {
               // A highlight opens its note; a press-and-hold or drag selects text (the bar then offers Highlight and Look up).
               const sel = window.getSelection();
@@ -369,6 +371,16 @@ export function ChapterPage({ id }: { id: string }) {
 
       {pending && !open ? (
         <div className="selection-bar">
+          {!known && lookable(pending.quote) && pending.quote.trim().split(/\s+/).length === 1 && (
+            <QuickDefinition
+              word={lookable(pending.quote)!}
+              lang={source && !english ? source.id : readIn.id}
+              onMore={() => {
+                setLookup({ word: lookable(pending.quote)!, lang: source && !english ? source.id : readIn.id });
+                window.getSelection()?.removeAllRanges();
+              }}
+            />
+          )}
           {!english && (
             <span className="muted small">
               “{pending.quote.slice(0, 36)}
@@ -419,7 +431,7 @@ export function ChapterPage({ id }: { id: string }) {
               onPointerDown={(e) => e.preventDefault()}
               onClick={() => {
                 // A word in the book's own language, or in the English translation.
-                setLookup({ word: lookable(pending.quote)!, lang: source && !english ? source.id : 'en' });
+                setLookup({ word: lookable(pending.quote)!, lang: source && !english ? source.id : readIn.id });
                 window.getSelection()?.removeAllRanges();
               }}
             >

@@ -131,7 +131,7 @@ export function Settings() {
         <section className="card">
           <h3>Dictionaries</h3>
           <p className="muted small">
-            Offline dictionaries for tapping a word, shortened from: ECDICT (English, MIT License); CC-CEDICT (Chinese, CC
+            Offline dictionaries for tapping a word, shortened from: WordNet 3.0, Copyright 2006 by Princeton University (English definitions, WordNet license) with ECDICT pronunciations (MIT License); CC-CEDICT (Chinese, CC
             BY-SA 4.0); JMdict from the Electronic Dictionaries Research Group (Japanese, CC BY-SA 4.0, used in accordance
             with the group's licence, edrdg.org); Wiktionary via Kaikki (Korean, CC BY-SA 4.0). Each loads the first time
             you look up a word in that language, then works offline.

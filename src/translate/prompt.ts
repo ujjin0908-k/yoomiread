@@ -1,4 +1,4 @@
-import { ANY_SOURCE, LANGUAGES, type LanguageInfo } from '../languages';
+import { ANY_SOURCE, LANGUAGES, TARGETS, type LanguageInfo, type TargetInfo } from '../languages';
 import type { BookStyle, Gender, GlossaryEntry, GlossaryKind, ModelOption } from '../types';
 
 export interface ChatMessage {
@@ -28,20 +28,20 @@ export function glossaryLines(entries: GlossaryEntry[]): string {
     .join('\n');
 }
 
-const TONE: Record<NonNullable<BookStyle['tone']>, string> = {
-  natural: 'Natural, easy modern English.',
-  literary: 'Literary English: richer word choice and sentence rhythm, but the same meaning.',
-  punchy: 'Punchy, fast English: short sentences in action scenes, vivid verbs.',
-  formal: 'Formal, measured English.',
+const TONE: Record<NonNullable<BookStyle['tone']>, (lang: string) => string> = {
+  natural: (l) => `Natural, easy modern ${l}.`,
+  literary: (l) => `Literary ${l}: richer word choice and sentence rhythm, but the same meaning.`,
+  punchy: (l) => `Punchy, fast ${l}: short sentences in action scenes, vivid verbs.`,
+  formal: (l) => `Formal, measured ${l}.`,
 };
 
 /** Extra instructions from the book's style settings. Empty when no style is set. */
-function styleRules(style?: BookStyle): string[] {
+function styleRules(style?: BookStyle, lang = 'English'): string[] {
   if (!style) return [];
   const rules = ['Style for this book (translation first: stay faithful to the meaning, and polish only the wording):'];
-  if (style.tone) rules.push(`- ${TONE[style.tone]}`);
+  if (style.tone) rules.push(`- ${TONE[style.tone](lang)}`);
   if (style.honorifics === 'romanised') rules.push('- Keep titles of respect as in the original: romanised Chinese titles (Senior Brother, Master), Japanese honorifics as suffixes (Tanaka-san, -senpai, -sama), Korean titles romanised (hyung, sunbae, oppa).');
-  if (style.honorifics === 'english') rules.push('- Translate titles of respect into natural English.');
+  if (style.honorifics === 'english') rules.push(`- Translate titles of respect into natural ${lang}.`);
   if (style.notes?.trim()) rules.push(`- ${style.notes.trim()}`);
   return rules;
 }
@@ -63,21 +63,24 @@ export function chapterMessages(input: {
   genre?: string;
   /** The language translated from. Chinese when not given (books from before Japanese and Korean). */
   source?: LanguageInfo;
+  /** The language translated into. English when not given. */
+  target?: TargetInfo;
 }): ChatMessage[] {
   const src = input.source ?? LANGUAGES.zh;
+  const into = (input.target ?? TARGETS.en).name;
   // Only entries named in this chapter: the rest would add cost and nothing else.
   const approved = input.glossary.filter((g) => g.status === 'ok' && [g.original, ...(g.aliases ?? [])].some((n) => n && input.text.includes(n)));
   const system = [
-    `You translate ${src.name} web novels into natural, readable English.`,
+    `You translate ${src.name} web novels into natural, readable ${into}.`,
     'Rules:',
     '- Translate everything. Do not summarize, shorten or add anything.',
     `- If you cannot translate a passage, for any reason (including content you will not write), never drop it silently:`,
     `  write the line "${CENSORED}" in its place, as its own paragraph, and carry on with the rest. Keep the same number of paragraphs.`,
-    '- Keep the paragraph breaks: one paragraph of the original becomes one paragraph in English, separated by a blank line.',
+    `- Keep the paragraph breaks: one paragraph of the original becomes one paragraph in ${into}, separated by a blank line.`,
     '- Use the glossary exactly for every name and term in it. Use each person\'s pronouns as given.',
     '- Keep the tone of the original. Dialogue should sound like real speech.',
     '- Output only the translation, with no notes, no title line and no commentary.',
-    `- After the translation, write a line "${TITLE}" and then the chapter title in English on one line, using the glossary for names.`,
+    `- After the translation, write a line "${TITLE}" and then the chapter title in ${into} on one line, using the glossary for names.`,
     '  Leave out the chapter number ("第589章 入梦" becomes "Into the Dream"); keep words like "Side Story".',
     `- Then write a line "${SUMMARY}" and then the story so far in English: 3 to 6 sentences covering`,
     '  who is who, what has happened, and where things stand at the end of this chapter. Update the earlier summary given in the message',
@@ -86,7 +89,7 @@ export function chapterMessages(input: {
     '  that is NOT in the glossary: {"original": "...", "english": "...", "kind": "person", "gender": "he|she|they|it"}.',
     '  Only character names. Never places, items, techniques, sects, titles, ordinary words, English words or anything already in the glossary.',
     `  "original" is the ${src.name} text from the chapter. Give gender only for people. If there are none, write the marker line and nothing after it.`,
-    ...styleRules(input.style),
+    ...styleRules(input.style, into),
     ...(input.genre ? [input.genre] : []),
   ].join('\n');
   const sample = input.style?.sample?.trim();
