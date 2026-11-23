@@ -105,6 +105,27 @@ export async function signOut(): Promise<void> {
   listeners.forEach((l) => l());
 }
 
+/**
+ * Deletes the reader's account on the server: the sign-in, the synced library and the AI cost records. Then signs out
+ * on this phone. The phone's own library stays unless the reader also chose to erase it (`eraseThisPhone`).
+ */
+export async function deleteAccount(): Promise<void> {
+  const token = await accountToken();
+  if (!token) throw new Error('Please sign in again first.');
+  const res = await fetch('/api/account/delete', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ confirm: 'DELETE' }),
+  }).catch(() => undefined);
+  if (!res) throw new Error('Could not reach YoomiRead. Check the internet and try again.');
+  if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? `The account could not be deleted (${res.status}).`);
+  // The account is gone on the server: forget the sign-in here (the server cannot be asked any more).
+  const c = await supabase();
+  await c.auth.signOut({ scope: 'local' }).catch(() => undefined);
+  session = null;
+  listeners.forEach((l) => l());
+}
+
 /** The signed-in reader's email (or undefined), kept up to date. */
 export function useAccount(): { email?: string; signedIn: boolean } {
   const [, bump] = useState(0);

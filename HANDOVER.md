@@ -276,6 +276,11 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   - **Updates:** an open copy lets a newer version upgrade the data (`src/dbOpen.ts`).
   - **Docs:** the README describes where data lives. A terms draft is in the vault.
 
+- **Delete my account (2026-11-23):** Settings → Account → "Delete my account". The reader types DELETE; a backup is
+  offered first. The server (`src/server/accountDelete.ts`, `functions/api/account`) deletes the sign-in with the
+  service key, and the database removes the synced library and AI records with it. "Also erase everything on this
+  phone" (off by default) clears every table on the device (`src/erase.ts`).
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless

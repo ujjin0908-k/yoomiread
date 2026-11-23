@@ -2439,3 +2439,7 @@ body[data-reader='night'] {
   text-align: center;
   z-index: 1000;
 }
+.danger-link {
+  align-self: flex-start;
+  color: var(--accent);
+}

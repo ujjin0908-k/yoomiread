@@ -9,7 +9,8 @@ import { DEFAULT_BACKUP, loadBackupState, saveBackupFile, saveBackupState } from
 import { formatDate } from '../logic';
 import { chat } from '../translate/api';
 import { EMPTY_SETTINGS, fetchModels, hostedUsage, loadSettings, saveSettings, setAiMode } from '../translate/run';
-import { accountsAvailable, signInWith, signInWithEmail, signOut, useAccount } from '../account';
+import { accountsAvailable, deleteAccount, signInWith, signInWithEmail, signOut, useAccount } from '../account';
+import { eraseThisPhone } from '../erase';
 import { answerHeld, answerOtherAccount, setSyncOn, setSyncText, syncNow, syncOn, syncText, undoSync, useSyncStatus } from '../syncRun';
 import type { ModelOption, TranslateSettings } from '../types';
 
@@ -553,8 +554,79 @@ function AccountCard() {
           )}
         </div>
       )}
+      {account.signedIn && <DeleteAccount onDone={setSaid} />}
       {said && <p className="small">{said}</p>}
     </section>
+  );
+}
+
+/**
+ * "Delete my account": removes the sign-in, the synced library and the AI cost records from the server. The reader
+ * types DELETE to confirm, and can also erase this phone's library (off by default; a backup is offered first).
+ */
+function DeleteAccount({ onDone }: { onDone: (message: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState('');
+  const [erase, setErase] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [said, setSaid] = useState('');
+
+  async function run() {
+    setBusy(true);
+    setSaid('');
+    try {
+      await deleteAccount();
+      if (erase) {
+        await eraseThisPhone(db);
+        window.location.replace(window.location.pathname);
+        return;
+      }
+      // The card switches to signed out, so the message is shown by the card, not by this panel.
+      onDone('Your account is deleted, with its synced library and AI records on the server. Your library is still on this phone.');
+    } catch (e) {
+      setSaid(e instanceof Error ? e.message : 'The account could not be deleted.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <>
+        <button type="button" className="link small danger-link" onClick={() => setOpen(true)}>
+          Delete my account
+        </button>
+        {said && <p className="small">{said}</p>}
+      </>
+    );
+  }
+  return (
+    <div className="sync-ask delete-account" role="region" aria-label="Delete my account">
+      <p className="small">
+        <b>Delete your account?</b> This removes your sign-in, your synced library on the server and your AI use records. Other
+        devices stop syncing. It cannot be undone.
+      </p>
+      <button type="button" className="btn" onClick={() => void saveBackupFile()}>
+        Download a backup first
+      </button>
+      <label className="row between">
+        <span className="small">Also erase everything on this phone</span>
+        <input id="erase-phone" type="checkbox" className="switch" checked={erase} onChange={(e) => setErase(e.target.checked)} />
+      </label>
+      <label className="small" htmlFor="delete-typed">
+        Type DELETE to confirm
+      </label>
+      <input id="delete-typed" autoCapitalize="characters" autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} />
+      <div className="row-btns">
+        <button type="button" className="btn" disabled={busy} onClick={() => setOpen(false)}>
+          Cancel
+        </button>
+        <button type="button" className="btn danger" disabled={busy || typed.trim() !== 'DELETE'} onClick={() => void run()}>
+          {busy ? 'Deleting…' : erase ? 'Delete account and this phone’s library' : 'Delete my account'}
+        </button>
+      </div>
+      {said && <p className="warn small">{said}</p>}
+    </div>
   );
 }
 
