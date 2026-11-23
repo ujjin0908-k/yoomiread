@@ -1,5 +1,6 @@
 // Offline dictionaries, shortened and shipped with the app (credits in public/dict/NOTICE.txt and Settings):
-// English (ECDICT), Chinese (CC-CEDICT), Japanese (JMdict, in two files: common words, then the rest) and Korean
+// English (WordNet definitions, ECDICT pronunciations; two files: common words, then the rest), Chinese (CC-CEDICT),
+// Japanese (JMdict, in two files: common words, then the rest) and Korean
 // (Wiktionary via Kaikki, with inflected forms pointing to their dictionary word).
 // Each file loads the first time it is needed, then stays on the phone for offline use.
 
@@ -15,7 +16,7 @@ export interface Entry {
 }
 
 type Dict = Record<string, [string, string]>;
-type DictFile = 'en' | 'zh' | 'ja' | 'ja-more' | 'ko';
+type DictFile = 'en' | 'en-more' | 'zh' | 'ja' | 'ja-more' | 'ko';
 const loaded: Partial<Record<DictFile, Promise<Dict>>> = {};
 
 /** Fetches a dictionary file. `get` can be replaced in tests. */
@@ -80,6 +81,32 @@ export function japaneseBases(word: string): string[] {
   return [...new Set(out)];
 }
 
+/**
+ * Base forms an English word could come from (windows → window, murmured → murmur, running → run, quieter → quiet,
+ * tower's → tower). Irregular forms (ran, mice) are in the dictionary itself, pointing to their base word.
+ */
+export function englishBases(word: string): string[] {
+  const w = word.toLowerCase().replace(/[’']s$/, '');
+  const out = [w];
+  const tryEnd = (end: string, ...repl: string[]) => {
+    if (w.length > end.length + 1 && w.endsWith(end)) for (const r of repl) out.push(w.slice(0, -end.length) + r);
+  };
+  tryEnd('ies', 'y');
+  tryEnd('ied', 'y');
+  tryEnd('iest', 'y');
+  tryEnd('ier', 'y');
+  tryEnd('es', '');
+  tryEnd('s', '');
+  tryEnd('ing', '', 'e');
+  tryEnd('ed', '', 'e');
+  tryEnd('est', '', 'e');
+  tryEnd('er', '', 'e');
+  // A doubled last letter before -ing, -ed, -er, -est: running → run, stopped → stop, bigger → big.
+  const doubled = /([b-df-hj-np-tv-z])\1(ing|ed|er|est)$/.exec(w);
+  if (doubled) out.push(w.slice(0, doubled.index + 1));
+  return [...new Set(out)];
+}
+
 /** Korean particles and endings that attach to a word (민준은, 도시를, 탑에서), longest first. */
 const KO_PARTICLES = ['으로부터', '에게서', '한테서', '이라고', '께서', '에서', '에게', '한테', '으로', '까지', '부터', '처럼', '보다', '마다', '이랑', '하고', '이나', '라고',
   '은', '는', '이', '가', '을', '를', '에', '의', '도', '만', '로', '와', '과', '랑', '나', '야', '아'];
@@ -95,9 +122,28 @@ const entryOf = (hit: [string, string], headword?: string): Entry => ({ pron: hi
 
 /** Looks a word up in the bundled dictionary. Undefined when the word is not in it. */
 export async function lookup(lang: LookupLanguage, word: string): Promise<Entry | undefined> {
-  if (lang === 'en' || lang === 'zh') {
-    const hit = (await load(lang))[lang === 'en' ? word.toLowerCase() : word];
+  if (lang === 'zh') {
+    const hit = (await load('zh'))[word];
     return hit ? entryOf(hit) : undefined;
+  }
+  if (lang === 'en') {
+    // Common words first; the larger file loads only when a word is not among them.
+    const bases = englishBases(word);
+    for (const file of ['en', 'en-more'] as const) {
+      const dict = await load(file);
+      for (const base of bases) {
+        const hit = dict[base];
+        if (!hit) continue;
+        if (hit[0].startsWith('=')) {
+          const head = hit[0].slice(1);
+          const main = (await load('en'))[head] ?? (await load('en-more'))[head];
+          if (main) return entryOf(main, head);
+          continue;
+        }
+        return entryOf(hit, base === word.toLowerCase() ? undefined : base);
+      }
+    }
+    return undefined;
   }
   // Spanish and French: no offline dictionary yet (the word sheet links to RAE and Larousse).
   if (lang === 'es' || lang === 'fr') return undefined;

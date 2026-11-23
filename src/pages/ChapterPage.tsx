@@ -11,7 +11,7 @@ import { OrderToggle, ProgressBar, Sheet, TopBar, Working } from '../components'
 import { db } from '../db';
 import { go, useLive } from '../hooks';
 import { titleOf, bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakerOf, speakersFrom, type Speaker } from '../logic';
-import { WordSheet } from './WordSheet';
+import { QuickDefinition, WordSheet } from './WordSheet';
 import { GlossaryCard, StoryPicture } from './GlossaryCard';
 import { FixLine } from './FixLine';
 import { ReadAloudBar, usePlayer } from '../speech/ReadAloud';
@@ -371,6 +371,16 @@ export function ChapterPage({ id }: { id: string }) {
 
       {pending && !open ? (
         <div className="selection-bar">
+          {!known && lookable(pending.quote) && pending.quote.trim().split(/\s+/).length === 1 && (
+            <QuickDefinition
+              word={lookable(pending.quote)!}
+              lang={source && !english ? source.id : readIn.id}
+              onMore={() => {
+                setLookup({ word: lookable(pending.quote)!, lang: source && !english ? source.id : readIn.id });
+                window.getSelection()?.removeAllRanges();
+              }}
+            />
+          )}
           {!english && (
             <span className="muted small">
               “{pending.quote.slice(0, 36)}

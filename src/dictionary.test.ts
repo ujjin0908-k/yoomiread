@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { japaneseBases, koreanBases, lookup, setDictionaryFetch } from './dictionary';
+import { englishBases, japaneseBases, koreanBases, lookup, setDictionaryFetch } from './dictionary';
 
 let fetched: string[] = [];
 beforeEach(() => {
@@ -60,6 +60,40 @@ describe('Korean dictionary (Wiktionary via Kaikki)', () => {
 
   it('says nothing for a word it does not know', async () => {
     expect(await lookup('ko', '퀘퀘퀘퀘')).toBeUndefined();
+  });
+});
+
+describe('English dictionary (WordNet, like Kindle)', () => {
+  it('explains English words in English, with the pronunciation', async () => {
+    const window = await lookup('en', 'window');
+    expect(window?.text).toMatch(/^\(noun\) a framework of wood or metal/);
+    expect(window?.pron).toBeTruthy();
+    expect(window?.text).not.toMatch(/[\u4e00-\u9fff]/);
+  });
+
+  it('finds the base word of the forms a story uses', async () => {
+    expect(await lookup('en', 'Windows')).toMatchObject({ headword: 'window' });
+    expect(await lookup('en', 'murmured')).toMatchObject({ headword: 'murmur', text: expect.stringMatching(/speak softly|low continuous/) });
+    expect(await lookup('en', 'jumped')).toMatchObject({ headword: 'jump' });
+    // A form that is a word of its own ("the running of the bulls") is shown as itself, as Kindle does.
+    expect(await lookup('en', 'running')).toMatchObject({ text: expect.stringMatching(/\(/) });
+    expect(await lookup('en', 'ran')).toMatchObject({ headword: 'run' });
+    expect(await lookup('en', 'mice')).toMatchObject({ headword: 'mouse' });
+    expect(await lookup('en', 'quieter')).toMatchObject({ headword: 'quiet' });
+    expect(await lookup('en', "tower's")).toMatchObject({ headword: 'tower' });
+  });
+
+  it('loads the larger file only for a rare word', async () => {
+    await lookup('en', 'window');
+    expect(fetched).toEqual(['en']);
+    expect(await lookup('en', 'apophthegm')).toMatchObject({ text: expect.stringMatching(/saying|maxim|aphorism/) });
+    expect(fetched).toEqual(['en', 'en-more']);
+  });
+
+  it('guesses bases sensibly', () => {
+    expect(englishBases('stopped')).toContain('stop');
+    expect(englishBases('cities')).toContain('city');
+    expect(englishBases('Window')[0]).toBe('window');
   });
 });
 

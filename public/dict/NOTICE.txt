@@ -1,7 +1,9 @@
 Dictionaries bundled with YoomiRead
 
-English (en.json.gz): a shortened copy of ECDICT by Linwei (skywind3000/ECDICT), MIT License.
-  Only common words are kept, and definitions are shortened.
+English (en.json.gz, en-more.json.gz): definitions from WordNet 3.0, Copyright 2006 by Princeton University, under
+  the WordNet 3.0 license (full text in WORDNET-LICENSE.txt, which must stay with these files). Senses are shortened.
+  Pronunciations from ECDICT by Linwei (skywind3000/ECDICT), MIT License. Common words are in en.json.gz, the rest
+  in en-more.json.gz.
 
 Chinese (zh.json.gz): a shortened copy of CC-CEDICT (mdbg.net), licensed under CC BY-SA 4.0.
   Pinyin and English glosses are kept; the entries are shortened.
