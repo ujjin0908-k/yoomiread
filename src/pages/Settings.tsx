@@ -365,6 +365,22 @@ function TranslationSettings() {
         </div>
       </div>
 
+      <div className="look-row">
+        <span>Fill the Living Book while translating</span>
+        <div className="seg">
+          <button type="button" className={s.worldNotes !== false ? 'on' : ''} onClick={() => update({ worldNotes: true })}>
+            On
+          </button>
+          <button type="button" className={s.worldNotes === false ? 'on' : ''} onClick={() => update({ worldNotes: false })}>
+            Off
+          </button>
+        </div>
+      </div>
+      <p className="muted small">
+        Each translation also notes who stands where with whom, and the chapter’s big moments. It is the same request, so it
+        adds only a little to each chapter’s cost.
+      </p>
+
       <button type="button" className="btn" disabled={testing} onClick={() => void test()}>
         Test connection
       </button>

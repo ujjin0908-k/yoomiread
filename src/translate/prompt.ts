@@ -10,6 +10,11 @@ export interface ChatMessage {
 export const NEW_TERMS = '===NEW TERMS===';
 /** Marks the short story-so-far summary, written after the translation and before the new names. */
 export const SUMMARY = '===SUMMARY===';
+/** Marks the chapter's links and events for the Living Book, written last, after the new names. */
+export const WORLD = '===WORLD===';
+/** The most links and events kept from one chapter's translation, so the list stays short and cheap. */
+export const MAX_CHAPTER_LINKS = 4;
+export const MAX_CHAPTER_EVENTS = 2;
 /** Marks the chapter title in English, in a chapter's reply. */
 export const TITLE = '===TITLE===';
 /** Marks a passage the model could not translate. The reader shows it in red as "Censored and skipped". */
@@ -65,6 +70,8 @@ export function chapterMessages(input: {
   source?: LanguageInfo;
   /** The language translated into. English when not given. */
   target?: TargetInfo;
+  /** Also note the chapter's lasting relationships and key events for the Living Book (Settings, on by default). */
+  world?: boolean;
 }): ChatMessage[] {
   const src = input.source ?? LANGUAGES.zh;
   const into = (input.target ?? TARGETS.en).name;
@@ -89,6 +96,17 @@ export function chapterMessages(input: {
     '  that is NOT in the glossary: {"original": "...", "english": "...", "kind": "person", "gender": "he|she|they|it"}.',
     '  Only character names. Never places, items, techniques, sects, titles, ordinary words, English words or anything already in the glossary.',
     `  "original" is the ${src.name} text from the chapter. Give gender only for people. If there are none, write the marker line and nothing after it.`,
+    ...(input.world
+      ? [
+          `- Last, write a line "${WORLD}" and then, for the reader's guide, JSON lines about THIS chapter only (often there are none):`,
+          `  at most ${MAX_CHAPTER_LINKS} lasting relationships between two named people that this chapter states or plainly shows, one per line:`,
+          '  {"link": "<name>", "to": "<name>", "label": "<1 to 4 words: how the first stands to the second>"}',
+          '  Not "talked to", "met" or "fought beside once". Skip relationships the story so far already gives.',
+          `  and at most ${MAX_CHAPTER_EVENTS} events a reader would want to be reminded of later, one per line:`,
+          '  {"event": "<what happened, under 14 words, past tense, in English>", "who": ["<name>"], "where": "<place name>"}',
+          `  Write names in ${into}, exactly as in your translation. Leave "who" and "where" out when unsure. Skip ordinary scenes.`,
+        ]
+      : []),
     ...styleRules(input.style, into),
     ...(input.genre ? [input.genre] : []),
   ].join('\n');
@@ -186,10 +204,14 @@ export function isRefusal(reply: string): boolean {
   return REFUSAL.test(reply.trim().slice(0, 200));
 }
 
-export function splitReply(reply: string, source: LanguageInfo = LANGUAGES.zh): { text: string; terms: ProposedTerm[]; summary?: string; title?: string } {
-  const at = reply.indexOf(NEW_TERMS);
-  const beforeTerms = at >= 0 ? reply.slice(0, at) : reply;
-  const terms = at >= 0 ? parseTerms(reply.slice(at + NEW_TERMS.length), false, source) : [];
+export function splitReply(reply: string, source: LanguageInfo = LANGUAGES.zh): { text: string; terms: ProposedTerm[]; summary?: string; title?: string; world?: string } {
+  // The Living Book's lines come last; older replies (and books with it off) have none.
+  const worldAt = reply.indexOf(WORLD);
+  const world = worldAt >= 0 ? reply.slice(worldAt + WORLD.length).trim() : '';
+  const rest = worldAt >= 0 ? reply.slice(0, worldAt) : reply;
+  const at = rest.indexOf(NEW_TERMS);
+  const beforeTerms = at >= 0 ? rest.slice(0, at) : rest;
+  const terms = at >= 0 ? parseTerms(rest.slice(at + NEW_TERMS.length), false, source) : [];
   const marker = beforeTerms.indexOf(SUMMARY);
   const beforeSummary = marker >= 0 ? beforeTerms.slice(0, marker) : beforeTerms;
   const summary = marker >= 0 ? beforeTerms.slice(marker + SUMMARY.length).trim() : '';
@@ -206,7 +228,7 @@ export function splitReply(reply: string, source: LanguageInfo = LANGUAGES.zh): 
     .map((p) => p.trim())
     .filter(Boolean)
     .join('\n\n');
-  return { text, terms, summary: summary || undefined, title };
+  return { text, terms, summary: summary || undefined, title, world: world || undefined };
 }
 
 /** One clean line of title: no quotes, no "Chapter 589:" in front, no markdown. */
@@ -227,14 +249,15 @@ export function cleanChapterTitle(raw: string): string | undefined {
 const CJK = new RegExp(ANY_SOURCE.source, 'g');
 
 /** Rough token counts for a cost estimate before anything is sent. */
-export function estimateTokens(text: string, glossaryCount = 0): { input: number; output: number } {
+export function estimateTokens(text: string, glossaryCount = 0, world = false): { input: number; output: number } {
   const cjk = (text.match(CJK) ?? []).length;
   const other = text.length - cjk;
   // About one token per Chinese, Japanese or Korean character, plus the instructions and the glossary.
-  const input = Math.round(cjk * 1.1 + other / 4 + 450 + glossaryCount * 12);
+  // The Living Book's links and events add about 120 tokens of instructions going in and 150 coming out.
+  const input = Math.round(cjk * 1.1 + other / 4 + 450 + glossaryCount * 12 + (world ? 120 : 0));
   // English comes out a little shorter in tokens than the Chinese characters going in.
   // The story-so-far summary adds about 200 tokens of output per chapter.
-  const output = Math.round(cjk * 0.9 + other / 4 + 60 + 200);
+  const output = Math.round(cjk * 0.9 + other / 4 + 60 + 200 + (world ? 150 : 0));
   return { input, output };
 }
 

@@ -322,4 +322,9 @@ export interface TranslateSettings {
   onImport?: number;
   /** When true, models are asked not to think before answering: faster and cheaper, but untested per model. */
   thinkingOff?: boolean;
+  /**
+   * Each translation also notes the chapter's lasting relationships and key events for the Living Book, in the same
+   * request (a few lines more of output). On unless set to false.
+   */
+  worldNotes?: boolean;
 }

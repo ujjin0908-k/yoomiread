@@ -1,11 +1,14 @@
 import { AI_OFF_FOR_FAN_WORK, aiAllowedFor } from '../import/ao3Book';
 import { useState } from 'react';
 import { db } from '../db';
-import { isRead, needsTranslation, titleOf } from '../logic';
+import { isRead, needsTranslation } from '../logic';
 import { addSpend, callCost, aiReady, loadSettings, modelFor } from '../translate/run';
 import { chat } from '../translate/api';
 import { formatCost, type ChatMessage } from '../translate/prompt';
-import type { Book, Chapter, GlossaryEntry } from '../types';
+import type { Book, Chapter } from '../types';
+import { loadWorldData } from '../world/load';
+import { worldAt } from '../world/visible';
+import { catContext, catLine } from './askContext';
 import { useMood } from './useMood';
 import { lineFor } from './lines';
 import { Wizard } from './Wizard';
@@ -18,16 +21,7 @@ function hash(text: string): string {
   return h.toString(36);
 }
 
-/** Only the chapters he may talk about: the ones the reader has finished. Later chapters never reach the model. */
-function readExcerpts(chapters: Chapter[], texts: Map<string, string>, upTo: number): string {
-  return chapters
-    .filter((c) => isRead(c) && c.number <= upTo)
-    .slice(-3)
-    .map((c) => `Chapter ${c.number}: ${titleOf(c)}\n${(texts.get(c.id) ?? '').slice(0, 1500)}`)
-    .join('\n\n');
-}
-
-export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter: Chapter; chapters: Chapter[]; away?: boolean }) {
+export function Mascot({ book, chapter, away }: { book: Book; chapter: Chapter; away?: boolean }) {
   const { mood = 'idle', trouble } = useMood();
   const [open, setOpen] = useState(false);
   const [poked, setPoked] = useState(false);
@@ -53,8 +47,14 @@ export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter:
     try {
       const settings = await loadSettings();
       const model = modelFor(settings, book.model);
-      const readIds = chapters.filter(isRead).map((c) => c.id).join(',');
-      const key = `wizard:${hash(`${book.id}|${readIds}|${q}|${model.id}`)}`;
+      // Read fresh: how far I am in this chapter changes while the bubble is open.
+      const data = await loadWorldData(book.id);
+      if (!data) return;
+      const now = data.chapters.find((c) => c.id === chapter.id) ?? chapter;
+      const line = catLine(data.chapters, data.book.startLine);
+      const readIds = data.chapters.filter(isRead).map((c) => c.id).join(',');
+      const at = isRead(now) ? 1 : Math.round((now.position ?? 0) * 20) / 20;
+      const key = `wizard:${hash(`${book.id}|${readIds}|${now.id}@${at}|${q}|${model.id}`)}`;
 
       // The same question about the same reading is answered from memory, for free.
       const saved = (await db.settings.get(key))?.value as { text: string; cost?: number } | undefined;
@@ -71,25 +71,32 @@ export function Mascot({ book, chapter, chapters, away }: { book: Book; chapter:
         return;
       }
 
-      const texts = new Map((await db.texts.toArray()).map((t) => [t.chapterId, t.text]));
-      const translations = new Map((await db.translations.toArray()).map((t) => [t.chapterId, t.text]));
-      const glossary: GlossaryEntry[] = (await db.glossary.where('bookId').equals(book.id).toArray()).filter((g) => g.status === 'ok');
-      const readText = new Map<string, string>();
-      for (const c of chapters.filter(isRead)) {
-        const t = needsTranslation(book, texts.get(c.id)) ? translations.get(c.id) : undefined;
-        readText.set(c.id, t ?? texts.get(c.id) ?? '');
-      }
-      const names = glossary.map((g) => `${g.english} (${g.original})`).join(', ');
+      // Only this book's text, in the language I read it in.
+      const [texts, translations] = await Promise.all([db.texts.where('bookId').equals(book.id).toArray(), db.translations.where('bookId').equals(book.id).toArray()]);
+      const original = new Map(texts.map((t) => [t.chapterId, t.text]));
+      const english = new Map(translations.map((t) => [t.chapterId, t.text]));
+      const textOf = (id: string) => (needsTranslation(data.book, original.get(id)) ? english.get(id) : undefined) ?? original.get(id);
+      const notes = catContext({
+        question: q,
+        world: worldAt(data, { line, spoilers: !!data.book.worldSpoilers }),
+        line,
+        chapters: data.chapters,
+        textOf,
+        current: now,
+      });
       const messages: ChatMessage[] = [
         {
           role: 'system',
           content:
-            'You are a friendly cat in a wizard hat, reading this novel alongside the reader. Use only the excerpts given. ' +
-            'Never reveal or guess what comes after the excerpts. Answer in under 80 words.',
+            'You are a friendly, slightly smug cat in a wizard hat, reading this novel alongside the reader. ' +
+            'You are given notes and passages covering ONLY what the reader has read so far. Answer only from them. ' +
+            'Never reveal, hint at or guess what comes later, and never use outside knowledge of this book, even if you know it. ' +
+            'If the answer is not in what they have read, say they have not got there yet (or it has not come up), without hinting either way. ' +
+            'Use the names as written in the notes. Answer in under 80 words.',
         },
         {
           role: 'user',
-          content: `Book: ${book.title}\n${names ? `Names: ${names}\n` : ''}\nExcerpts from chapters already read:\n${readExcerpts(chapters, readText, chapter.number)}\n\nQuestion: ${q}`,
+          content: `Book: ${book.title}\nThe reader has finished up to chapter ${line}${now.number > line ? ` and is partway through chapter ${now.number}` : ''}.\n\n${notes}\n\nQuestion: ${q}`,
         },
       ];
       const result = await chat(settings, model.id, messages);

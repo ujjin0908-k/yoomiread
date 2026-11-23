@@ -35,7 +35,7 @@ import {
   progress,
 } from '../logic';
 import { costOf, estimateTokens, formatCost } from '../translate/prompt';
-import { keepTranslation, aiReady, loadSettings, modelFor, translateChapter, translateTitle, translateTitles, type ChapterRun } from '../translate/run';
+import { keepTranslation, aiReady, worldNotesOn, loadSettings, modelFor, translateChapter, translateTitle, translateTitles, type ChapterRun } from '../translate/run';
 import type { Book, BookLanguage, BookStyle, Chapter, GenreId, GlossaryKind, Shelf, TranslateSettings } from '../types';
 import { GENRES, guessGenre } from '../genres';
 import { parseSources, sourcesText, webLink } from '../sources';
@@ -905,7 +905,7 @@ function TranslateSheet({ book, chapters, done, onClose }: { book: Book; chapter
   let input = 0;
   let output = 0;
   for (const c of batch) {
-    const t = estimateTokens(lengths?.get(c.id) ?? '字'.repeat(c.length ?? 0));
+    const t = estimateTokens(lengths?.get(c.id) ?? '字'.repeat(c.length ?? 0), 0, worldNotesOn(settings));
     input += t.input;
     output += t.output;
   }
