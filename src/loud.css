@@ -876,22 +876,22 @@ a.pocket:active .pocket-cv {
 .tile-label {
   font-weight: 600;
 }
-.tiles:not(.one) .tile:nth-child(1) {
+.tiles:not(.one, .quiet) .tile:nth-child(1) {
   background: var(--pill);
   color: var(--pill-ink);
 }
-.tiles:not(.one) .tile:nth-child(1) .tile-label {
+.tiles:not(.one, .quiet) .tile:nth-child(1) .tile-label {
   color: var(--pill-ink);
 }
-.tiles:not(.one) .tile:nth-child(3) {
+.tiles:not(.one, .quiet) .tile:nth-child(3) {
   background: var(--accent);
   color: #14121f;
 }
-.tiles:not(.one) .tile:nth-child(3) .tile-label {
+.tiles:not(.one, .quiet) .tile:nth-child(3) .tile-label {
   color: #14121f;
 }
-/* Today's bar is the red one. */
-.chart-wrap svg > g:last-of-type .bar-mark {
+/* Today's (this month's) bar is the red one. */
+.chart-wrap .bar-mark.now {
   fill: var(--accent);
 }
 .wizard-card p {
@@ -3014,4 +3014,190 @@ body[data-reader='night'] {
 .ask-compose:focus-within {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* ---------- Stats (src/pages/Stats.tsx): range, hero, heat squares, bars, books ---------- */
+
+.stats-range {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 4px 0 14px;
+}
+.stats-range button {
+  min-width: 0;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+.stats-hero {
+  grid-template-columns: 1fr 1fr;
+}
+.stats-hero-main {
+  grid-column: 1 / -1;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.hero-num.big {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 3.1rem;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+.hero-compare {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.stats-page .chart-card {
+  margin-top: 12px;
+}
+.avg-line line {
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.55;
+}
+.axis.tiny {
+  font-size: 6.5px;
+}
+.heat-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.heat {
+  cursor: pointer;
+}
+.heat.l0 {
+  fill: var(--line);
+  background: var(--line);
+}
+.heat.l1 {
+  fill: color-mix(in srgb, var(--accent) 28%, transparent);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.heat.l2 {
+  fill: color-mix(in srgb, var(--accent) 50%, transparent);
+  background: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.heat.l3 {
+  fill: color-mix(in srgb, var(--accent) 74%, transparent);
+  background: color-mix(in srgb, var(--accent) 74%, transparent);
+}
+.heat.l4 {
+  fill: var(--accent);
+  background: var(--accent);
+}
+.heat.picked {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+.heat-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+.heat-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.heat-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.heat-legend span:first-child {
+  margin-right: 3px;
+}
+.heat-legend span:last-child {
+  margin-left: 3px;
+}
+.hbars-head {
+  margin: 12px 0 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.hbars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+.hbars li {
+  display: grid;
+  grid-template-columns: minmax(96px, 38%) 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+.hbar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hbar-track {
+  height: 10px;
+}
+.hbar {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: var(--chart);
+}
+.hbars li:first-child .hbar {
+  background: var(--accent);
+}
+.hbar-value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.stat-books {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+.stat-books li + li {
+  border-top: 1px solid var(--line);
+}
+.stat-books a {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  color: inherit;
+  text-decoration: none;
+}
+.stat-book-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.stat-book-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.progress-track {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+.progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--chart);
+  border-radius: 2px;
 }
