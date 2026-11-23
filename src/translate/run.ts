@@ -261,7 +261,7 @@ async function runChapter(chapter: Chapter, options: ChapterOptions): Promise<Ch
     world: worldNotesOn(options.settings),
   });
   const result = await chat(options.settings, options.model, messages, options.onText, options.signal);
-  const { text: english, terms, summary, title, world: worldLines } = splitReply(result.text, sourceOf(book));
+  const { text: english, terms, summary, title, world: worldLines, speakers } = splitReply(result.text, sourceOf(book));
   const world = worldNotesOn(options.settings) ? chapterWorld(worldLines, chapter.number) : undefined;
   const option = modelFor(options.settings, options.model);
   const spend = callCost(option, messages, result);
@@ -292,6 +292,7 @@ async function runChapter(chapter: Chapter, options: ChapterOptions): Promise<Ch
     summary,
     lang: targetOf(book).id,
     title,
+    speakers,
     createdAt: Date.now(),
   };
   let newTerms = 0;

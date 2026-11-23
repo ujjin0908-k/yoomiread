@@ -5,6 +5,7 @@ import { usePictureUrl } from './picture';
 import { motionOk } from './motion';
 import type { Book } from './types';
 import { go } from './hooks';
+import { withoutSpeakerTags } from './translate/prompt';
 
 export function Stars({ value, onChange, size = 'md' }: { value?: number; onChange?: (v: number) => void; size?: 'sm' | 'md' }) {
   const v = value ?? 0;
@@ -267,7 +268,7 @@ export function Working({ label, peek }: { label: string; peek?: string }) {
       </p>
       {peek ? (
         <p className="peek" lang="en">
-          {peek.slice(-260)}
+          {withoutSpeakerTags(peek).slice(-260)}
           <span className="caret" aria-hidden="true" />
         </p>
       ) : null}
