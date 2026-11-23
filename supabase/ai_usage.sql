@@ -44,3 +44,37 @@ order by 1 desc, cost_usd desc;
 
 revoke all on public.ai_spend_by_month from anon, authenticated;
 revoke all on public.ai_spend_by_kind from anon, authenticated;
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- Trust step (2026-11-23): reserve before calling the AI, so requests sent at the same moment cannot all pass the
+-- limits. Safe to run again on a project that already has the table.
+
+alter table public.ai_usage add column if not exists pending boolean not null default false;
+
+-- Reserves `p_amount` US$ for one AI call, or refuses: 'month' (this reader's monthly limit) or 'day' (everyone's
+-- daily ceiling). Locks per reader and for the daily total, so two calls at once are checked one after the other.
+-- Only the server (service key) calls it.
+create or replace function public.ai_reserve(
+  p_user uuid, p_amount numeric, p_month_limit numeric, p_day_limit numeric, p_model text, p_kind text
+) returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  spent_month numeric;
+  spent_day numeric;
+  new_id bigint;
+begin
+  perform pg_advisory_xact_lock(hashtext('ai-day'));
+  perform pg_advisory_xact_lock(hashtext(p_user::text));
+  select coalesce(sum(cost_usd), 0) into spent_day from ai_usage where at >= date_trunc('day', now());
+  if p_day_limit is not null and spent_day + p_amount > p_day_limit then
+    return jsonb_build_object('error', 'day');
+  end if;
+  select coalesce(sum(cost_usd), 0) into spent_month from ai_usage
+    where user_id = p_user and at >= date_trunc('month', now() at time zone 'utc') at time zone 'utc';
+  if spent_month + p_amount > p_month_limit then
+    return jsonb_build_object('error', 'month');
+  end if;
+  insert into ai_usage (user_id, model, kind, input_tokens, output_tokens, cost_usd, estimated, pending)
+    values (p_user, p_model, p_kind, 0, 0, p_amount, true, true) returning id into new_id;
+  return jsonb_build_object('id', new_id);
+end $$;
+revoke all on function public.ai_reserve(uuid, numeric, numeric, numeric, text, text) from public, anon, authenticated;
