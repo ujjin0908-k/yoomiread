@@ -287,6 +287,17 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   "Fill in from file" on its page (`src/pages/FillText.tsx`, `src/fillText.ts`): pick the same PDF or ePub; chapters
   are matched by number and title, never overwritten, and a different book is refused.
 
+- **Japanese and Korean (2026-11-23, item 4):** books can be Japanese (`ja`) or Korean (`ko`) as well as Chinese.
+  - `src/languages.ts` holds each source language's name, script, how names are romanized (pinyin, Hepburn, Revised
+    Romanization), and reading speed. The language is guessed from the text: kana means Japanese, hangul Korean,
+    Han alone Chinese.
+  - Translation, glossary scan, chapter and book titles, and "Check the original" all use the book's language.
+    Chinese books get exactly the same instructions as before (tested).
+  - PDF chapter headings: 第1話, プロローグ, 제1화, 12화, 프롤로그. Korean chapter numbers. Japanese and Korean genre words.
+  - Reader: Noto Serif JP and KR, a Japanese first-line indent, Korean keep-all line breaks.
+  - Tapping a word: Wikipedia in that language, plus a Jisho or Naver link (no offline dictionary yet).
+  - Chapter titles in CJK are now upright in their own serif (Chinese titles too, instead of a fake italic).
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless

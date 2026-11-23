@@ -1,3 +1,6 @@
+import { db } from '../db';
+import { useLive } from '../hooks';
+import { LANGUAGES, sourceOf } from '../languages';
 import { Search } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Sheet } from '../components';
@@ -24,6 +27,8 @@ export function FixLine({
   onClose: () => void;
 }) {
   const pair = pairAt(original, english, selection.start);
+  const book = useLive(() => db.books.get(bookId), [bookId]);
+  const src = sourceOf(book) ?? LANGUAGES.zh;
   const [answer, setAnswer] = useState<FixAnswer>();
   const [zh, setZh] = useState('');
   const [better, setBetter] = useState('');
@@ -60,7 +65,7 @@ export function FixLine({
       setZh(text);
       setError('');
     } else {
-      setError('Select the Chinese words in the paragraph above first (press and hold, then drag).');
+      setError(`Select the ${src.name} words in the paragraph above first (press and hold, then drag).`);
     }
   }
 
@@ -104,7 +109,7 @@ export function FixLine({
                 pair.english
               )}
             </p>
-            <p className="fix-zh" lang="zh" ref={zhRef}>
+            <p className="fix-zh" lang={src.htmlLang} ref={zhRef}>
               {zh && pair.original.includes(zh) ? (
                 <>
                   {pair.original.slice(0, pair.original.indexOf(zh))}
@@ -121,7 +126,7 @@ export function FixLine({
               <div className="row-2">
                 <button type="button" className="pill-btn" disabled={!!busy} onClick={() => void find()}>
                   <Search size={16} />
-                  <span>{busy || 'Find the Chinese'}</span>
+                  <span>{busy || `Find the ${src.name}`}</span>
                 </button>
                 <button type="button" className="btn ghost" disabled={!!busy} onPointerDown={(e) => e.preventDefault()} onClick={useSelected}>
                   Use my selection
@@ -130,15 +135,15 @@ export function FixLine({
             )}
             {answer?.meaning && (
               <p className="small">
-                <b lang="zh">{answer.original}</b>
+                <b lang={src.htmlLang}>{answer.original}</b>
                 {answer.literal ? ` (literally “${answer.literal}”)` : ''}: {answer.meaning}
               </p>
             )}
 
             <div className="row-2">
               <label>
-                Chinese
-                <input lang="zh" value={zh} disabled={!!busy} onChange={(e) => setZh(e.target.value)} />
+                {src.name}
+                <input lang={src.htmlLang} value={zh} disabled={!!busy} onChange={(e) => setZh(e.target.value)} />
               </label>
               <label>
                 English instead

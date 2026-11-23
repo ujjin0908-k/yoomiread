@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Sheet } from '../components';
 import { db } from '../db';
 import { newId } from '../logic';
-import { lookup, type Entry } from '../dictionary';
+import { lookup, type Entry, type LookupLanguage } from '../dictionary';
 
-async function wikiSummary(word: string, lang: 'en' | 'zh'): Promise<string | undefined> {
+async function wikiSummary(word: string, lang: LookupLanguage): Promise<string | undefined> {
   const res = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(word)}`);
   if (!res.ok) return undefined;
   const body = (await res.json()) as { extract?: string };
@@ -12,7 +12,7 @@ async function wikiSummary(word: string, lang: 'en' | 'zh'): Promise<string | un
 }
 
 /** A word tapped in the reader: its meaning from a dictionary and Wikipedia, and a way to keep it. */
-export function WordSheet({ word, bookId, lang, onClose }: { word: string; bookId: string; lang: 'en' | 'zh'; onClose: () => void }) {
+export function WordSheet({ word, bookId, lang, onClose }: { word: string; bookId: string; lang: LookupLanguage; onClose: () => void }) {
   const [defs, setDefs] = useState<Entry | null | undefined>();
   const [wiki, setWiki] = useState<string | undefined>();
   const [english, setEnglish] = useState('');
@@ -55,7 +55,7 @@ export function WordSheet({ word, bookId, lang, onClose }: { word: string; bookI
       <div className="form">
         <p className="small muted">Dictionary{defs?.pron ? ` · ${defs.pron}` : ''}</p>
         {defs === undefined && <p className="small">Looking up…</p>}
-        {defs === null && <p className="small">Not in the dictionary.</p>}
+        {defs === null && <p className="small">{lang === 'ja' || lang === 'ko' ? 'No offline dictionary for this language yet.' : 'Not in the dictionary.'}</p>}
         {defs?.text.split('\n').map((line, i) => (
           <p key={i} className="small">
             {line}
@@ -64,6 +64,16 @@ export function WordSheet({ word, bookId, lang, onClose }: { word: string; bookI
         {lang === 'zh' && (
           <a className="btn ghost" href={mdbg} target="_blank" rel="noopener noreferrer">
             Open in MDBG dictionary
+          </a>
+        )}
+        {lang === 'ja' && (
+          <a className="btn ghost" href={`https://jisho.org/search/${encodeURIComponent(word)}`} target="_blank" rel="noopener noreferrer">
+            Open in Jisho dictionary
+          </a>
+        )}
+        {lang === 'ko' && (
+          <a className="btn ghost" href={`https://en.dict.naver.com/#/search?query=${encodeURIComponent(word)}`} target="_blank" rel="noopener noreferrer">
+            Open in Naver dictionary
           </a>
         )}
 

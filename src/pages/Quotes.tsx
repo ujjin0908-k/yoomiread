@@ -1,3 +1,4 @@
+import { htmlLangOf } from '../languages';
 import { ArrowRight, Search, X } from 'lucide-react';
 import { useState } from 'react';
 import { Cover, Empty, PageTitle, TabBar, TopBar } from '../components';
@@ -96,7 +97,7 @@ export function Quotes() {
                     <span className="quote-where">
                       Ch.{chapter?.number ?? '?'} <span aria-hidden="true">|</span> {formatDate(note.createdAt)}
                     </span>
-                    <span className="quote-text" lang={book.language === 'zh' ? 'zh' : undefined}>
+                    <span className="quote-text" lang={htmlLangOf(book.language)}>
                       {note.quote}
                     </span>
                     {note.body && <span className="quote-note">{note.body}</span>}
@@ -129,7 +130,7 @@ export function QuoteCard({ id }: { id: string }) {
   const { note, book, chapter } = item;
   const text = note.quote ?? '';
   // The last word gets the marker stroke.
-  const cut = Math.max(text.trimEnd().lastIndexOf(' '), book.language === 'zh' ? text.length - 2 : -1);
+  const cut = Math.max(text.trimEnd().lastIndexOf(' '), htmlLangOf(book.language) ? text.length - 2 : -1);
   const head = cut > 0 ? text.slice(0, cut + 1) : '';
   const tail = cut > 0 ? text.slice(cut + 1) : text;
 
@@ -140,7 +141,7 @@ export function QuoteCard({ id }: { id: string }) {
         <span className="quote-orn" aria-hidden="true">
           ❦
         </span>
-        <blockquote lang={book.language === 'zh' ? 'zh' : undefined}>
+        <blockquote lang={htmlLangOf(book.language)}>
           “{head}
           <mark>{tail}”</mark>
         </blockquote>

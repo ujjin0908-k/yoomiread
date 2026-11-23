@@ -1225,6 +1225,20 @@ button {
   text-indent: 0;
 }
 
+/* Japanese and Korean pages use their own serif, so kanji keep Japanese shapes and hangul is not set in a fallback. */
+.reader:lang(ja) p {
+  font-family: 'Noto Serif JP', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+  text-indent: 1em;
+  line-break: strict;
+}
+.reader:lang(ko) p {
+  font-family: 'Noto Serif KR', 'AppleMyungjo', 'Batang', serif;
+  word-break: keep-all;
+}
+.reader.drop:lang(ja) p:first-child {
+  text-indent: 0;
+}
+
 .hl {
   background: linear-gradient(transparent 8%, var(--hl) 8%, var(--hl) 92%, transparent 92%);
   color: inherit;
@@ -1654,6 +1668,17 @@ button {
   font-family: 'Noto Serif SC', var(--display);
   font-size: clamp(1.6rem, 7vw, 2.4rem);
   line-height: 1.5;
+}
+.quote-card blockquote:lang(ja) {
+  font-family: 'Noto Serif JP', var(--display);
+  font-size: clamp(1.6rem, 7vw, 2.4rem);
+  line-height: 1.5;
+}
+.quote-card blockquote:lang(ko) {
+  font-family: 'Noto Serif KR', var(--display);
+  font-size: clamp(1.5rem, 6.5vw, 2.2rem);
+  line-height: 1.5;
+  word-break: keep-all;
 }
 
 .quote-card mark {

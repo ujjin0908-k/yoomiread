@@ -43,7 +43,7 @@ const STEPS: { cat: string; title: string; text: string }[] = [
   {
     cat: 'working',
     title: 'Translate when you want to',
-    text: 'Chinese novels can be translated into English with names kept the same in every chapter. This uses AI, which you set up in Settings. Everything else works without it.',
+    text: 'Chinese, Japanese and Korean novels can be translated into English, with names kept the same in every chapter. This uses AI, which you set up in Settings. Everything else works without it.',
   },
 ];
 

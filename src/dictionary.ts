@@ -22,8 +22,12 @@ async function load(lang: 'en' | 'zh'): Promise<Dict> {
   return loaded[lang]!;
 }
 
-/** Looks a word up in the bundled dictionary. Undefined when the word is not in it. */
-export async function lookup(lang: 'en' | 'zh', word: string): Promise<Entry | undefined> {
+/** Languages a word can be looked up in from the reader. Only English and Chinese have an offline dictionary yet. */
+export type LookupLanguage = 'en' | 'zh' | 'ja' | 'ko';
+
+/** Looks a word up in the bundled dictionary. Undefined when the word is not in it, or the language has none yet. */
+export async function lookup(lang: LookupLanguage, word: string): Promise<Entry | undefined> {
+  if (lang !== 'en' && lang !== 'zh') return undefined;
   const dict = await load(lang);
   const key = lang === 'en' ? word.toLowerCase() : word;
   const hit = dict[key];

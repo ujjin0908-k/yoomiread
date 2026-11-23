@@ -1,3 +1,4 @@
+import { htmlLangOf } from './languages';
 import { BarChart3, ChevronLeft, Home, LibraryBig, Quote, X } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { usePictureUrl } from './picture';
@@ -181,7 +182,7 @@ export function Cover({ book, shape = 'rect', size = 'md' }: { book: Book; shape
       ) : (
         <div className={`cover-made tone-${tone(book.title)}`}>
           <span className="cover-rule" />
-          <span className="cover-name" lang={book.language === 'zh' ? 'zh' : undefined}>
+          <span className="cover-name" lang={htmlLangOf(book.language)}>
             {book.title}
           </span>
           <span className="cover-orn">❦</span>

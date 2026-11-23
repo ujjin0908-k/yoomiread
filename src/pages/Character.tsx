@@ -1,3 +1,4 @@
+import { htmlLangOfText } from '../languages';
 import { LookBox } from './GlossaryCard';
 import { cameFromChapter, chapterBefore } from '../trail';
 import { ImagePlus, ShieldCheck, X } from 'lucide-react';
@@ -170,7 +171,7 @@ export function CharacterPage({ id }: { id: string }) {
           <div className="char-meta">
             <h1>{entry.english}</h1>
             {needsTranslation(book) && entry.original !== entry.english && (
-              <span className="muted" lang="zh">
+              <span className="muted" lang={htmlLangOfText(entry.original)}>
                 {entry.original}
               </span>
             )}

@@ -1,3 +1,4 @@
+import { htmlLangOf } from '../languages';
 import { ChevronRight, Plus, Settings as Gear } from 'lucide-react';
 import { useState } from 'react';
 import { Book3D, Empty, Pocket, SampleButton, TabBar } from '../components';
@@ -193,7 +194,7 @@ function NowReading({ book, chapters }: { book: Book; chapters: Chapter[] }) {
             <small>%</small>
           </span>
         </div>
-        <h3 lang={book.language === 'zh' ? 'zh' : undefined}>{book.title}</h3>
+        <h3 lang={htmlLangOf(book.language)}>{book.title}</h3>
         <span className="muted small">{next ? `${titleOf(next)}${left ? ` · ${left} min left` : ''}` : 'No chapters yet'}</span>
         <button type="button" className="pill-btn" onClick={() => go(next ? `chapter/${next.id}` : `book/${book.id}`)}>
           <span>{next ? 'Continue' : 'Open book'}</span>

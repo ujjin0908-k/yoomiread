@@ -79,8 +79,8 @@ function endpoint(baseUrl: string): string {
  */
 export function kindOf(messages: ChatMessage[]): string {
   const first = messages[0]?.content ?? '';
-  if (/^You translate (Chinese web novels|the chapter titles)/.test(first)) return 'translate';
-  if (/^You translate Chinese book titles/.test(first)) return 'title';
+  if (/^You translate (\w+ web novels|the chapter titles)/.test(first)) return 'translate';
+  if (/^You translate \w+ book titles/.test(first)) return 'title';
   if (/^You (prepare a glossary|list the characters)/.test(first)) return 'glossary';
   if (/^You keep a reader's guide/.test(first)) return 'world';
   if (/^You check one line/.test(first)) return 'fix';

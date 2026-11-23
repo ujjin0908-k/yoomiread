@@ -1,3 +1,4 @@
+import { BOOK_LANGUAGES, htmlLangOf, htmlLangOfText, ANY_SOURCE } from '../languages';
 import { BackdropPicker } from './BackdropPicker';
 import { inOrder, useChapterOrder } from '../chapterOrder';
 import '../world/world.css';
@@ -142,7 +143,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const facts: [string, string][] = [
     ['Author', book.author],
     ['Original', book.originalTitle ?? ''],
-    ['Language', book.language === 'zh' ? 'Chinese' : book.language === 'en' ? 'English' : 'Other'],
+    ['Language', BOOK_LANGUAGES.find((l) => l.id === book.language)?.label ?? 'Other'],
     ['Started', formatDate(book.startedAt)],
     ['Finished', formatDate(book.finishedAt)],
     ['Chapters', p.total ? `${p.read} of ${p.total} read` : ''],
@@ -184,7 +185,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
       <main className="page">
         <section className="book-hero">
           <Book3D book={book} size="lg" />
-          <h1 lang={book.language === 'zh' ? 'zh' : undefined}>{book.title}</h1>
+          <h1 lang={htmlLangOf(book.language)}>{book.title}</h1>
           {(book.shelf === 'finished' || book.shelf === 'dropped') && book.rating ? <Stars value={book.rating} /> : null}
           {book.shelf !== 'finished' && list.length > 0 && (
             <div className="hero-progress">
@@ -215,7 +216,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
             .map(([k, v]) => (
               <div key={k}>
                 <dt>{k}</dt>
-                <dd lang={k === 'Original' ? 'zh' : undefined}>{v}</dd>
+                <dd lang={k === 'Original' ? htmlLangOfText(v, book.language) : undefined}>{v}</dd>
               </div>
             ))}
         </dl>
@@ -337,7 +338,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
             <h2>Chapters</h2>
             <div className="row">
               {list.length > 1 && <OrderToggle order={order} onChange={setOrder} />}
-              {needsTranslation(book) && list.some((c) => !c.titleEn && /[\u3400-\u9fff]/.test(c.title)) && (
+              {needsTranslation(book) && list.some((c) => !c.titleEn && ANY_SOURCE.test(c.title)) && (
                 <button
                   type="button"
                   className="link"
@@ -394,7 +395,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
                 <a href={`#/chapter/${c.id}`} className="chapter-link">
                   <span className="chapter-name">
                     <span className="muted">{c.number}</span>
-                    <span lang={book.language === 'zh' && !c.titleEn ? 'zh' : undefined}>{titleOf(c)}</span>
+                    <span lang={!c.titleEn ? htmlLangOf(book.language) : undefined}>{titleOf(c)}</span>
                   </span>
                   <span className="chips">
                     {isRead(c) ? (
@@ -665,7 +666,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
   const [styleSample, setStyleSample] = useState(book.style?.sample ?? '');
   const [storySoFar, setStorySoFar] = useState(book.storySoFar ?? '');
   const [naming, setNaming] = useState('');
-  const hasChinese = /[\u3400-\u9fff]/.test(title);
+  const hasChinese = ANY_SOURCE.test(title);
 
   async function englishTitle() {
     setNaming('Translating the title…');
@@ -732,14 +733,16 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
         </label>
         <label>
           Original title <span className="muted small">(optional)</span>
-          <input lang="zh" value={originalTitle} onChange={(e) => setOriginalTitle(e.target.value)} />
+          <input lang={htmlLangOfText(originalTitle, language)} value={originalTitle} onChange={(e) => setOriginalTitle(e.target.value)} />
         </label>
         <label>
           Language
           <select value={language} onChange={(e) => setLanguage(e.target.value as BookLanguage)}>
-            <option value="zh">Chinese</option>
-            <option value="en">English</option>
-            <option value="other">Other</option>
+            {BOOK_LANGUAGES.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.label}
+              </option>
+            ))}
           </select>
         </label>
         <label>
@@ -799,7 +802,7 @@ function DetailsSheet({ book, justImported, onClose }: { book: Book; justImporte
             Titles of respect
             <select value={honorifics} onChange={(e) => setHonorifics(e.target.value as BookStyle['honorifics'] | '')}>
               <option value="">Default</option>
-              <option value="romanised">Keep romanised (Senior Brother, Master)</option>
+              <option value="romanised">Keep as in the original (Senior Brother, -san, sunbae)</option>
               <option value="english">Translate into English</option>
             </select>
           </label>

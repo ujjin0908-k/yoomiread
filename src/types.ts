@@ -2,7 +2,7 @@ import type { Picture } from './picture';
 
 export type Shelf = 'want' | 'reading' | 'finished' | 'dropped';
 
-export type BookLanguage = 'zh' | 'en' | 'other';
+export type BookLanguage = 'zh' | 'ja' | 'ko' | 'en' | 'other';
 
 /** The book's genre preset (see src/genres.ts). Not set means "General", how every book worked before presets. */
 export type GenreId = 'general' | 'fantasy' | 'cultivation' | 'scifi' | 'romance' | 'mystery';

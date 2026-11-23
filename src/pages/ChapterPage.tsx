@@ -1,3 +1,5 @@
+import { sourceOf } from '../languages';
+import type { LookupLanguage } from '../dictionary';
 import { inOrder, useChapterOrder } from '../chapterOrder';
 import { mix, topColour } from '../backdrop';
 import { BackdropPicker } from './BackdropPicker';
@@ -69,7 +71,7 @@ export function ChapterPage({ id }: { id: string }) {
   // "Check the original" for a selected English line (src/pages/FixLine.tsx).
   const [fixing, setFixing] = useState<Selection>();
   // A word tapped in the reader, looked up in a dictionary and Wikipedia.
-  const [lookup, setLookup] = useState<{ word: string; lang: 'en' | 'zh' }>();
+  const [lookup, setLookup] = useState<{ word: string; lang: LookupLanguage }>();
   const [scroll, setScroll] = useState(0);
   const textRef = useRef<HTMLDivElement>(null);
 
@@ -123,7 +125,7 @@ export function ChapterPage({ id }: { id: string }) {
   const backdropUrl = usePictureUrl(backdrop?.picture, `backdrop-${book?.id}`);
   const [barsAway, setBarsAway] = useState(false);
   useAutoHideBars(setBarsAway);
-  const zhNow = book?.language === 'zh';
+  const source = sourceOf(book);
 
   // Reader theme colors the whole page while it is open, including the top of the screen (the status bar).
   useEffect(() => {
@@ -190,7 +192,7 @@ export function ChapterPage({ id }: { id: string }) {
   const live = list.map((c) => (c.id === id ? { ...c, position: Math.max(c.position ?? 0, scroll) } : c));
   const bookPct = book ? bookProgress(book, live) : 0;
   const minutesLeft = shown ? readingMinutes(shown, scroll) : 0;
-  const zh = book?.language === 'zh' && !english;
+  const zh = !!source && !english;
 
   async function finishChapter() {
     await db.chapters.update(id, { read: true, position: 1 });
@@ -256,7 +258,7 @@ export function ChapterPage({ id }: { id: string }) {
       <main className="page reader-main" style={{ fontSize: FONT_SIZES[prefs.size] }}>
         <p className="eyebrow">Chapter {chapter.number}</p>
         {aheadStatus && <p className="small muted">{aheadStatus}</p>}
-        <h1 className="chapter-title" lang={english && chapter.titleEn ? undefined : zh ? 'zh' : undefined}>
+        <h1 className="chapter-title" lang={english && chapter.titleEn ? undefined : zh ? source!.htmlLang : undefined}>
           {english && chapter.titleEn ? chapter.titleEn : chapter.title}
         </h1>
         <span className="title-rule" aria-hidden="true" />
@@ -283,7 +285,7 @@ export function ChapterPage({ id }: { id: string }) {
           <div
             className={`reader ${prefs.dropCap ? 'drop' : ''}`}
             ref={textRef}
-            lang={zh ? 'zh' : 'en'}
+            lang={zh ? source!.htmlLang : 'en'}
             onClick={(e) => {
               // A highlight opens its note; a press-and-hold or drag selects text (the bar then offers Highlight and Look up).
               const sel = window.getSelection();
@@ -416,8 +418,8 @@ export function ChapterPage({ id }: { id: string }) {
               className="pill-btn small ghost-pill"
               onPointerDown={(e) => e.preventDefault()}
               onClick={() => {
-                const isZh = zhNow && !english;
-                setLookup({ word: lookable(pending.quote)!, lang: isZh ? 'zh' : 'en' });
+                // A word in the book's own language, or in the English translation.
+                setLookup({ word: lookable(pending.quote)!, lang: source && !english ? source.id : 'en' });
                 window.getSelection()?.removeAllRanges();
               }}
             >
@@ -481,7 +483,7 @@ export function ChapterPage({ id }: { id: string }) {
                   onClick={() => setSheet(undefined)}
                 >
                   <span className="muted">{c.number}</span>
-                  <span lang={zh && !c.titleEn ? 'zh' : undefined}>{titleOf(c)}</span>
+                  <span lang={zh && !c.titleEn ? source!.htmlLang : undefined}>{titleOf(c)}</span>
                   {c.bookmarked && <Bookmark size={14} aria-label="Bookmarked" />}
                   {isRead(c) && <span className="muted small">✓</span>}
                 </a>

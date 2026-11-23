@@ -1,3 +1,4 @@
+import { htmlLangOfText } from '../languages';
 import { useState } from 'react';
 import { picturePrompt } from '../art';
 import { genreOf, kindLabel } from '../genres';
@@ -35,7 +36,7 @@ export function GlossaryCard({ entry, onClose }: { entry: GlossaryEntry; onClose
             <span className="chip">{kindLabel(genreOf(book), entry.kind)}</span>
             {entry.gender && <span className="chip">{entry.gender}</span>}
             {entry.original !== entry.english && (
-              <p className="muted small" lang="zh">
+              <p className="muted small" lang={htmlLangOfText(entry.original, book?.language)}>
                 {entry.original}
               </p>
             )}

@@ -2457,3 +2457,18 @@ body[data-reader='night'] {
   align-items: center;
   gap: 8px;
 }
+
+/* Chapter titles in the book's own script: the matching serif, upright (no slanted CJK), so "第1話" keeps its digit. */
+.chapter-title:lang(zh) {
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
+  font-style: normal;
+}
+.chapter-title:lang(ja) {
+  font-family: 'Noto Serif JP', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+  font-style: normal;
+}
+.chapter-title:lang(ko) {
+  font-family: 'Noto Serif KR', 'AppleMyungjo', 'Batang', serif;
+  font-style: normal;
+  word-break: keep-all;
+}

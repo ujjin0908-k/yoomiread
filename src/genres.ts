@@ -169,15 +169,15 @@ export function kindsShown(genre: Genre, have: Iterable<GlossaryKind>): Glossary
 /** Words that point to a genre. Scored on the phone; nothing is sent anywhere. */
 const SIGNS: Record<Exclude<GenreId, 'general'>, RegExp> = {
   cultivation:
-    /\b(cultivat\w*|qi|dantian|meridians?|sect|elders?|disciples?|dao|immortals?|foundation establishment|core formation|nascent soul|martial arts?|young master|beyonders?|sequence \d)\b|修炼|修仙|宗门|灵气|丹田|筑基|金丹|元婴|弟子|长老|师尊|师兄|武功|序列/gi,
+    /\b(cultivat\w*|qi|dantian|meridians?|sect|elders?|disciples?|dao|immortals?|foundation establishment|core formation|nascent soul|martial arts?|young master|beyonders?|sequence \d)\b|修炼|修仙|宗门|灵气|丹田|筑基|金丹|元婴|弟子|长老|师尊|师兄|武功|序列|무림|내공|문파|수련|장로|사형/gi,
   fantasy:
-    /\b(magic|mage|wizards?|sorcer\w+|spells?|dragons?|elves|elf|dwarves|dwarf|orcs?|goblins?|kingdoms?|knights?|swords?|quest|prophecy|enchant\w*|castle|realm)\b|魔法|巨龙|精灵|骑士|王国/gi,
+    /\b(magic|mage|wizards?|sorcer\w+|spells?|dragons?|elves|elf|dwarves|dwarf|orcs?|goblins?|kingdoms?|knights?|swords?|quest|prophecy|enchant\w*|castle|realm)\b|魔法|巨龙|精灵|骑士|王国|魔王|勇者|異世界|冒険者|ギルド|ダンジョン|마법|마왕|용사|던전|헌터|각성|게이트|회귀|성좌/gi,
   scifi:
-    /\b(spaceships?|starships?|planets?|galaxy|galactic|space station|orbit|lasers?|androids?|robots?|cyborgs?|hyperspace|warp|colony|alien|fleet|plasma)\b|星舰|飞船|星球|机甲|星际/gi,
+    /\b(spaceships?|starships?|planets?|galaxy|galactic|space station|orbit|lasers?|androids?|robots?|cyborgs?|hyperspace|warp|colony|alien|fleet|plasma)\b|星舰|飞船|星球|机甲|星际|宇宙船|惑星|우주선|행성/gi,
   romance:
-    /\b(kiss\w*|boyfriend|girlfriend|crush|date|dating|blush\w*|wedding|husband|wife|fiancée?|heartbeat|in love)\b|恋爱|喜欢你|男朋友|女朋友|婚礼|老公|老婆/gi,
+    /\b(kiss\w*|boyfriend|girlfriend|crush|date|dating|blush\w*|wedding|husband|wife|fiancée?|heartbeat|in love)\b|恋爱|喜欢你|男朋友|女朋友|婚礼|老公|老婆|恋人|告白|彼氏|彼女|연애|고백|남자친구|여자친구|결혼/gi,
   mystery:
-    /\b(detective|murder\w*|inspector|suspects?|evidence|alibi|crime scene|victim|corpse|culprit|investigat\w*|forensic|case)\b|侦探|凶手|嫌疑|证据|命案|尸体/gi,
+    /\b(detective|murder\w*|inspector|suspects?|evidence|alibi|crime scene|victim|corpse|culprit|investigat\w*|forensic|case)\b|侦探|凶手|嫌疑|证据|命案|尸体|探偵|犯人|事件|殺人|탐정|범인|살인|증거/gi,
 };
 
 /**
