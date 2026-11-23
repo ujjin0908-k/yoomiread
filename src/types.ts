@@ -89,6 +89,8 @@ export interface Book {
   spentEstimated?: boolean;
   createdAt: number;
   updatedAt: number;
+  /** Who "I" is in a book told in the first person: a glossary person's id (see `speakersOfChapter`). */
+  narrator?: string;
 }
 
 export interface Chapter {

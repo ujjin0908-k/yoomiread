@@ -10,7 +10,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { OrderToggle, ProgressBar, Sheet, TopBar, Working } from '../components';
 import { db } from '../db';
 import { go, useLive } from '../hooks';
-import { titleOf, bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakerOf, speakersFrom, type Speaker } from '../logic';
+import { titleOf, bookProgress, folderNames, formatDate, isRead, moveToShelf, needsTranslation, newId, paragraphs, readingMinutes, segmentText, speakersFrom, speakersOfChapter, type Speaker } from '../logic';
 import { QuickDefinition, WordSheet } from './WordSheet';
 import { GlossaryCard, StoryPicture } from './GlossaryCard';
 import { FixLine } from './FixLine';
@@ -179,10 +179,15 @@ export function ChapterPage({ id }: { id: string }) {
   const speakers: Speaker[] = speakersFrom(people);
   // The picture book: a place, god or group with a picture is shown big after the paragraph that first names it.
   const scenes = shown && prefs.storyPictures ? scenesFor(paragraphs(shown).map((x) => x.text), glossary ?? []) : [];
-  const faceFor = (paragraph: string) => {
-    const id = speakerOf(paragraph, speakers);
-    return people.find((g) => g.id === id && g.picture);
-  };
+  // Who speaks each paragraph, reading the chapter in order so "he said" and back-and-forth lines find their speaker.
+  const shownParas = shown ? paragraphs(shown) : [];
+  const speakerIds = speakersOfChapter(
+    shownParas.map((x) => x.text),
+    speakers.map((s) => ({ ...s, gender: people.find((g) => g.id === s.id)?.gender })),
+    book?.narrator,
+    (glossary ?? []).filter((g) => g.kind !== 'person').flatMap((g) => [g.english, ...(g.aliases ?? [])]),
+  );
+  const faces = speakerIds.map((sid) => people.find((g) => g.id === sid && g.picture));
   const comments = (notes ?? []).filter((n) => n.kind === 'chapter');
   // A name in the glossary was selected: the bar offers its short explanation instead of the dictionary.
   const known = pending ? glossaryFor(pending.quote, (glossary ?? []).filter((g) => g.status === 'ok')) : undefined;
@@ -297,7 +302,7 @@ export function ChapterPage({ id }: { id: string }) {
               setBarsAway((away) => !away);
             }}
           >
-            {withFaces(paragraphs(shown), faceFor).map(({ p, face }, i) => (
+            {shownParas.map((p, i) => ({ p, face: faces[i] })).map(({ p, face }, i) => (
               <Fragment key={`${view}-${p.start}`}>
               {
               p.text === CENSORED ? (
@@ -781,15 +786,6 @@ function LookSheet({ book, prefs, setPrefs, onClose }: { book?: Book; prefs: Rea
       </div>
     </Sheet>
   );
-}
-
-/**
- * Pairs paragraphs with a face: faceFor finds who is speaking in a paragraph, and a face shows only
- * when the speaker changes from the paragraph before, so a long conversation does not get a circle on every line.
- */
-/** Each paragraph with the face of whoever speaks in it, every time they speak. */
-function withFaces<P extends { text: string }>(list: P[], faceFor: (text: string) => GlossaryEntry | undefined) {
-  return list.map((p) => ({ p, face: faceFor(p.text) }));
 }
 
 /**
