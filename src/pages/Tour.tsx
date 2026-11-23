@@ -27,7 +27,8 @@ export async function setTourSeen(seen: boolean): Promise<void> {
 
 /**
  * The cat pitches the app: what he says in his bubble, a title, and three selling points. Everything he claims is
- * something the app does (checked against the code when written, 2026-11-23).
+ * something the app does (checked against the code when written, 2026-11-23; buddy reads, Stats and Wrapped added the
+ * same day).
  */
 const STEPS: { cat: string; says: string; title: string; points: string[] }[] = [
   {
@@ -51,7 +52,7 @@ const STEPS: { cat: string; says: string; title: string; points: string[] }[] = 
     says: 'Forgot who that is? Ask me. I know everyone you have met so far, and I never tell what happens next.',
     title: 'The world, without spoilers',
     points: [
-      'Who is who and how they are linked, as a web',
+      'Who is who and how they are linked, and a face beside each line showing who speaks',
       'Places on a map, events on a timeline, a recap when you come back',
       'Ask the cat about the story: only from the pages you have read',
     ],
@@ -67,10 +68,34 @@ const STEPS: { cat: string; says: string; title: string; points: string[] }[] = 
     ],
   },
   {
+    cat: 'resting',
+    says: 'Bring a friend. I will hide their gasps until you reach the same chapter.',
+    title: 'Read together, no spoilers',
+    points: [
+      'Start a buddy read and invite a friend with a link',
+      'See how far along they are in the book',
+      'Their comments open only when you reach that chapter',
+    ],
+  },
+  {
     cat: 'idle',
     says: 'You read. I take notes. It is a very good arrangement.',
     title: 'Your reading life, kept',
-    points: ['Highlights, notes, quotes and reviews', 'Reading streaks, minutes and stats that add up', 'Backups, and sync across your devices when you sign in'],
+    points: [
+      'Highlights and quotes on each book, notes and reviews',
+      'Stats with charts: your streaks, your genres, when you read',
+      'Backups, and sync across your devices when you sign in',
+    ],
+  },
+  {
+    cat: 'sly',
+    says: 'Every month I make you a little book about your reading. You may share it. I insist.',
+    title: 'Your year, wrapped',
+    points: [
+      'Reading Wrapped for every month and every year',
+      'Your hours, your night-owl habits, your book of the year',
+      'Save the pages as pictures, or share them to your story',
+    ],
   },
   {
     cat: 'happy',
@@ -81,7 +106,7 @@ const STEPS: { cat: string; says: string; title: string; points: string[] }[] = 
 ];
 
 /**
- * The tour for someone new: the cat pitches the app in six short cards after the welcome screen, shown once, and only
+ * The tour for someone new: the cat pitches the app in eight short cards after the welcome screen, shown once, and only
  * while the library is empty. It ends with the free sample book or the reader's own.
  */
 export function Tour({ onDone }: { onDone: (addOwn?: boolean) => void }) {
