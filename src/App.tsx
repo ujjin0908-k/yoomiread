@@ -9,6 +9,7 @@ import { Library } from './pages/Library';
 import { BookQuotesPage, QuoteCard } from './pages/Quotes';
 import { Ask } from './pages/Ask';
 import { WrappedPage } from './pages/Wrapped';
+import { TheoriesPage } from './pages/Theories';
 import { Settings } from './pages/Settings';
 import { Stats } from './pages/Stats';
 import { Welcome } from './pages/Welcome';
@@ -61,6 +62,7 @@ export function App() {
   if (page === 'quotes') return <Library />;
   if (page === 'stats') return <Stats />;
   if (page === 'wrapped') return <WrappedPage key={id} id={id} />;
+  if (page === 'theories' && id) return <TheoriesPage key={id} bookId={id} chapterId={sub} />;
   if (page === 'settings') return <Settings />;
   if (!welcomed) {
     return (

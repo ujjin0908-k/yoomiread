@@ -120,6 +120,7 @@ export function worldAt(
 
   const numberOf = new Map(data.chapters.map((c) => [c.id, c.number]));
   const notes = data.notes
+    .filter((n) => n.kind !== 'theory')
     .map((n) => ({ ...n, chapter: numberOf.get(n.chapterId) ?? Number.MAX_SAFE_INTEGER }))
     .filter((n) => n.chapter <= o.line)
     .sort((a, b) => a.chapter - b.chapter || a.createdAt - b.createdAt);

@@ -260,7 +260,8 @@ export interface WorldEvent {
 /** A chapter as written in a backup file: text and translation included. */
 export type BackupChapter = Chapter & { text?: string; translation?: Omit<Translation, 'chapterId' | 'bookId'> };
 
-export type NoteKind = 'chapter' | 'highlight';
+/** 'theory' is a guess about the story, on the Theory board (src/pages/Theories.tsx), sealed with its chapter. */
+export type NoteKind = 'chapter' | 'highlight' | 'theory';
 export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink';
 
 export interface Note {
@@ -279,6 +280,12 @@ export interface Note {
   /** Highlight color; yellow when not set. */
   color?: HighlightColor;
   body: string;
+  /** A theory's outcome: came true or wrong (open while unset), and the chapter that settled it. */
+  verdict?: 'right' | 'wrong';
+  settledChapter?: number;
+  /** What the cat said when it last checked this theory, and when. */
+  catSays?: string;
+  checkedAt?: number;
   createdAt: number;
   updatedAt: number;
 }

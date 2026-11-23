@@ -2,7 +2,7 @@ import { BOOK_LANGUAGES, htmlLangOf, htmlLangOfText, ANY_SOURCE, sourceOf, targe
 import { BackdropPicker } from './BackdropPicker';
 import { inOrder, useChapterOrder } from '../chapterOrder';
 import '../world/world.css';
-import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, Orbit, PenLine, Plus, Quote, Trash2 } from 'lucide-react';
+import { BookMarked, ChevronRight, ImagePlus, Languages, Lightbulb, MessageCircle, Orbit, PenLine, Plus, Quote, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Book3D, Cover, OrderToggle, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
 import { toPicture } from '../picture';
@@ -102,7 +102,9 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const p = progress(list);
   const pct = bookProgress(book, list);
   const next = continueChapter(book, list);
-  const notesFor = (chapterId: string) => (notes ?? []).filter((n) => n.chapterId === chapterId).length;
+  const notesFor = (chapterId: string) => (notes ?? []).filter((n) => n.chapterId === chapterId && n.kind !== 'theory').length;
+  const theories = (notes ?? []).filter((n) => n.kind === 'theory');
+  const openTheories = theories.filter((n) => !n.verdict).length;
   const highlights = (notes ?? []).filter((n) => n.kind === 'highlight').length;
   const quoteCount = (notes ?? []).filter((n) => n.kind === 'highlight' && n.quote).length;
 
@@ -313,6 +315,11 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
             <Quote size={18} />
             <span>Quotes</span>
             <span className="muted small">{quoteCount ? `${quoteCount} kept` : 'none yet'}</span>
+          </button>
+          <button type="button" className="tool" onClick={() => go(`theories/${id}`)}>
+            <Lightbulb size={18} />
+            <span>Theories</span>
+            <span className="muted small">{theories.length ? `${openTheories} open · ${theories.length - openTheories} settled` : 'Make a guess'}</span>
           </button>
           <button type="button" className="tool tool-world" onClick={() => go(`world/${id}`)}>
             <Orbit size={20} />
