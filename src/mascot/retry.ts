@@ -1,3 +1,4 @@
+import { aiAllowedFor } from '../import/ao3Book';
 import { db } from '../db';
 import { needsTranslation, titleOf } from '../logic';
 import { aiReady, loadSettings, modelFor, translateChapter } from '../translate/run';
@@ -42,6 +43,7 @@ export async function retryTranslation(input: { book: Book; current: Chapter; tr
   const target = (input.trouble?.chapterId && ((await db.chapters.get(input.trouble.chapterId)) as Chapter | undefined)) || input.current;
   const book = target.bookId === input.book.id ? input.book : ((await db.books.get(target.bookId)) as Book | undefined) ?? input.book;
   const text = (await db.texts.get(target.id))?.text;
+  if (!aiAllowedFor(book)) return { now: 'This is a fan work, so AI stays off for it unless you turn it on in Edit details.' };
   if (!text) return { now: `"${titleOf(target)}" has no text for me to translate.` };
   if (!needsTranslation(book, text)) return { now: `"${titleOf(target)}" is already in English. Nothing to translate.` };
   const running = jobs.get(target.id);

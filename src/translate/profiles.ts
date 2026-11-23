@@ -1,3 +1,4 @@
+import { AI_OFF_FOR_FAN_WORK, aiAllowedFor } from '../import/ao3Book';
 import { db } from '../db';
 import { isRead, needsTranslation, newId } from '../logic';
 import type { Book, Chapter, CharacterProfile, GlossaryEntry, GlossaryKind, ProfileFact, TranslateSettings, WorldEvent, WorldLink } from '../types';
@@ -297,6 +298,7 @@ export async function updateProfiles(input: {
   onStatus?: (line: string) => void;
 }): Promise<UpdateResult> {
   const { book, chapters, picked, findNew, settings, model, signal } = input;
+  if (!aiAllowedFor(book)) throw new Error(AI_OFF_FOR_FAN_WORK);
   const needed = chapters.filter((c) => picked.some((e) => chaptersToRead(chapters, e).includes(c)));
   const texts = await readingTexts(book, needed);
   const plan = planReading(chapters, picked, (id) => texts.get(id) ?? '', findNew);
@@ -645,6 +647,7 @@ export async function searchStory(input: {
   linksOnly?: boolean;
 }): Promise<SearchResult> {
   const { book, chapters, settings, model, signal, linksOnly } = input;
+  if (!aiAllowedFor(book)) throw new Error(AI_OFF_FOR_FAN_WORK);
   const from = linksOnly ? (book.linksUpTo ?? 0) : searchedTo(book);
   const todo = chaptersToSearch(chapters, from);
   const texts = await readingTexts(book, todo);

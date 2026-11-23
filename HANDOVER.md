@@ -323,6 +323,17 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
     the full sheet. This works for every language with a dictionary.
   - The selection bar now sits above the cat. The WordNet license is in `public/dict/WORDNET-LICENSE.txt`.
 
+- **AO3 import (2026-11-23, item 6):** Add book → "From AO3", or any ePub that AO3 made.
+  - YoomiRead never fetches from AO3. The reader downloads the EPUB on AO3; a pasted work link gives a button to
+    AO3's own download.
+  - The preface gives the work's details (`Book.ao3`): rating, warnings, fandoms, relationships, characters, tags,
+    summary, words, chapters, complete or not. AO3's preface and afterword pages are left out of the chapters.
+  - The characters fill the glossary and the relationships fill the People web, from the tags and for free
+    ("A/B" romantic, "A & B" friendship, `ao3Guide`). The genre is guessed from the tags.
+  - A newer download of the same work adds only its new chapters (`addNewAo3Chapters`), keeping notes.
+  - AI is off for fan works unless the reader allows it in Edit details (`aiOk`, checked at every AI entry point).
+  - The book page shows an AO3 card (`src/pages/Ao3Card.tsx`).
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless

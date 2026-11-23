@@ -1,3 +1,4 @@
+import { aiAllowedFor } from '../import/ao3Book';
 import { useEffect, useState } from 'react';
 import { db } from '../db';
 import { needsTranslation } from '../logic';
@@ -16,7 +17,7 @@ export function useTranslateAhead(chapter: Chapter | null | undefined, book: Boo
   const bookModel = book?.model;
 
   useEffect(() => {
-    if (!chapterId || !bookId || !needsTranslation(book)) return;
+    if (!chapterId || !bookId || !needsTranslation(book) || !aiAllowedFor(book)) return;
     const controller = new AbortController();
     void (async () => {
       const settings = await loadSettings();

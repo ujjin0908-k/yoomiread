@@ -1,3 +1,4 @@
+import { aiAllowedFor } from '../import/ao3Book';
 import { useSyncExternalStore } from 'react';
 import { db } from '../db';
 import { needsTranslation } from '../logic';
@@ -43,7 +44,8 @@ export async function translateFirstChapters(bookId: string): Promise<void> {
   if (count <= 0 || !aiReady(settings)) return;
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
   const book = await db.books.get(bookId);
-  if (!book || !needsTranslation(book)) return;
+  // Fan works keep AI off unless the reader turned it on: nothing is translated in the background.
+  if (!book || !needsTranslation(book) || !aiAllowedFor(book)) return;
 
   const first = (await db.chapters.where('bookId').equals(bookId).sortBy('number')).slice(0, count);
   const todo = [];
