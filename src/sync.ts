@@ -131,6 +131,8 @@ export interface SyncOptions {
   allowBookDeletes?: boolean;
   /** Leave out chapter text and translations (book text stays on this phone only). Default false. */
   noBookText?: boolean;
+  /** Books whose text syncs even with `noBookText` (the free public-domain sample). */
+  textAlways?: string[];
 }
 
 /** More than this many books, or a quarter of the library, removed in one sync needs the reader's OK. */
@@ -192,21 +194,25 @@ export async function syncOnce(db: YoomiDB, remote: Remote, opts: SyncOptions = 
 
   // 1. This device: every row, encoded, with its fingerprint.
   const local = new Map<string, { tbl: SyncTable; id: string; data: Record<string, unknown>; hash: string }>();
-  const tables = (Object.keys(SYNC_TABLES) as SyncTable[]).filter((t) => !(opts.noBookText && TEXT_TABLES.includes(t)));
-  for (const tbl of tables) {
+  const always = new Set(opts.textAlways ?? []);
+  /** Book text that stays on this phone: text tables when `noBookText`, except books in `textAlways`. */
+  const stays = (tbl: string, bookId: unknown) => !!opts.noBookText && TEXT_TABLES.includes(tbl as SyncTable) && !always.has(String(bookId));
+  for (const tbl of Object.keys(SYNC_TABLES) as SyncTable[]) {
     const pk = SYNC_TABLES[tbl];
     for (const row of await table(db, tbl).toArray()) {
+      if (stays(tbl, row.bookId)) continue;
       const id = String(row[pk]);
       const data = await encodeRow(row);
       local.set(keyOf(tbl, id), { tbl, id, data, hash: fingerprint(stable(data)) });
     }
   }
   const changedHere = new Set([...local].filter(([k, r]) => hashes[k] !== r.hash).map(([k]) => k));
-  const skipped = (k: string) => opts.noBookText && TEXT_TABLES.some((t) => k.startsWith(`${t}:`));
-  const deletedHere = new Set(Object.keys(hashes).filter((k) => !local.has(k) && !skipped(k)));
+  // A text row that stays here is never sent as deleted either (it is only left out, not gone).
+  const textKey = (k: string) => TEXT_TABLES.some((t) => k.startsWith(`${t}:`));
+  const deletedHere = new Set(Object.keys(hashes).filter((k) => !local.has(k) && !(opts.noBookText && textKey(k))));
 
   // 2. Elsewhere: rows changed since the last sync.
-  const incoming = (await remote.pull(state.cursor)).filter((r) => !skipped(keyOf(r.tbl, r.id)));
+  const incoming = (await remote.pull(state.cursor)).filter((r) => !(r.data ? stays(r.tbl, r.data.bookId) : opts.noBookText && TEXT_TABLES.includes(r.tbl)));
 
   // Many books about to be removed from this phone: stop before changing anything, and ask.
   if (!opts.allowBookDeletes) {

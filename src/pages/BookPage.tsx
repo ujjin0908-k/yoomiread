@@ -9,6 +9,7 @@ import { coverFromLink } from '../import/cover';
 import { features } from '../edition';
 import { ChapterLinks } from './ChapterLinks';
 import { ChapterFile } from './ChapterFile';
+import { FillText } from './FillText';
 import { CopyWorld } from './CopyWorld';
 import { sameNovel, worldSources } from '../world/copyWorld';
 import { celebrate } from '../motion';
@@ -328,6 +329,8 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
             I finished this book
           </button>
         )}
+
+        <FillText bookId={id} />
 
         <section>
           <div className="section-head">

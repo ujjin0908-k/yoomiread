@@ -281,6 +281,12 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   service key, and the database removes the synced library and AI records with it. "Also erase everything on this
   phone" (off by default) clears every table on the device (`src/erase.ts`).
 
+- **Book text: asked once, and "Fill in from file" (2026-11-23):** in the public app the first sync waits for one
+  question, "Also sync your books' text?", with "off" preselected. The owner's app keeps it on without asking. The
+  free sample's text always syncs (`Book.sample`, `textAlways`). A book whose text stayed on another device shows
+  "Fill in from file" on its page (`src/pages/FillText.tsx`, `src/fillText.ts`): pick the same PDF or ePub; chapters
+  are matched by number and title, never overwritten, and a different book is refused.
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless
