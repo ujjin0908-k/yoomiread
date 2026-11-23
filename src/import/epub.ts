@@ -159,7 +159,7 @@ export function readEpub(bytes: Uint8Array): ParsedEpub {
   return {
     title: isJunkTitle(title) ? '' : title,
     author: meta('creator'),
-    language: lang.startsWith('zh') ? 'zh' : lang.startsWith('en') ? 'en' : guessLanguage(allText),
+    language: lang.startsWith('zh') ? 'zh' : lang.startsWith('ja') ? 'ja' : lang.startsWith('ko') ? 'ko' : lang.startsWith('en') ? 'en' : guessLanguage(allText),
     cover: coverItem && files[coverItem.path] ? { bytes: files[coverItem.path], type: coverItem.type } : undefined,
     chapters,
   };

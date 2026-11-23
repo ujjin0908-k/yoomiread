@@ -1,3 +1,4 @@
+import { ANY_SOURCE, htmlLangOfText } from '../languages';
 import { picturePrompt } from '../art';
 import { genreOf, kindLabel, kindsShown } from '../genres';
 import { applyGuide, guideFor, guideInfo, parseGuide, type Guide } from '../guides';
@@ -103,8 +104,8 @@ export function GlossaryPage({ bookId }: { bookId: string }) {
 
   // Entries from before the stricter rules: English words that are not from the Chinese text.
   async function removeEnglishOnly() {
-    const junk = review.filter((g) => !/[㐀-鿿豈-﫿]/.test(g.original));
-    if (!junk.length || !confirm(`Remove ${junk.length} entries that are not Chinese names or terms?`)) return;
+    const junk = review.filter((g) => !ANY_SOURCE.test(g.original));
+    if (!junk.length || !confirm(`Remove ${junk.length} entries that are not written in the book's own language?`)) return;
     await db.glossary.bulkDelete(junk.map((g) => g.id));
   }
 
@@ -321,7 +322,7 @@ function WorldList({ entries, onOpen }: { entries: GlossaryEntry[]; onOpen: (g: 
               <WorldArt entry={g} />
               <strong>{g.english}</strong>
               {g.original !== g.english && (
-                <span className="muted small" lang="zh">
+                <span className="muted small" lang={htmlLangOfText(g.original)}>
                   {g.original}
                 </span>
               )}
@@ -361,7 +362,7 @@ function EntryList({ entries, onOpen }: { entries: GlossaryEntry[]; onOpen: (g: 
             <span className="g-names">
               <strong>{g.english}</strong>
               {g.original !== g.english && (
-                <span className="muted" lang="zh">
+                <span className="muted" lang={htmlLangOfText(g.original)}>
                   {g.original}
                 </span>
               )}
@@ -394,7 +395,7 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
 
   async function save(approve: boolean) {
     // An English book has one name: it is kept in both places.
-    const first = plain && !/[㐀-鿿]/.test(original) ? english.trim() : original.trim();
+    const first = plain && !ANY_SOURCE.test(original) ? english.trim() : original.trim();
     if (!first || !english.trim()) return setError(plain ? 'A name is needed.' : 'Both names are needed.');
     const clash = await db.glossary.where('[bookId+original]').equals([bookId, first]).first();
     if (clash && clash.id !== entry?.id) return setError(`"${first}" is already in the glossary.`);
@@ -494,7 +495,7 @@ export function EntrySheet({ bookId, entry, plain, onClose }: { bookId: string; 
           <div className="row-2">
             <label>
               Original
-              <input lang="zh" value={original} disabled={entry?.locked && locked} onChange={(e) => setOriginal(e.target.value)} />
+              <input lang={htmlLangOfText(original, book?.language)} value={original} disabled={entry?.locked && locked} onChange={(e) => setOriginal(e.target.value)} />
             </label>
             <label>
               English

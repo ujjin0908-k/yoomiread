@@ -145,6 +145,10 @@ export function buildParagraphs(lines: PdfLine[]): Paragraph[] {
 const CN_NUM = '[0-9０-９一二三四五六七八九十百千零〇两]+';
 const EN_NUM = '([0-9]+|[ivxlc]+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty)';
 const CN_HEADING = new RegExp(`^(第\\s*${CN_NUM}\\s*[章节回卷集部篇]|序章|序言|楔子|引子|尾声|后记|番外)`);
+/** Japanese: 第1話, 第一章, プロローグ, エピローグ, 幕間, 序章, 終章, 番外編. */
+const JA_HEADING = new RegExp(`^(第\\s*${CN_NUM}\\s*[話章幕]|プロローグ|エピローグ|幕間|序章|終章|番外編|あとがき)`);
+/** Korean: 제1화, 제 3 장, 12화, 프롤로그, 에필로그, 외전, 작가의 말. */
+const KO_HEADING = /^(제\s*[0-9０-９]+\s*[화장]|[0-9０-９]+\s*화(\s|$|[:.])|프롤로그|에필로그|외전|작가의 말)/;
 const EN_HEADING = new RegExp(`^((chapter|chap\\.)\\s+${EN_NUM}\\b|prologue\\b|epilogue\\b|interlude\\b|afterword\\b)`, 'i');
 
 /**
@@ -154,6 +158,10 @@ const EN_HEADING = new RegExp(`^((chapter|chap\\.)\\s+${EN_NUM}\\b|prologue\\b|e
 export function isHeading(text: string): boolean {
   const t = text.trim();
   if (CN_HEADING.test(t)) return t.length <= 30 && !/[，。！？；、,!?;]/.test(t);
+  // Japanese has no spaces: a heading has no sentence punctuation at all, and 話/章 is not followed by a particle
+  // ("第12話を読んだあと…" is a sentence about chapter 12).
+  if (JA_HEADING.test(t)) return t.length <= 40 && !/[、。！？]/.test(t) && !/^第\s*\S+?[話章幕][をはがのにでともへや]/.test(t);
+  if (KO_HEADING.test(t)) return t.length <= 40 && !/[.!?。]$/.test(t);
   if (EN_HEADING.test(t)) return t.split(/\s+/).length <= 10 && !/[.!?]["']?$/.test(t.replace(/^(chapter|chap\.)\s+\S+\.?/i, ''));
   return false;
 }

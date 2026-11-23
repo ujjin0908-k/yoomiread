@@ -12,6 +12,8 @@ type LangFilter = 'all' | BookLanguage;
 
 const LANGUAGES: { id: BookLanguage; label: string }[] = [
   { id: 'zh', label: 'Chinese' },
+  { id: 'ja', label: 'Japanese' },
+  { id: 'ko', label: 'Korean' },
   { id: 'en', label: 'English' },
   { id: 'other', label: 'Other' },
 ];

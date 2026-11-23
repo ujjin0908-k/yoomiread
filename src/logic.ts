@@ -1,3 +1,4 @@
+import { guessSource, LANGUAGES, sourceLetters } from './languages';
 import type { Book, BookLanguage, Chapter, Note, Session, Shelf } from './types';
 
 export const SHELVES: { id: Shelf; label: string }[] = [
@@ -123,30 +124,35 @@ export function nextChapterNumber(chapters: Chapter[]): number {
 
 const CJK = /[㐀-鿿豈-﫿]/g;
 
+/** Japanese kana and Korean hangul: counted by characters too, like Han. */
+const KANA_HANGUL = /[\u3040-\u30ff\u31f0-\u31ff\uac00-\ud7af\u1100-\u11ff\u3130-\u318f]/g;
+
 /**
- * Minutes to read a piece of text. Chinese is counted by characters
- * (about 400 a minute), everything else by words (about 230 a minute).
+ * Minutes to read a piece of text. Chinese characters are counted at about 400 a minute, Japanese kana and Korean
+ * hangul at about 500, everything else by words (about 230 a minute).
  * `readFraction` is how much of it is already read.
  */
 export function readingMinutes(text: string, readFraction = 0): number {
   const remaining = text.slice(Math.floor(text.length * Math.min(1, Math.max(0, readFraction))));
   const cjk = (remaining.match(CJK) ?? []).length;
-  const words = remaining.replace(CJK, ' ').split(/\s+/).filter(Boolean).length;
-  return Math.ceil(cjk / 400 + words / 230);
+  const kh = (remaining.match(KANA_HANGUL) ?? []).length;
+  const words = remaining.replace(CJK, ' ').replace(KANA_HANGUL, ' ').split(/\s+/).filter(Boolean).length;
+  return Math.ceil(cjk / 400 + kh / 500 + words / 230);
 }
 
 /** The same estimate from a character count, for lists that do not load the text. */
 export function estimateMinutes(chars: number, language: BookLanguage, readFraction = 0): number {
   const left = chars * (1 - Math.min(1, Math.max(0, readFraction)));
-  // About 400 Chinese characters a minute; English is about 230 words, roughly 1,300 characters.
-  return Math.ceil(left / (language === 'zh' ? 400 : 1300));
+  // About 400 Chinese or 500 Japanese and Korean characters a minute; English is about 230 words, roughly 1,300 characters.
+  const source = language === 'zh' || language === 'ja' || language === 'ko' ? LANGUAGES[language].perMinute : 1300;
+  return Math.ceil(left / source);
 }
 
 export function guessLanguage(text: string): BookLanguage {
   const sample = text.slice(0, 5000);
-  const cjk = (sample.match(CJK) ?? []).length;
+  const source = guessSource(sample);
   const letters = (sample.match(/[A-Za-z]/g) ?? []).length;
-  if (cjk > letters / 3 && cjk > 20) return 'zh';
+  if (source && sourceLetters(sample) > letters / 3) return source;
   return letters > 20 ? 'en' : 'other';
 }
 

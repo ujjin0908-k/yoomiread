@@ -1,3 +1,4 @@
+import { ANY_SOURCE, LANGUAGES, type LanguageInfo } from '../languages';
 import type { BookStyle, Gender, GlossaryEntry, GlossaryKind, ModelOption } from '../types';
 
 export interface ChatMessage {
@@ -39,7 +40,7 @@ function styleRules(style?: BookStyle): string[] {
   if (!style) return [];
   const rules = ['Style for this book (translation first: stay faithful to the meaning, and polish only the wording):'];
   if (style.tone) rules.push(`- ${TONE[style.tone]}`);
-  if (style.honorifics === 'romanised') rules.push('- Keep titles of respect romanised as in the original (e.g. Senior Brother, Master), capitalised.');
+  if (style.honorifics === 'romanised') rules.push('- Keep titles of respect as in the original: romanised Chinese titles (Senior Brother, Master), Japanese honorifics as suffixes (Tanaka-san, -senpai, -sama), Korean titles romanised (hyung, sunbae, oppa).');
   if (style.honorifics === 'english') rules.push('- Translate titles of respect into natural English.');
   if (style.notes?.trim()) rules.push(`- ${style.notes.trim()}`);
   return rules;
@@ -60,11 +61,14 @@ export function chapterMessages(input: {
   style?: BookStyle;
   /** One line about the book's genre (see `genreNote`), when it has one. */
   genre?: string;
+  /** The language translated from. Chinese when not given (books from before Japanese and Korean). */
+  source?: LanguageInfo;
 }): ChatMessage[] {
+  const src = input.source ?? LANGUAGES.zh;
   // Only entries named in this chapter: the rest would add cost and nothing else.
   const approved = input.glossary.filter((g) => g.status === 'ok' && [g.original, ...(g.aliases ?? [])].some((n) => n && input.text.includes(n)));
   const system = [
-    'You translate Chinese web novels into natural, readable English.',
+    `You translate ${src.name} web novels into natural, readable English.`,
     'Rules:',
     '- Translate everything. Do not summarize, shorten or add anything.',
     `- If you cannot translate a passage, for any reason (including content you will not write), never drop it silently:`,
@@ -81,7 +85,7 @@ export function chapterMessages(input: {
     `- Then write a line "${NEW_TERMS}" and then one JSON object per line for each character name`,
     '  that is NOT in the glossary: {"original": "...", "english": "...", "kind": "person", "gender": "he|she|they|it"}.',
     '  Only character names. Never places, items, techniques, sects, titles, ordinary words, English words or anything already in the glossary.',
-    '  "original" is the Chinese text from the chapter. Give gender only for people. If there are none, write the marker line and nothing after it.',
+    `  "original" is the ${src.name} text from the chapter. Give gender only for people. If there are none, write the marker line and nothing after it.`,
     ...styleRules(input.style),
     ...(input.genre ? [input.genre] : []),
   ].join('\n');
@@ -103,7 +107,8 @@ export function chapterMessages(input: {
 }
 
 /** Instructions for building a glossary from the first chapters. */
-export function glossaryScanMessages(input: { bookTitle: string; sample: string; known: GlossaryEntry[]; plain?: boolean }): ChatMessage[] {
+export function glossaryScanMessages(input: { bookTitle: string; sample: string; known: GlossaryEntry[]; plain?: boolean; source?: LanguageInfo }): ChatMessage[] {
+  const src = input.source ?? LANGUAGES.zh;
   // A book already in English: there is nothing to translate, the list is just the cast.
   const system = input.plain
     ? [
@@ -113,11 +118,11 @@ export function glossaryScanMessages(input: { bookTitle: string; sample: string;
         '{"original": "...", "english": "...", "kind": "person", "gender": "he|she|they|it", "note": "who they are, in a few words"}',
       ].join('\n')
     : [
-    'You prepare a glossary for translating a Chinese novel into English.',
+    `You prepare a glossary for translating a ${src.novel} into English.`,
     'List only character names (kind "person"). Skip places, items, techniques, sects, titles, ordinary words, common phrases, slang,',
     'English words, and anything that is not a character\'s name.',
-    'The "original" must be the Chinese text as written.',
-    'For each, give the original, a natural English rendering (pinyin for personal names, meaning-based for most terms),',
+    `The "original" must be the ${src.name} text as written.`,
+    `For each, give the original, a natural English rendering (${src.names}),`,
     'the kind (person, place or term) and, for people, the gender as he, she, they or it, judged from the text.',
     'Answer with one JSON object per line and nothing else:',
     '{"original": "...", "english": "...", "kind": "person|place|term", "gender": "he|she|they|it", "note": "short optional note"}',
@@ -144,7 +149,7 @@ const GENDERS: Gender[] = ['he', 'she', 'they', 'it'];
  * `plain` is for a book already in English: names are written in Latin letters, so they are kept, and the one
  * name given (in either field) is used for both.
  */
-export function parseTerms(raw: string, plain = false): ProposedTerm[] {
+export function parseTerms(raw: string, plain = false, source: LanguageInfo = LANGUAGES.zh): ProposedTerm[] {
   const out: ProposedTerm[] = [];
   const seen = new Set<string>();
   for (const line of raw.split('\n')) {
@@ -155,8 +160,8 @@ export function parseTerms(raw: string, plain = false): ProposedTerm[] {
       const given = String(o.original ?? '').trim();
       const english = String(o.english ?? '').trim();
       const original = plain ? given || english : given;
-      // A term of a Chinese book must come from the Chinese text: English words in its list are never kept.
-      if (!original || !english || seen.has(original) || (!plain && !/[㐀-鿿豈-﫿]/.test(original))) continue;
+      // A term of a Chinese, Japanese or Korean book must come from the book's own text: English words are never kept.
+      if (!original || !english || seen.has(original) || (!plain && !source.script.test(original))) continue;
       // Only character names are proposed: places, items and terms are never added.
       if (o.kind !== 'person') continue;
       const gender = GENDERS.includes(o.gender as Gender) ? (o.gender as Gender) : undefined;
@@ -178,10 +183,10 @@ export function isRefusal(reply: string): boolean {
   return REFUSAL.test(reply.trim().slice(0, 200));
 }
 
-export function splitReply(reply: string): { text: string; terms: ProposedTerm[]; summary?: string; title?: string } {
+export function splitReply(reply: string, source: LanguageInfo = LANGUAGES.zh): { text: string; terms: ProposedTerm[]; summary?: string; title?: string } {
   const at = reply.indexOf(NEW_TERMS);
   const beforeTerms = at >= 0 ? reply.slice(0, at) : reply;
-  const terms = at >= 0 ? parseTerms(reply.slice(at + NEW_TERMS.length)) : [];
+  const terms = at >= 0 ? parseTerms(reply.slice(at + NEW_TERMS.length), false, source) : [];
   const marker = beforeTerms.indexOf(SUMMARY);
   const beforeSummary = marker >= 0 ? beforeTerms.slice(0, marker) : beforeTerms;
   const summary = marker >= 0 ? beforeTerms.slice(marker + SUMMARY.length).trim() : '';
@@ -216,13 +221,13 @@ export function cleanChapterTitle(raw: string): string | undefined {
   return t && t.length <= 120 ? t : undefined;
 }
 
-const CJK = /[㐀-鿿豈-﫿]/g;
+const CJK = new RegExp(ANY_SOURCE.source, 'g');
 
 /** Rough token counts for a cost estimate before anything is sent. */
 export function estimateTokens(text: string, glossaryCount = 0): { input: number; output: number } {
   const cjk = (text.match(CJK) ?? []).length;
   const other = text.length - cjk;
-  // About one token per Chinese character, plus the instructions and the glossary.
+  // About one token per Chinese, Japanese or Korean character, plus the instructions and the glossary.
   const input = Math.round(cjk * 1.1 + other / 4 + 450 + glossaryCount * 12);
   // English comes out a little shorter in tokens than the Chinese characters going in.
   // The story-so-far summary adds about 200 tokens of output per chapter.
@@ -274,12 +279,12 @@ export function pronounWarnings(text: string, glossary: GlossaryEntry[]): string
 }
 
 /** Instructions for translating a book title (and author name) into English. */
-export function titleMessages(title: string, author?: string): ChatMessage[] {
+export function titleMessages(title: string, author?: string, source: LanguageInfo = LANGUAGES.zh): ChatMessage[] {
   return [
     {
       role: 'system',
       content:
-        'You translate Chinese book titles into natural English, the way an English publisher would title the book. ' +
+        `You translate ${source.name} book titles into natural English, the way an English publisher would title the book. ` +
         'Reply with only the English title on one line: no quotes, no notes, no original text.',
     },
     { role: 'user', content: author ? `Title: ${title}\nAuthor: ${author}` : `Title: ${title}` },

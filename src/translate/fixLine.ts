@@ -1,3 +1,4 @@
+import { LANGUAGES, sourceOf, type LanguageInfo } from '../languages';
 import { db } from '../db';
 import { newId, paragraphs } from '../logic';
 import type { GlossaryEntry, GlossaryKind } from '../types';
@@ -46,14 +47,15 @@ export interface FixAnswer {
   kind?: GlossaryKind;
 }
 
-export function fixMessages(input: { original: string; english: string; quote: string; neighbours?: string }): ChatMessage[] {
+export function fixMessages(input: { original: string; english: string; quote: string; neighbours?: string; source?: LanguageInfo }): ChatMessage[] {
+  const src = input.source ?? LANGUAGES.zh;
   return [
     {
       role: 'system',
       content:
-        'You check one line of a Chinese web novel translated into English. The reader selected words in the English that look wrong. ' +
-        'Find the Chinese words in the original paragraph that became the selected English, and say what they really mean in this line. ' +
-        'Reply with one JSON object and nothing else: {"original": "the Chinese words, copied exactly from the paragraph", ' +
+        `You check one line of a ${src.novel} translated into English. The reader selected words in the English that look wrong. ` +
+        `Find the ${src.name} words in the original paragraph that became the selected English, and say what they really mean in this line. ` +
+        `Reply with one JSON object and nothing else: {"original": "the ${src.name} words, copied exactly from the paragraph", ` +
         '"literal": "word-for-word meaning", "meaning": "what it means here, in one short sentence", ' +
         '"suggestion": "the English to use instead in this line, short, in the same voice", ' +
         '"kind": "person|place|god|group|term"} (kind: term for an expression, catchphrase, item or rule).',
@@ -97,12 +99,12 @@ export async function askOriginal(bookId: string, pair: ParagraphPair, quote: st
   const settings = await loadSettings();
   const book = await db.books.get(bookId);
   const model = modelFor(settings, book?.model);
-  const messages = fixMessages({ original: pair.original, english: pair.english, quote });
+  const messages = fixMessages({ original: pair.original, english: pair.english, quote, source: sourceOf(book) });
   const result = await chat(settings, model.id, messages);
   const spend = callCost(model, messages, result);
   await addSpend(bookId, spend.cost, spend.estimated);
   const answer = parseFix(result.text, pair.original);
-  if (!answer) throw new Error('The answer did not name words from this paragraph. Select the Chinese yourself below.');
+  if (!answer) throw new Error(`The answer did not name words from this paragraph. Select the ${(sourceOf(book) ?? LANGUAGES.zh).name} yourself below.`);
   return answer;
 }
 

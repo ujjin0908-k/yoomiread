@@ -1,6 +1,7 @@
 import { accountsAvailable, accountToken, signedIn } from '../account';
 import { PUBLIC } from '../edition';
 import { genreNote } from '../genres';
+import { ANY_SOURCE, guessSource, LANGUAGES, sourceOf, type LanguageInfo } from '../languages';
 import { db } from '../db';
 import { newId } from '../logic';
 import type { Chapter, GlossaryEntry, ModelOption, TranslateSettings, Translation } from '../types';
@@ -214,9 +215,10 @@ async function runChapter(chapter: Chapter, options: ChapterOptions): Promise<Ch
     previousSummary: previousSummary ?? book?.storySoFar,
     style: book?.style,
     genre: genreNote(book) || undefined,
+    source: sourceOf(book),
   });
   const result = await chat(options.settings, options.model, messages, options.onText, options.signal);
-  const { text: english, terms, summary, title } = splitReply(result.text);
+  const { text: english, terms, summary, title } = splitReply(result.text, sourceOf(book));
   const option = modelFor(options.settings, options.model);
   const spend = callCost(option, messages, result);
   // A refusal is not a translation: show it as an error and keep the chapter untranslated.
@@ -299,12 +301,12 @@ export async function scanGlossary(bookId: string, settings: TranslateSettings, 
     if (sample.length > 12_000) break;
   }
   if (!sample.trim()) throw new Error('This book has no chapter text to read yet.');
-  const messages = glossaryScanMessages({ bookTitle: book?.title ?? '', sample: sample.slice(0, 12_000), known, plain: !needsTranslation(book, sample) });
+  const messages = glossaryScanMessages({ bookTitle: book?.title ?? '', sample: sample.slice(0, 12_000), known, plain: !needsTranslation(book, sample), source: sourceOf(book) });
   const result = await chat(settings, model, messages, undefined, signal);
   const spend = callCost(modelFor(settings, model), messages, result);
   await addSpend(bookId, spend.cost, spend.estimated);
   if (wholeTo > (book?.castUpTo ?? 0)) await db.books.update(bookId, { castUpTo: wholeTo }).catch(() => {});
-  return addProposals(bookId, parseTerms(result.text, !needsTranslation(book, sample)));
+  return addProposals(bookId, parseTerms(result.text, !needsTranslation(book, sample), sourceOf(book)));
 }
 
 /** Asks the model for an English title. */
@@ -315,7 +317,9 @@ export async function translateTitle(
   author?: string,
   bookId?: string,
 ): Promise<string> {
-  const messages = titleMessages(title, author);
+  // The title's own letters say its language (a book's language may not be set yet right after import).
+  const lang = guessSource(title);
+  const messages = titleMessages(title, author, lang ? LANGUAGES[lang] : undefined);
   const result = await chat(settings, model, messages);
   if (bookId) {
     const spend = callCost(modelFor(settings, model), messages, result);
@@ -330,14 +334,15 @@ export async function translateTitle(
 const TITLES_PER_CALL = 120;
 
 /** The request for a batch of chapter titles: numbered lines in, numbered lines out. */
-export function titleBatchMessages(titles: string[], glossary: GlossaryEntry[]): ChatMessage[] {
+export function titleBatchMessages(titles: string[], glossary: GlossaryEntry[], source: LanguageInfo = LANGUAGES.zh): ChatMessage[] {
   const named = glossary.filter((g) => g.status === 'ok' && [g.original, ...(g.aliases ?? [])].some((n) => n && titles.some((t) => t.includes(n))));
   return [
     {
       role: 'system',
       content:
-        'You translate the chapter titles of a Chinese web novel into English. Use the glossary exactly for names. ' +
-        'Leave out the chapter number ("第589章 入梦" becomes "Into the Dream"); keep words like "Side Story". Keep the tone of each title. ' +
+        `You translate the chapter titles of a ${source.novel} into English. Use the glossary exactly for names. ` +
+        'Leave out the chapter number ("第589章 入梦" becomes "Into the Dream", "第12話 旅立ち" becomes "Departure", "제3화 각성" becomes "Awakening"); ' +
+        'keep words like "Side Story". Keep the tone of each title. ' +
         'Reply with the same numbered lines and nothing else: "1. Title".',
     },
     {
@@ -369,7 +374,8 @@ export async function translateTitles(bookId: string, onProgress?: (done: number
   const book = await db.books.get(bookId);
   const model = modelFor(settings, book?.model);
   const glossary = (await db.glossary.where('bookId').equals(bookId).toArray()) as GlossaryEntry[];
-  const todo = ((await db.chapters.where('bookId').equals(bookId).sortBy('number')) as Chapter[]).filter((c) => !c.titleEn && /[㐀-鿿]/.test(c.title));
+  const todo = ((await db.chapters.where('bookId').equals(bookId).sortBy('number')) as Chapter[])
+    .filter((c) => !c.titleEn && ANY_SOURCE.test(c.title));
   let done = 0;
   onProgress?.(0, todo.length);
   for (let at = 0; at < todo.length; at += TITLES_PER_CALL) {
@@ -378,6 +384,7 @@ export async function translateTitles(bookId: string, onProgress?: (done: number
     const messages = titleBatchMessages(
       batch.map((c) => c.title),
       glossary,
+      sourceOf(book),
     );
     const result = await chat(settings, model.id, messages, undefined, signal);
     const spend = callCost(model, messages, result);

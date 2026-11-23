@@ -1,3 +1,4 @@
+import { BOOK_LANGUAGES, htmlLangOfText } from '../languages';
 import { features } from '../edition';
 import { translateFirstChapters } from '../translate/onImport';
 import { BookOpen, ClipboardPaste, FileText, Globe, PenLine } from 'lucide-react';
@@ -123,7 +124,7 @@ export function AddBook({ shelf = 'reading', onClose }: { shelf?: Shelf; onClose
     const text = pasteText.replace(/\r\n/g, '\n').trim();
     if (!text) return setError('Paste the chapter text first.');
     const title = pasteTitle.trim() || 'Pasted chapter';
-    await save({ title, author: '', language: /[\u3400-\u9fff]/.test(text) ? 'zh' : 'other', chapters: [{ title, text }] }, 'paste');
+    await save({ title, author: '', language: guessLanguage(text), chapters: [{ title, text }] }, 'paste');
   }
 
   async function fromPdf(file: File) {
@@ -337,16 +338,18 @@ function ManualBook({ shelf, onClose }: { shelf: Shelf; onClose: () => void }) {
           <input value={author} onChange={(e) => setAuthor(e.target.value)} />
         </label>
         <label>
-          Original title <span className="muted small">(optional, e.g. Chinese)</span>
-          <input value={originalTitle} onChange={(e) => setOriginalTitle(e.target.value)} lang="zh" />
+          Original title <span className="muted small">(optional, in the book's own language)</span>
+          <input value={originalTitle} onChange={(e) => setOriginalTitle(e.target.value)} lang={htmlLangOfText(originalTitle)} />
         </label>
         <div className="row-2">
           <label>
             Language
             <select value={language} onChange={(e) => setLanguage(e.target.value as BookLanguage)}>
-              <option value="en">English</option>
-              <option value="zh">Chinese</option>
-              <option value="other">Other</option>
+              {BOOK_LANGUAGES.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.label}
+                </option>
+              ))}
             </select>
           </label>
           <label>

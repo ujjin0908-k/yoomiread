@@ -58,7 +58,12 @@ const CHAPTER_WORD =
 
 /** The chapter number written in a title ("Chapter 12: ...", "第12章"), if there is one. */
 export function chapterNumber(title: string): number | undefined {
-  const m = /(?:chapter|ch\.?|episode|ep\.?)\s*(\d+)/i.exec(title) ?? /第\s*(\d+)\s*[章话話回节節]/.exec(title);
+  const m =
+    /(?:chapter|ch\.?|episode|ep\.?)\s*(\d+)/i.exec(title) ??
+    /第\s*(\d+)\s*[章话話回节節]/.exec(title) ??
+    // Korean: "제12화", "제 3 장", "12화".
+    /제\s*(\d+)\s*[화장]/.exec(title) ??
+    /(?:^|\s)(\d+)\s*화(?:\s|$|[:.])/.exec(title);
   return m ? Number(m[1]) : undefined;
 }
 
