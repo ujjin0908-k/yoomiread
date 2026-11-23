@@ -6,7 +6,8 @@ import { CharacterPage } from './pages/Character';
 import { GlossaryPage } from './pages/Glossary';
 import { Home } from './pages/Home';
 import { Library } from './pages/Library';
-import { QuoteCard, Quotes } from './pages/Quotes';
+import { QuoteCard } from './pages/Quotes';
+import { Ask } from './pages/Ask';
 import { Settings } from './pages/Settings';
 import { Stats } from './pages/Stats';
 import { Welcome } from './pages/Welcome';
@@ -53,7 +54,9 @@ export function App() {
   if (page === 'world' && id) return <WorldPage key={id} bookId={id} tab={sub} />;
   if (page === 'join' && id) return <JoinPage code={id} />;
   if (page === 'library') return <Library />;
-  if (page === 'quotes') return <Quotes />;
+  if (page === 'ask') return <Ask />;
+  // The old Quotes tab: quotes are on each book's page now.
+  if (page === 'quotes') return <Library />;
   if (page === 'stats') return <Stats />;
   if (page === 'settings') return <Settings />;
   if (!welcomed) {

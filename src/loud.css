@@ -2784,3 +2784,88 @@ body[data-reader='night'] {
   display: grid;
   gap: 8px;
 }
+
+/* A book's quotes, on its page (src/pages/Quotes.tsx BookQuotes). */
+.book-quotes {
+  margin: 18px 0;
+}
+.book-quotes .search {
+  margin-bottom: 10px;
+}
+.book-quotes .btn {
+  margin-top: 8px;
+}
+
+/* The Ask tab (src/pages/Ask.tsx). */
+.ask-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.ask-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ask-cat {
+  flex: none;
+  object-fit: contain;
+}
+.ask-book {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.ask-book select {
+  width: 100%;
+  min-width: 0;
+}
+.ask-form {
+  display: flex;
+  gap: 8px;
+}
+.ask-form input {
+  flex: 1;
+  min-width: 0;
+}
+.ask-starters {
+  margin: 0;
+  flex-wrap: wrap;
+}
+.ask-answer {
+  margin: 0;
+}
+div.ask-answer {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--surface-2);
+}
+div.ask-answer p {
+  margin: 4px 0;
+}
+.ask-recaps {
+  margin-top: 22px;
+  display: grid;
+  gap: 12px;
+}
+.ask-recap-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+.ask-recap-head > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.ask-told {
+  margin: 10px 0 6px;
+}
+.ask-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}

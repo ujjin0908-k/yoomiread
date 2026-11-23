@@ -13,6 +13,7 @@ import { ChapterFile } from './ChapterFile';
 import { FillText } from './FillText';
 import { Ao3Card } from './Ao3Card';
 import { BuddyCard } from '../buddy/BuddyCard';
+import { BookQuotes } from './Quotes';
 import { CopyWorld } from './CopyWorld';
 import { sameNovel, worldSources } from '../world/copyWorld';
 import { celebrate } from '../motion';
@@ -338,6 +339,8 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
         )}
 
         <FillText bookId={id} />
+
+        <BookQuotes book={book} notes={notes ?? []} chapters={list} />
 
         <section>
           <div className="section-head">

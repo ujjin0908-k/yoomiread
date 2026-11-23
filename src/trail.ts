@@ -6,7 +6,7 @@ let previous: string[] = [];
 let current: string[] = [];
 let reading: string | undefined;
 
-const LEAVES_READING = new Set(['', 'library', 'quotes', 'stats', 'book', 'settings']);
+const LEAVES_READING = new Set(['', 'library', 'ask', 'stats', 'book', 'settings']);
 
 export function noteRoute(parts: string[]): void {
   previous = current;

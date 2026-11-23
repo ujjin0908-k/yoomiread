@@ -72,7 +72,7 @@ export function initMotion(): void {
   document.addEventListener('keydown', markIntent, true);
 }
 
-const TABS = ['', 'library', 'quotes', 'stats'];
+const TABS = ['', 'library', 'ask', 'stats'];
 
 function depth(parts: string[]): number {
   const page = parts[0] ?? '';

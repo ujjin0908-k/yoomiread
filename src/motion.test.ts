@@ -4,7 +4,7 @@ import { navKind } from './motion';
 describe('navKind', () => {
   it('steps sideways between tabs, in the order of the tab bar', () => {
     expect(navKind([], ['library'])).toBe('tab-right');
-    expect(navKind(['stats'], ['quotes'])).toBe('tab-left');
+    expect(navKind(['stats'], ['ask'])).toBe('tab-left');
   });
   it('goes forward into a book and a chapter, and back out again', () => {
     expect(navKind(['library'], ['book', 'b1'])).toBe('forward');

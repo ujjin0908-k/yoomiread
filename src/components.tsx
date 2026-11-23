@@ -1,5 +1,5 @@
 import { htmlLangOf } from './languages';
-import { BarChart3, ChevronLeft, Home, LibraryBig, Quote, X } from 'lucide-react';
+import { BarChart3, Cat, ChevronLeft, Home, LibraryBig, X } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { usePictureUrl } from './picture';
 import { motionOk } from './motion';
@@ -133,7 +133,7 @@ export function PageTitle({ title, sub, right, icon }: { title: string; sub?: st
 const TABS = [
   { href: '', label: 'Home', icon: Home },
   { href: 'library', label: 'Library', icon: LibraryBig },
-  { href: 'quotes', label: 'Quotes', icon: Quote },
+  { href: 'ask', label: 'Ask', icon: Cat },
   { href: 'stats', label: 'Stats', icon: BarChart3 },
 ];
 
