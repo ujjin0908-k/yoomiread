@@ -298,6 +298,13 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   - Tapping a word: Wikipedia in that language, plus a Jisho or Naver link (no offline dictionary yet).
   - Chapter titles in CJK are now upright in their own serif (Chinese titles too, instead of a fake italic).
 
+- **Japanese and Korean dictionaries (2026-11-23):** tap a word in a Japanese or Korean book for an offline meaning.
+  - Japanese: JMdict in two files, common words (`ja.json.gz`, 1.3 MB) loaded first and the rest (`ja-more.json.gz`,
+    5.9 MB) only on a miss; conjugated words are traced back (つぶやいた → つぶやく).
+  - Korean: Wiktionary via Kaikki (`ko.json.gz`, 2.3 MB); inflected forms point to their dictionary word (먹었다 →
+    먹다), and particles are dropped (도시를 → 도시).
+  - Credits: `public/dict/NOTICE.txt` and Settings → Dictionaries. Rebuild: `scripts/dictionaries/`.
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless
