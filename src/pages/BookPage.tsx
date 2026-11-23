@@ -2,7 +2,7 @@ import { BOOK_LANGUAGES, htmlLangOf, htmlLangOfText, ANY_SOURCE, sourceOf, targe
 import { BackdropPicker } from './BackdropPicker';
 import { inOrder, useChapterOrder } from '../chapterOrder';
 import '../world/world.css';
-import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, Orbit, PenLine, Plus, Trash2 } from 'lucide-react';
+import { BookMarked, ChevronRight, ImagePlus, Languages, MessageCircle, Orbit, PenLine, Plus, Quote, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Book3D, Cover, OrderToggle, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
 import { toPicture } from '../picture';
@@ -13,7 +13,6 @@ import { ChapterFile } from './ChapterFile';
 import { FillText } from './FillText';
 import { Ao3Card } from './Ao3Card';
 import { BuddyCard } from '../buddy/BuddyCard';
-import { BookQuotes } from './Quotes';
 import { CopyWorld } from './CopyWorld';
 import { sameNovel, worldSources } from '../world/copyWorld';
 import { celebrate } from '../motion';
@@ -105,6 +104,7 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const next = continueChapter(book, list);
   const notesFor = (chapterId: string) => (notes ?? []).filter((n) => n.chapterId === chapterId).length;
   const highlights = (notes ?? []).filter((n) => n.kind === 'highlight').length;
+  const quoteCount = (notes ?? []).filter((n) => n.kind === 'highlight' && n.quote).length;
 
   async function setShelf(shelf: Shelf) {
     if (shelf === 'finished') return go(`book/${id}/finish`);
@@ -309,6 +309,11 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
               <span className="muted small">Nothing to translate</span>
             </div>
           )}
+          <button type="button" className="tool" onClick={() => go(`quotes/${id}`)}>
+            <Quote size={18} />
+            <span>Quotes</span>
+            <span className="muted small">{quoteCount ? `${quoteCount} kept` : 'none yet'}</span>
+          </button>
           <button type="button" className="tool tool-world" onClick={() => go(`world/${id}`)}>
             <Orbit size={20} />
             <span>The world</span>
@@ -340,7 +345,6 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
 
         <FillText bookId={id} />
 
-        <BookQuotes book={book} notes={notes ?? []} chapters={list} />
 
         <section>
           <div className="section-head">

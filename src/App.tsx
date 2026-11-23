@@ -6,7 +6,7 @@ import { CharacterPage } from './pages/Character';
 import { GlossaryPage } from './pages/Glossary';
 import { Home } from './pages/Home';
 import { Library } from './pages/Library';
-import { QuoteCard } from './pages/Quotes';
+import { BookQuotesPage, QuoteCard } from './pages/Quotes';
 import { Ask } from './pages/Ask';
 import { Settings } from './pages/Settings';
 import { Stats } from './pages/Stats';
@@ -49,6 +49,7 @@ export function App() {
   if (page === 'book' && id) return <BookPage key={id} id={id} sub={sub} />;
   if (page === 'chapter' && id) return <ChapterPage key={id} id={id} />;
   if (page === 'quote' && id) return <QuoteCard id={id} />;
+  if (page === 'quotes' && id) return <BookQuotesPage key={id} bookId={id} />;
   if (page === 'glossary' && id) return <GlossaryPage key={id} bookId={id} />;
   if (page === 'character' && id) return <CharacterPage key={id} id={id} />;
   if (page === 'world' && id) return <WorldPage key={id} bookId={id} tab={sub} />;

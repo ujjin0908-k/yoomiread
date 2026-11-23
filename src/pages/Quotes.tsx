@@ -1,82 +1,84 @@
 import { htmlLangOf } from '../languages';
 import { ArrowRight } from 'lucide-react';
 import { useState } from 'react';
-import { TopBar } from '../components';
+import { Empty, PageTitle, TopBar } from '../components';
+import { db } from '../db';
 import { useLive } from '../hooks';
 import { folderNames, formatDate } from '../logic';
 import { allQuotes } from '../queries';
-import type { Book, Chapter, Note } from '../types';
 
 function useQuotes() {
   return useLive(allQuotes, [], 'quotes');
 }
 
 /**
- * A book's quotes, on its own page: the lines I highlighted in it, newest first, with their folders and a search.
- * (They used to be a tab of their own, mixed across books; 2026-11-23 they moved here, and the tab became Ask.)
+ * A book's quotes, on a page of their own (opened from the Quotes tile on the book's page): the lines I highlighted
+ * in it, newest first, with their folders and a search. (Until 2026-11-23 they sat at the bottom of the book page.)
  */
-export function BookQuotes({ book, notes, chapters }: { book: Book; notes: Note[]; chapters: Chapter[] }) {
-  const [all, setAll] = useState(false);
+export function BookQuotesPage({ bookId }: { bookId: string }) {
+  const book = useLive(async () => (await db.books.get(bookId)) ?? null, [bookId], 'book');
+  const chapters = useLive(() => db.chapters.where('bookId').equals(bookId).toArray(), [bookId], 'book-chapters-any');
+  const notes = useLive(() => db.notes.where('bookId').equals(bookId).toArray(), [bookId], 'book-notes');
   const [search, setSearch] = useState('');
   // undefined: every folder; '': lines with no folder; otherwise one folder.
   const [folder, setFolder] = useState<string>();
-  const quotes = notes.filter((n) => n.kind === 'highlight' && n.quote).sort((a, b) => b.createdAt - a.createdAt);
-  if (!quotes.length) return null;
-  const number = new Map(chapters.map((c) => [c.id, c.number]));
+  if (book === undefined) return <TopBar back={`book/${bookId}`} />;
+  if (!book) {
+    return (
+      <>
+        <TopBar back="library" />
+        <p className="empty">This book was deleted.</p>
+      </>
+    );
+  }
+  const quotes = (notes ?? []).filter((n) => n.kind === 'highlight' && n.quote).sort((a, b) => b.createdAt - a.createdAt);
+  const number = new Map((chapters ?? []).map((c) => [c.id, c.number]));
   const folders = folderNames(quotes);
   const q = search.trim().toLowerCase();
   const shown = quotes.filter((n) => (folder === undefined || (n.folder ?? '') === folder) && (!q || [n.quote ?? '', n.body].some((x) => x.toLowerCase().includes(q))));
-  const FEW = 4;
-  const list = all || q || folder !== undefined ? shown : shown.slice(0, FEW);
 
   return (
-    <section className="book-quotes">
-      <div className="section-head">
-        <h2>Quotes</h2>
-        <span className="muted small">
-          {quotes.length} {quotes.length === 1 ? 'line' : 'lines'} kept
-        </span>
-      </div>
-      {quotes.length > FEW && (
-        <input className="search" type="search" placeholder="Search this book’s quotes" value={search} onChange={(e) => setSearch(e.target.value)} />
-      )}
-      {folders.length > 0 && (
-        <div className="folder-chips">
-          <button type="button" className={folder === undefined ? 'on' : ''} onClick={() => setFolder(undefined)}>
-            All
-          </button>
-          {folders.map((f) => (
-            <button key={f} type="button" className={folder === f ? 'on' : ''} onClick={() => setFolder(f)}>
-              {f}
+    <>
+      <TopBar back={`book/${bookId}`} title={book.title} />
+      <main className="page book-quotes">
+        <PageTitle title="Quotes" sub={quotes.length ? `${quotes.length} ${quotes.length === 1 ? 'line' : 'lines'} kept from this book` : undefined} />
+        {!quotes.length && <Empty title="No quotes yet">Highlight a line while reading and it is kept here.</Empty>}
+        {quotes.length > 4 && (
+          <input className="search" type="search" placeholder="Search this book’s quotes" value={search} onChange={(e) => setSearch(e.target.value)} />
+        )}
+        {folders.length > 0 && (
+          <div className="folder-chips">
+            <button type="button" className={folder === undefined ? 'on' : ''} onClick={() => setFolder(undefined)}>
+              All
             </button>
+            {folders.map((f) => (
+              <button key={f} type="button" className={folder === f ? 'on' : ''} onClick={() => setFolder(f)}>
+                {f}
+              </button>
+            ))}
+            <button type="button" className={folder === '' ? 'on' : ''} onClick={() => setFolder('')}>
+              No folder
+            </button>
+          </div>
+        )}
+        {quotes.length > 0 && !shown.length && <p className="muted small">No quotes match.</p>}
+        <ul className="quote-list">
+          {shown.map((note) => (
+            <li key={note.id}>
+              <a href={`#/quote/${note.id}`}>
+                <span className="quote-where">
+                  Ch.{number.get(note.chapterId) ?? '?'} <span aria-hidden="true">|</span> {formatDate(note.createdAt)}
+                </span>
+                <span className="quote-text" lang={htmlLangOf(book.language)}>
+                  {note.quote}
+                </span>
+                {note.body && <span className="quote-note">{note.body}</span>}
+              </a>
+            </li>
           ))}
-          <button type="button" className={folder === '' ? 'on' : ''} onClick={() => setFolder('')}>
-            No folder
-          </button>
-        </div>
-      )}
-      {!shown.length && <p className="muted small">No quotes match.</p>}
-      <ul className="quote-list">
-        {list.map((note) => (
-          <li key={note.id}>
-            <a href={`#/quote/${note.id}`}>
-              <span className="quote-where">
-                Ch.{number.get(note.chapterId) ?? '?'} <span aria-hidden="true">|</span> {formatDate(note.createdAt)}
-              </span>
-              <span className="quote-text" lang={htmlLangOf(book.language)}>
-                {note.quote}
-              </span>
-              {note.body && <span className="quote-note">{note.body}</span>}
-            </a>
-          </li>
-        ))}
-      </ul>
-      {list.length < shown.length && (
-        <button type="button" className="btn ghost wide" onClick={() => setAll(true)}>
-          Show all {shown.length}
-        </button>
-      )}
-    </section>
+        </ul>
+      </main>
+    </>
   );
 }
 
@@ -103,7 +105,7 @@ export function QuoteCard({ id }: { id: string }) {
 
   return (
     <>
-      <TopBar back={`book/${book.id}`} />
+      <TopBar back={`quotes/${book.id}`} />
       <main className="page quote-card">
         <span className="quote-orn" aria-hidden="true">
           ❦
