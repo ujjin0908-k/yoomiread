@@ -53,9 +53,12 @@ export function WordSheet({ word, bookId, lang, onClose }: { word: string; bookI
   return (
     <Sheet title={word} onClose={onClose}>
       <div className="form">
-        <p className="small muted">Dictionary{defs?.pron ? ` · ${defs.pron}` : ''}</p>
+        <p className="small muted">
+          Dictionary{defs?.headword ? ` · ${defs.headword}` : ''}
+          {defs?.pron ? ` · ${defs.pron}` : ''}
+        </p>
         {defs === undefined && <p className="small">Looking up…</p>}
-        {defs === null && <p className="small">{lang === 'ja' || lang === 'ko' ? 'No offline dictionary for this language yet.' : 'Not in the dictionary.'}</p>}
+        {defs === null && <p className="small">Not in the dictionary.</p>}
         {defs?.text.split('\n').map((line, i) => (
           <p key={i} className="small">
             {line}

@@ -6,3 +6,15 @@ English (en.json.gz): a shortened copy of ECDICT by Linwei (skywind3000/ECDICT),
 Chinese (zh.json.gz): a shortened copy of CC-CEDICT (mdbg.net), licensed under CC BY-SA 4.0.
   Pinyin and English glosses are kept; the entries are shortened.
   Share-alike: this copy is under the same license.
+
+Japanese (ja.json.gz, ja-more.json.gz): a shortened copy of JMdict (JMdict_e), from the Electronic Dictionaries
+  Research Group. This publication has included material from the JMdict (EDICT, etc.) dictionary files in
+  accordance with the licence provisions of the Electronic Dictionaries Research Group. See
+  https://www.edrdg.org/ for the licence (CC BY-SA 4.0). Common words are in ja.json.gz, the rest in
+  ja-more.json.gz; archaic and obscure entries are left out and definitions are shortened.
+  Share-alike: this copy is under the same license.
+
+Korean (ko.json.gz): a shortened copy of the Korean entries of English Wiktionary, as extracted by Kaikki
+  (https://kaikki.org, wiktextract by Tatu Ylonen). Wiktionary text is available under CC BY-SA 4.0 (and the GFDL).
+  Inflected verb and adjective forms point to their dictionary word; glosses are shortened.
+  Share-alike: this copy is under the same license.
