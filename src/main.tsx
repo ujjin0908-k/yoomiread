@@ -8,6 +8,8 @@ import './motion.css';
 import './loud.css';
 
 initMotion();
+// The saved books and this copy of the app must be the same version (src/dbOpen.ts).
+void Promise.all([import('./db'), import('./dbOpen')]).then(([{ db }, { guardVersions, browserHooks }]) => guardVersions(db, browserHooks()));
 // Old pictures become bytes, so Safari can keep saving books that have a cover.
 void import('./db').then(({ storePicturesAsBytes }) => storePicturesAsBytes()).catch((e) => console.warn('Pictures were not converted:', e));
 void import('./backdrop').then(({ movePhoneBackdropToBook }) => movePhoneBackdropToBook()).catch((e) => console.warn('The background was not moved:', e));
