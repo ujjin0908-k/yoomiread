@@ -461,3 +461,14 @@ Read `CLAUDE.md` before changing anything: it asks to keep the vault status note
   - The tab is now **Ask** (`src/pages/Ask.tsx`): pick a book, ask the cat (same spoiler-safe answers as his bubble,
     now shared in `src/mascot/ask.ts`), starter questions, and "Pick up where you left off": the free recap for the
     books being read (story so far from translations, or the latest big moments), with a link to the full recap.
+
+- **Smoother tabs and a new Ask tab (2026-11-23, after the owner found tabs laggy and Ask ugly):**
+  - Measured on a heavy library (6 books, 2,350 chapters with translations) with the CPU slowed 4×. The lag was the
+    page animation between tabs: the browser held the screen still while the whole new page was drawn. Tabs now swap
+    at once (only the tab marker slides); book and chapter pages keep their animations. Library 82–133 ms → 14–29 ms,
+    Home 104–159 → 37–46, Stats 81–204 → 33–95.
+  - Ask loaded every chapter and the whole Living Book of each book for its recaps (434–864 ms). It now reads book rows
+    only, and "where you left off" (`src/mascot/leftOff.ts`) reads chapter rows, up to 5 translations and the events
+    for the one book shown: 19–81 ms.
+  - The Ask tab is now a conversation: a row of covers to pick the book, the cat's bubbles and mine, starter questions
+    in one row, and the question box held just above the tab bar. The talk is kept per book while the app is open.

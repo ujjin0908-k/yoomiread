@@ -124,7 +124,10 @@ export function animatePage(kind: string, update: () => void, from: string[] = [
     openBook(update);
     return;
   }
-  if (!doc.startViewTransition || !motionOk() || !recent) {
+  // Between tabs the page simply swaps, as tab bars do on the phone: only the marker slides along the bar. A page
+  // animation here had to draw the whole new page while the screen was held still, which felt like lag (2026-11-23).
+  const tabSwitch = kind === 'tab-left' || kind === 'tab-right';
+  if (!doc.startViewTransition || !motionOk() || !recent || tabSwitch) {
     // No browser page change: the page's own entrance effects are the movement.
     delete document.documentElement.dataset.vt;
     update();
