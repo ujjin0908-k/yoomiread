@@ -75,7 +75,7 @@ export const monthStart = (now: Date) => new Date(Date.UTC(now.getUTCFullYear(),
 export const costOf = (m: GatewayModel, input: number, output: number) => (input * m.input + output * m.output) / 1_000_000;
 
 /** Who is asking: the Supabase user for the sign-in token, or undefined. */
-async function whoIs(request: Request, env: GatewayEnv, f: Fetch): Promise<{ id: string; confirmed: boolean } | undefined> {
+export async function whoIs(request: Request, env: GatewayEnv, f: Fetch): Promise<{ id: string; confirmed: boolean } | undefined> {
   const token = /^Bearer\s+(.+)$/i.exec(request.headers.get('authorization') ?? '')?.[1];
   if (!token || !env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return undefined;
   const res = await f(`${env.SUPABASE_URL}/auth/v1/user`, { headers: { apikey: env.SUPABASE_ANON_KEY, authorization: `Bearer ${token}` } });
