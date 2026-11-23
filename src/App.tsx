@@ -8,6 +8,7 @@ import { Home } from './pages/Home';
 import { Library } from './pages/Library';
 import { BookQuotesPage, QuoteCard } from './pages/Quotes';
 import { Ask } from './pages/Ask';
+import { WrappedPage } from './pages/Wrapped';
 import { Settings } from './pages/Settings';
 import { Stats } from './pages/Stats';
 import { Welcome } from './pages/Welcome';
@@ -59,6 +60,7 @@ export function App() {
   // The old Quotes tab: quotes are on each book's page now.
   if (page === 'quotes') return <Library />;
   if (page === 'stats') return <Stats />;
+  if (page === 'wrapped') return <WrappedPage key={id} id={id} />;
   if (page === 'settings') return <Settings />;
   if (!welcomed) {
     return (

@@ -7,6 +7,7 @@ import { formatCost } from '../translate/prompt';
 import { lineFor } from '../mascot/lines';
 import { useMood } from '../mascot/useMood';
 import { Wizard } from '../mascot/Wizard';
+import { periodId, periodName, wrapsOffered } from '../wrapped/data';
 import { BAND_HOURS, BANDS, calendar, hours, RANGES, readingReport, WEEKDAYS, type Bucket, type Range, type Report, type Share } from '../stats';
 
 const RANGE_KEY = 'stats-range';
@@ -53,6 +54,7 @@ export function Stats() {
             <p>{lineFor(mood, new Date().toDateString(), trouble)}</p>
           </section>
         )}
+        {input && <WrapEntry sessions={input.sessions} />}
         <div className="seg stats-range" role="group" aria-label="Time range">
           {RANGES.map((r) => (
             <button key={r.id} type="button" className={r.id === range ? 'on' : ''} aria-pressed={r.id === range} onClick={() => setRange(r.id)}>
@@ -516,4 +518,26 @@ function forecast(days: number): string {
   if (days < 60) return `${Math.round(days / 7)} weeks`;
   if (days < 730) return `${Math.round(days / 30)} months`;
   return `${Math.round(days / 365)} years`;
+}
+
+/** The way into Reading Wrapped: this year, this month and last month, when they have reading. */
+function WrapEntry({ sessions }: { sessions: Parameters<typeof wrapsOffered>[0] }) {
+  const offered = wrapsOffered(sessions);
+  if (!offered.length) return null;
+  return (
+    <section className="wrap-entry">
+      <div className="wrap-entry-text">
+        <span className="wrap-entry-kicker">Reading Wrapped</span>
+        <span className="wrap-entry-title">Flip through your reading</span>
+        <span className="wrap-entry-sub">Save the pages as pictures, or share them to your story.</span>
+      </div>
+      <div className="wrap-entry-links">
+        {offered.map((p) => (
+          <a key={periodId(p)} className="wrap-entry-link" href={`#/wrapped/${periodId(p)}`}>
+            {periodName(p, true)}
+          </a>
+        ))}
+      </div>
+    </section>
+  );
 }

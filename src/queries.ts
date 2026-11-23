@@ -8,6 +8,12 @@ export const allChapters = () => db.chapters.toArray();
 
 export const readingStats = async () => computeStats(await db.books.toArray(), await db.sessions.toArray());
 
+/** Everything Reading Wrapped works from (src/wrapped/data.ts): the Stats input plus the highlights. */
+export const wrapInput = async () => {
+  const [base, notes] = await Promise.all([statsInput(), db.notes.where('kind').equals('highlight').toArray()]);
+  return { ...base, notes };
+};
+
 /** Everything the Stats tab works from (src/stats.ts): books, reading sessions and chapters (no chapter text). */
 export const statsInput = async () => {
   const [books, sessions, chapters] = await Promise.all([db.books.toArray(), db.sessions.toArray(), db.chapters.toArray()]);

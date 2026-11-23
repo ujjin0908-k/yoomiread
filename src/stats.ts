@@ -136,7 +136,7 @@ export function streaks(sessions: Session[], now: number): { streak: number; bes
   return { streak, best };
 }
 
-function shares(entries: [string, string, number][]): Share[] {
+export function shares(entries: [string, string, number][]): Share[] {
   const by = new Map<string, Share>();
   for (const [id, label, minutes] of entries) {
     const s = by.get(id) ?? { id, label, minutes: 0 };
