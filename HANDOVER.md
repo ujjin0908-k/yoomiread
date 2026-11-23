@@ -267,6 +267,15 @@ Installed on the phone as a web app and works offline once loaded. Your books, n
   - Server: `supabase/sync.sql`, table `sync_rows` (one row per table and id, server-set time, readers see only
     their own rows) and a size view per reader.
 
+- **Trust step (2026-11-23, after an outside review):**
+  - **AI:** stopped answers are recorded; each call reserves its likely cost first in one locked step (`ai_reserve`),
+    so calls at the same moment cannot pass the limits; a daily ceiling for everyone (`AI_DAILY_LIMIT_USD`); a
+    confirmed email is required.
+  - **Sync:** "Undo last sync"; a question before removing more than 2 books or a quarter of the library; a question
+    when a different account signs in; an "Include book text" switch.
+  - **Updates:** an open copy lets a newer version upgrade the data (`src/dbOpen.ts`).
+  - **Docs:** the README describes where data lives. A terms draft is in the vault.
+
 ## Things that do not work or were decided against
 
 - **Kakao Page chapters:** the chapter text is loaded by scripts after the page opens. A plain fetch and a headless
