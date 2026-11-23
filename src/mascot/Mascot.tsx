@@ -126,7 +126,7 @@ export function Mascot({ book, chapter, away }: { book: Book; chapter: Chapter; 
         }}
         onAnimationEnd={(e) => e.target === e.currentTarget && setPoked(false)}
       >
-        <Wizard mood={mood} size={112} />
+        <Wizard mood={mood} size={112} sly={open && (busy || !!answer) && mood !== 'angry'} />
       </button>
       {open && (
         <div className="mascot-bubble" role="dialog" aria-label="The cat">

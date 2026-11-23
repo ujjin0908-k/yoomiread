@@ -1,4 +1,5 @@
 import { useRoute } from './hooks';
+import { JoinPage } from './buddy/JoinPage';
 import { BookPage } from './pages/BookPage';
 import { ChapterPage } from './pages/ChapterPage';
 import { CharacterPage } from './pages/Character';
@@ -50,6 +51,7 @@ export function App() {
   if (page === 'glossary' && id) return <GlossaryPage key={id} bookId={id} />;
   if (page === 'character' && id) return <CharacterPage key={id} id={id} />;
   if (page === 'world' && id) return <WorldPage key={id} bookId={id} tab={sub} />;
+  if (page === 'join' && id) return <JoinPage code={id} />;
   if (page === 'library') return <Library />;
   if (page === 'quotes') return <Quotes />;
   if (page === 'stats') return <Stats />;

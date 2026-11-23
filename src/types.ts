@@ -53,6 +53,8 @@ export interface Book {
   genre?: GenreId;
   /** The language chapters are translated into (src/languages.ts). English when not set. */
   target?: 'en' | 'es' | 'fr';
+  /** A buddy read this book is part of (src/buddy/buddy.ts). Members and comments live on the server. */
+  buddy?: import('./buddy/buddy').BuddyLink;
   /** A work from Archive of Our Own: its details from AO3's preface (src/import/ao3.ts). */
   ao3?: import('./import/ao3').Ao3Work;
   /**

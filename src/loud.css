@@ -2654,3 +2654,133 @@ body[data-reader='night'] {
 :root[data-motion='off'] .tour-speaker {
   animation: none;
 }
+
+/* Buddy reads (src/buddy/): who is reading along, and comments locked to chapters. */
+.buddy-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.buddy-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.buddy-code {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+.buddy-card .row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.buddy-members {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  display: grid;
+  gap: 8px;
+}
+.buddy-members li {
+  display: grid;
+  grid-template-columns: minmax(70px, 30%) 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+}
+.buddy-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.buddy-bar {
+  height: 8px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.buddy-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+.buddy-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.buddy-note p {
+  margin: 0;
+}
+.buddy-cat {
+  flex: none;
+  object-fit: contain;
+}
+.buddy-chapter {
+  margin: 22px 0 8px;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.buddy-comments {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 10px;
+  display: grid;
+  gap: 10px;
+}
+.buddy-comments li {
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+.buddy-comments li.mine {
+  background: var(--olive-soft);
+  color: #14121f;
+}
+.buddy-comments p {
+  margin: 4px 0;
+  white-space: pre-wrap;
+}
+.buddy-comments q {
+  display: block;
+  font-family: var(--italic);
+  color: inherit;
+  opacity: 0.8;
+}
+.buddy-comments .muted {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.buddy-write {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.buddy-write textarea {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+}
+.join-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+.join-books {
+  list-style: none;
+  padding: 0;
+  width: 100%;
+  display: grid;
+  gap: 8px;
+}
