@@ -2,7 +2,8 @@ import { htmlLangOf } from '../languages';
 import { ChevronRight, Plus, Settings as Gear } from 'lucide-react';
 import { useState } from 'react';
 import { Book3D, Empty, Pocket, SampleButton, TabBar } from '../components';
-import { backupDue, loadBackupState, saveBackupFile, snoozeBackup } from '../backupNow';
+import { backupDue, loadBackupState, snoozeBackup } from '../backupNow';
+import { useBackupSave } from '../useBackupSave';
 import { db } from '../db';
 import { go, useLive, useOnline } from '../hooks';
 import { bookProgress, computeStats, titleOf, continueChapter, estimateMinutes, formatDuration } from '../logic';
@@ -28,6 +29,7 @@ export function Home({ openAdd = false }: { openAdd?: boolean } = {}) {
     return { books, byBook, sessions, lines, backup: await loadBackupState() };
   }, [], 'home');
   const [adding, setAdding] = useState(openAdd);
+  const backup = useBackupSave();
   const online = useOnline();
   const { mood } = useMood();
 
@@ -96,8 +98,8 @@ export function Home({ openAdd = false }: { openAdd?: boolean } = {}) {
               <b>{data!.backup.lastAt ? `Last backup: ${backupDays} days ago.` : 'No backup yet.'}</b> Your books live on this phone only.
             </p>
             <div className="row">
-              <button type="button" className="pill-btn small" onClick={() => void saveBackupFile()}>
-                Save a backup
+              <button type="button" className="pill-btn small" disabled={backup.saving} onClick={() => void backup.save()}>
+                {backup.saving ? 'Saving…' : 'Save a backup'}
               </button>
               <button type="button" className="link" onClick={() => void snoozeBackup()}>
                 Later

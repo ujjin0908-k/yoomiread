@@ -5,7 +5,8 @@ import { db } from '../db';
 import { useLive } from '../hooks';
 import { motionSetting, setMotionSetting } from '../motion';
 import { parseBackup } from '../backup';
-import { DEFAULT_BACKUP, loadBackupState, saveBackupFile, saveBackupState } from '../backupNow';
+import { DEFAULT_BACKUP, loadBackupState, saveBackupState } from '../backupNow';
+import { useBackupSave } from '../useBackupSave';
 import { formatDate } from '../logic';
 import { chat } from '../translate/api';
 import { EMPTY_SETTINGS, fetchModels, hostedUsage, loadSettings, saveSettings, setAiMode } from '../translate/run';
@@ -29,8 +30,9 @@ export function Settings() {
     void navigator.storage?.persisted?.().then(setPersisted);
   }, []);
 
+  const backupSave = useBackupSave();
   async function exportBackup() {
-    const how = await saveBackupFile();
+    const how = await backupSave.save();
     if (how === 'shared') setMessage('Backup handed over. "Save to Files" keeps it safe outside the app.');
     if (how === 'downloaded') setMessage('Backup saved. Keep it somewhere safe (Files, iCloud Drive).');
   }
@@ -67,8 +69,8 @@ export function Settings() {
             the backup is the only copy of your books and notes.
           </p>
           <div className="stack">
-            <button type="button" className="btn primary" onClick={() => void exportBackup()}>
-              Download backup
+            <button type="button" className="btn primary" disabled={backupSave.saving} onClick={() => void exportBackup()}>
+              {backupSave.saving ? 'Preparing backup…' : 'Download backup'}
             </button>
             <label className="btn">
               Restore from backup
@@ -619,6 +621,7 @@ function DeleteAccount({ onDone }: { onDone: (message: string) => void }) {
   const [typed, setTyped] = useState('');
   const [erase, setErase] = useState(false);
   const [busy, setBusy] = useState(false);
+  const backup = useBackupSave();
   const [said, setSaid] = useState('');
 
   async function run() {
@@ -656,8 +659,8 @@ function DeleteAccount({ onDone }: { onDone: (message: string) => void }) {
         <b>Delete your account?</b> This removes your sign-in, your synced library on the server and your AI use records. Other
         devices stop syncing. It cannot be undone.
       </p>
-      <button type="button" className="btn" onClick={() => void saveBackupFile()}>
-        Download a backup first
+      <button type="button" className="btn" disabled={backup.saving} onClick={() => void backup.save()}>
+        {backup.saving ? 'Preparing backup…' : 'Download a backup first'}
       </button>
       <label className="row between">
         <span className="small">Also erase everything on this phone</span>
