@@ -5,7 +5,9 @@ import { Empty, PageTitle, Sheet, TabBar } from '../components';
 import { useLive } from '../hooks';
 import { wrapInput } from '../queries';
 import { CARD_ITEMS, VISIBILITY, cardFrom, lineMightSpoil, updatedWords, type CardData, type CardPrefs } from '../friends/card';
-import { addFriend, cardByCode, cleanFriendCode, friendCards, friendLink, loadPrefs, publishCard, removeFriend, savePrefs, showCode } from '../friends/friends';
+import { addFriend, cardByCode, cleanFriendCode, friendCards, friendFeed, friendLink, loadPrefs, publishCard, removeFriend, savePrefs, showCode } from '../friends/friends';
+import { ago, buildFeed, type FeedEntry, type FeedRow } from '../friends/feed';
+import { currentUserId } from '../account';
 import { ZineCard } from '../friends/ZineCard';
 
 /** Signed in, and the app has accounts at all. Follows sign-in and sign-out. */
@@ -26,6 +28,7 @@ export function Friends() {
   const [prefs, setPrefs] = useState<CardPrefs>();
   const [code, setCode] = useState<string>();
   const [friends, setFriends] = useState<CardData[]>();
+  const [rows, setRows] = useState<FeedRow[]>([]);
   const [sheet, setSheet] = useState<'edit' | 'add' | CardData>();
   const [status, setStatus] = useState('');
   const [copied, setCopied] = useState(false);
@@ -44,8 +47,11 @@ export function Friends() {
       try {
         const saved = await publishCard(card);
         if (live) setCode(saved.code);
-        const list = await friendCards();
-        if (live) setFriends(list);
+        const [list, feed] = await Promise.all([friendCards(), friendFeed()]);
+        if (live) {
+          setFriends(list);
+          setRows(feed);
+        }
       } catch (e) {
         if (live) setStatus(e instanceof Error ? e.message : 'Friends could not be loaded.');
       }
@@ -69,15 +75,34 @@ export function Friends() {
     }
   }
 
-  const refresh = async () => setFriends(await friendCards());
+  const refresh = async () => {
+    const [list, feed] = await Promise.all([friendCards(), friendFeed()]);
+    setFriends(list);
+    setRows(feed);
+  };
+  const feed = friends ? buildFeed(friends, rows, currentUserId()) : [];
 
   return (
     <>
       <main className="page tabs-page friends-page">
         <PageTitle title="Friends" sub="Your reader card, and the friends you read with" />
 
+        {online && feed.length > 0 && (
+          <section className="feed">
+            <h2>What friends are up to</h2>
+            <ul className="feed-list">
+              {feed.map((e) => (
+                <li key={e.key}>
+                  <FeedCard entry={e} onOpen={() => setSheet(e.who)} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {card && (
           <section className="my-card">
+            <h2 className="my-card-head">Your card</h2>
             <ZineCard card={card} code={code} />
             <div className="my-card-actions">
               <button type="button" className="pill-btn small" onClick={() => setSheet('edit')}>
@@ -206,6 +231,15 @@ function EditCard({ prefs, onClose, onSave }: { prefs: CardPrefs; onClose: () =>
           </div>
           <span className="muted small">Your books stay on your phone. Only what’s switched on is shared.</span>
         </div>
+        <div className="card-form-group">
+          <span className="card-form-label">In your friends’ feed</span>
+          <div className="card-switches">
+            <label className="row between card-switch">
+              <span>Tell friends when I finish a book</span>
+              <input type="checkbox" role="switch" checked={p.tellFinished} onChange={(e) => setP({ ...p, tellFinished: e.target.checked })} />
+            </label>
+          </div>
+        </div>
         <button type="submit" className="pill-btn">
           Save card
         </button>
@@ -304,5 +338,92 @@ export function FriendLinkPage({ code }: { code: string }) {
         </>
       )}
     </main>
+  );
+}
+
+/** Stars as text: 4.5 → ★★★★½. */
+export function starText(r: number): string {
+  return '★'.repeat(Math.floor(r)) + (r % 1 ? '½' : '');
+}
+
+/** Two letters for a cover: the first two CJK characters, or the initials of the main words ("The Wonderful Wizard" → WW). */
+export function initials(title: string): string {
+  if (/^[\u2e80-\uffff]/.test(title.trim())) return [...title.trim()].slice(0, 2).join('');
+  const words = title.split(/\s+/).filter((w) => w && !/^(the|a|an|of)$/i.test(w));
+  return (words.slice(0, 2).map((w) => w[0]).join('') || title.slice(0, 2)).toUpperCase();
+}
+
+/** A cover-coloured tile for a book only known by its title. */
+function TitleTile({ title }: { title: string }) {
+  let h = 0;
+  for (const c of title) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const tones = ['#6a3d5c', '#2d6a8a', '#b3471f', '#4f6b3a', '#5b4a8f'];
+  return (
+    <span className="feed-cover" style={{ background: `linear-gradient(160deg, #2a2233, ${tones[h % tones.length]})` }} aria-hidden="true">
+      {initials(title)}
+    </span>
+  );
+}
+
+/** One line of the activity feed. Tapping it opens that friend's card. */
+function FeedCard({ entry: e, onOpen }: { entry: FeedEntry; onOpen: () => void }) {
+  const when = <span className="feed-when">{ago(e.at)}</span>;
+  if (e.kind === 'recommend') {
+    return (
+      <button type="button" className="feed-item feed-rec" onClick={onOpen}>
+        <span className="feed-kicker">{e.forMe ? 'RECOMMENDED TO YOU' : 'RECOMMENDS'}</span>
+        <span className="feed-row">
+          <TitleTile title={e.title} />
+          <span className="feed-text">
+            <span>
+              <b>{e.who.name}</b> recommends <b>{e.title}</b>
+            </span>
+            {e.note && <q className="feed-note">{e.note}</q>}
+            {when}
+          </span>
+        </span>
+      </button>
+    );
+  }
+  return (
+    <button type="button" className={`feed-item${e.kind === 'wrapped' ? ' feed-wrap' : ''}`} onClick={onOpen}>
+      <span className="feed-row">
+        {e.kind === 'wrapped' ? <span className="feed-cover wrap" aria-hidden="true">{e.title.slice(0, 3)}</span> : <TitleTile title={e.title} />}
+        <span className="feed-text">
+          {e.kind === 'reading' && (
+            <>
+              <span>
+                <b>{e.who.name}</b> is reading <b>{e.title}</b>
+              </span>
+              {!!e.total && (
+                <>
+                  <span className="feed-bar">
+                    <span style={{ width: `${Math.round(Math.min(1, (e.chapter ?? 0) / e.total) * 100)}%` }} />
+                  </span>
+                  <span className="muted small">
+                    Chapter {e.chapter ?? 0} of {e.total}
+                  </span>
+                </>
+              )}
+            </>
+          )}
+          {e.kind === 'finished' && (
+            <span>
+              <b>{e.who.name}</b> finished <b>{e.title}</b>
+              {e.rating ? <span className="feed-stars"> {starText(e.rating)}</span> : null}
+            </span>
+          )}
+          {e.kind === 'wrapped' && (
+            <>
+              <span>
+                <b>{e.who.name}</b> shared their {e.title} Wrapped
+              </span>
+              {e.note && <span className="muted small">{e.note}</span>}
+            </>
+          )}
+          {when}
+        </span>
+      </span>
+    </button>
   );
 }

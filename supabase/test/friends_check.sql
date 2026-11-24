@@ -70,7 +70,8 @@ end $$;
 
 -- The feed: Eve finishes a book and recommends one to Fin.
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000e1');
-insert into public.feed_items (kind, book_title, rating) values ('finished', 'The Harbor Book', 5);
+insert into public.feed_items (kind, book_title, rating) values ('finished', 'The Harbor Book', 4.5);
+select pg_temp.expect((select rating from public.feed_items where kind = 'finished') = 4.5, 'a half-star rating is kept');
 insert into public.feed_items (kind, book_title, note, to_user) values ('recommend', 'Oz', 'Cosy and odd', '00000000-0000-0000-0000-0000000000f1');
 do $$ begin
   insert into public.feed_items (kind, book_title, to_user) values ('recommend', 'Oz', '00000000-0000-0000-0000-0000000000a1');

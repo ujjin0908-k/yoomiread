@@ -3830,3 +3830,134 @@ body[data-reader='night'] {
   margin: 0;
   border-radius: 6px;
 }
+
+/* ---------- Activity feed (Friends tab) and recommending ---------- */
+
+.feed {
+  margin-bottom: 22px;
+}
+.feed h2,
+.my-card-head {
+  margin: 0 0 10px;
+}
+.feed-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.feed-item {
+  width: 100%;
+  padding: 14px;
+  border-radius: 22px;
+  border: 1px solid var(--glass-edge);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+}
+.feed-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.feed-cover {
+  flex: none;
+  width: 48px;
+  height: 70px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fbf3ea;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.feed-cover.wrap {
+  height: 84px;
+  background: linear-gradient(170deg, #f7c48d, #f2a7a0 60%, #e9a3b8);
+  color: #14121f;
+  font-family: var(--display);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.feed-text {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+.feed-bar {
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+.feed-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.feed-stars {
+  color: var(--star);
+  white-space: nowrap;
+}
+.feed-when {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.feed-rec {
+  background: #1b1522;
+  color: #fbf3ea;
+  border-color: transparent;
+}
+.feed-rec .feed-when {
+  color: #c9c2d9;
+}
+.feed-kicker {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #f7c48d;
+}
+.feed-note {
+  font-family: var(--italic);
+  font-style: italic;
+  font-size: 1.15rem;
+  line-height: 1.15;
+}
+.rec-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.rec-chip {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+.rec-chip.on {
+  background: var(--pill);
+  color: var(--pill-ink);
+  border-color: transparent;
+}
+.wrapped-post {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #f7c48d;
+}

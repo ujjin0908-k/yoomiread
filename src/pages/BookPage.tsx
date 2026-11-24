@@ -2,7 +2,10 @@ import { BOOK_LANGUAGES, htmlLangOf, htmlLangOfText, ANY_SOURCE, sourceOf, targe
 import { BackdropPicker } from './BackdropPicker';
 import { inOrder, useChapterOrder } from '../chapterOrder';
 import '../world/world.css';
-import { BookMarked, ChevronRight, ImagePlus, Languages, Lightbulb, MessageCircle, Orbit, PenLine, Plus, Quote, Trash2 } from 'lucide-react';
+import { BookMarked, ChevronRight, ImagePlus, Languages, Lightbulb, MessageCircle, Orbit, PenLine, Plus, Quote, Send, Trash2 } from 'lucide-react';
+import { accountsAvailable, signedIn } from '../account';
+import { shareFinished } from '../friends/friends';
+import { RecommendSheet } from '../friends/Recommend';
 import { useEffect, useRef, useState } from 'react';
 import { Book3D, Cover, OrderToggle, ProgressBar, Sheet, Stars, TopBar, Working } from '../components';
 import { toPicture } from '../picture';
@@ -74,6 +77,8 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
   const [coverBusy, setCoverBusy] = useState(false);
   const [coverError, setCoverError] = useState('');
   const [editingReview, setEditingReview] = useState(false);
+  const [recommending, setRecommending] = useState(false);
+  const canShare = accountsAvailable && signedIn();
   const [editingDetails, setEditingDetails] = useState(false);
   const [translating, setTranslating] = useState(false);
   // Chapters picked with the check boxes, to download (translate and keep on the phone).
@@ -350,6 +355,13 @@ export function BookPage({ id, sub }: { id: string; sub?: string }) {
           </button>
         )}
 
+        {canShare && (
+          <button type="button" className="btn ghost wide" onClick={() => setRecommending(true)}>
+            <Send size={16} /> Recommend to friends
+          </button>
+        )}
+        {recommending && <RecommendSheet book={book} onClose={() => setRecommending(false)} />}
+
         <FillText bookId={id} />
 
 
@@ -530,7 +542,11 @@ function FinishSheet({ book, drop, onClose }: { book: Book; drop?: boolean; onCl
       ? { ...finishBook(book, rating, review), finishedAt: book.finishedAt }
       : finishBook(book, rating, review);
     await db.books.put(next);
-    if (!already) celebrate();
+    if (!already) {
+      celebrate();
+      // Friends see it in their feed, if I said so on my card.
+      void shareFinished(book.title, rating);
+    }
     onClose();
   }
 
