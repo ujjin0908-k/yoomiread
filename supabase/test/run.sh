@@ -12,6 +12,6 @@ run "'$bin/initdb' -D '$dir/data' -A trust -U postgres >/dev/null"
 run "'$bin/pg_ctl' -D '$dir/data' -o '-k $dir -p 54329 -c listen_addresses=' -l '$dir/log' start >/dev/null"
 psql=(psql -h "$dir" -p 54329 -U postgres -q -v ON_ERROR_STOP=1)
 "${psql[@]}" -c 'create database yoomi' >/dev/null
-for f in supabase_stub.sql ../sync.sql ../buddy.sql buddy_check.sql; do
+for f in supabase_stub.sql ../sync.sql ../buddy.sql buddy_check.sql ../friends.sql friends_check.sql; do
   "${psql[@]}" -d yoomi -f "$here/$f" 2>&1 >/dev/null | sed -E 's/^psql:[^ ]+ (NOTICE|WARNING): +//' | { grep -v ', skipping$' || true; }
 done

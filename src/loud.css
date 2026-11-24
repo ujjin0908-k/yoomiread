@@ -3527,3 +3527,306 @@ body[data-reader='night'] {
   color: var(--accent);
   text-decoration: none;
 }
+
+/* ---------- Friends (src/pages/Friends.tsx) and the zine reader card (src/friends/ZineCard.tsx) ---------- */
+
+/* Five tabs now: a little narrower, so they fit small phones. */
+.tabbar a {
+  min-width: 62px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.zine-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #1b1522;
+  color: #fbf3ea;
+  padding: 26px 22px 18px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 24px 50px rgb(40 20 90 / 0.28);
+  text-align: left;
+}
+.zine-edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  background: repeating-linear-gradient(180deg, #f2a7a0 0 10px, #2a2233 10px 15px, #f7c48d 15px 25px, #8f7bd6 25px 30px);
+}
+.zine-burst {
+  position: absolute;
+  right: -18px;
+  top: -16px;
+  width: 170px;
+  height: 170px;
+  fill: #f2a7a0;
+}
+.zine-cat {
+  position: absolute;
+  right: 6px;
+  top: 10px;
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+}
+.zine-head {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: calc(100% - 130px);
+  min-height: 104px;
+}
+.zine-kicker {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #f7c48d;
+}
+.zine-name {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 2.3rem;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  color: #fbf3ea;
+  overflow-wrap: anywhere;
+}
+.zine-badge {
+  margin-top: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: #f7c48d;
+  color: #14121f;
+  font-size: 0.7rem;
+  font-weight: 800;
+  transform: rotate(-3deg);
+}
+.zine-now {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.zine-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1.15;
+}
+.zine-small {
+  font-size: 0.78rem;
+  color: #c9c2d9;
+}
+.zine-bar {
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: #3a3144;
+  overflow: hidden;
+}
+.zine-bar span {
+  display: block;
+  height: 100%;
+  background: #f2a7a0;
+}
+.zine-line {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.zine-line q {
+  font-family: var(--italic);
+  font-style: italic;
+  font-size: 1.45rem;
+  line-height: 1.1;
+}
+.zine-spoiler {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.zine-blur {
+  font-family: var(--italic);
+  font-style: italic;
+  font-size: 1.45rem;
+  line-height: 1.1;
+  filter: blur(7px);
+  user-select: none;
+}
+.zine-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.zine-chips span {
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: #2a2233;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.zine-foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #c9c2d9;
+}
+.zine-card.mini {
+  padding: 16px 12px 14px 18px;
+  gap: 10px;
+  border-radius: 18px;
+  box-shadow: none;
+  min-height: 210px;
+}
+.zine-card.mini .zine-edge {
+  width: 7px;
+}
+.zine-card.mini .zine-burst {
+  width: 90px;
+  height: 90px;
+  right: -16px;
+  top: -16px;
+}
+.zine-card.mini .zine-cat {
+  width: 62px;
+  height: 62px;
+  right: 2px;
+  top: 4px;
+}
+.zine-card.mini .zine-head {
+  max-width: calc(100% - 58px);
+  min-height: 0;
+}
+.zine-card.mini .zine-name {
+  font-size: 1.4rem;
+}
+.zine-card.mini .zine-title {
+  font-size: 0.9rem;
+}
+
+.my-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.my-card-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.my-card-actions .pill-btn,
+.my-card-actions .btn,
+.friends-list .section-head .btn,
+.friends-offline .pill-btn {
+  width: auto;
+}
+.friends-offline {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.friends-offline h2 {
+  margin: 0;
+}
+.friend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+.friend-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.friend-remove {
+  margin-top: 14px;
+  color: var(--danger);
+}
+.card-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.card-form-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.card-vis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.card-switches {
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.card-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 50px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.95rem;
+}
+.card-switch:last-child {
+  border-bottom: 0;
+}
+.card-switch input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+}
+.form label.card-switch {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.zine-badge,
+.zine-kicker {
+  white-space: nowrap;
+}
+.zine-card.mini .zine-badge {
+  font-size: 0.6rem;
+  padding: 4px 8px;
+}
+.zine-card.mini .zine-kicker {
+  font-size: 0.58rem;
+}
+.form .card-switch span {
+  flex: 1;
+}
+.form .card-switch input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0;
+  border-radius: 6px;
+}

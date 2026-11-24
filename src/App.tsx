@@ -10,6 +10,7 @@ import { BookQuotesPage, QuoteCard } from './pages/Quotes';
 import { Ask } from './pages/Ask';
 import { WrappedPage } from './pages/Wrapped';
 import { TheoriesPage } from './pages/Theories';
+import { FriendLinkPage, Friends } from './pages/Friends';
 import { Settings } from './pages/Settings';
 import { Stats } from './pages/Stats';
 import { Welcome } from './pages/Welcome';
@@ -61,6 +62,8 @@ export function App() {
   // The old Quotes tab: quotes are on each book's page now.
   if (page === 'quotes') return <Library />;
   if (page === 'stats') return <Stats />;
+  if (page === 'friends') return <Friends />;
+  if (page === 'friend' && id) return <FriendLinkPage key={id} code={id} />;
   if (page === 'wrapped') return <WrappedPage key={id} id={id} />;
   if (page === 'theories' && id) return <TheoriesPage key={id} bookId={id} chapterId={sub} />;
   if (page === 'settings') return <Settings />;
