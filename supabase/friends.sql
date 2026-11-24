@@ -47,11 +47,16 @@ create table if not exists public.feed_items (
   user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
   kind text not null check (kind in ('started', 'finished', 'recommend', 'wrapped')),
   book_title text check (char_length(book_title) <= 200),
-  rating integer check (rating between 1 and 5),
+  -- Stars, in halves like the app (0.5 to 5).
+  rating numeric(2, 1) check (rating between 0.5 and 5),
   note text check (char_length(note) <= 280),
   to_user uuid references auth.users (id) on delete cascade,
   created_at timestamptz not null default now()
 );
+-- Earlier copies of this file kept whole stars only: allow halves there too.
+alter table public.feed_items alter column rating type numeric(2, 1);
+alter table public.feed_items drop constraint if exists feed_items_rating_check;
+alter table public.feed_items add constraint feed_items_rating_check check (rating between 0.5 and 5);
 create index if not exists feed_items_user_time on public.feed_items (user_id, created_at desc);
 
 -- Helpers for the rules below. Each only ever answers about the signed-in reader.

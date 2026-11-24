@@ -1,6 +1,7 @@
 import { accountsAvailable, currentUserId, signedIn, supabaseClient } from '../account';
 import { db } from '../db';
 import { DEFAULT_PREFS, type CardData, type CardPrefs } from './card';
+import type { FeedRow } from './feed';
 
 /**
  * Friends on the server (supabase/friends.sql): my card, friends added by code, their cards. The server decides who
@@ -99,4 +100,33 @@ export async function removeFriend(id: string): Promise<void> {
   const c = await client();
   const { error } = await c.rpc('friend_remove', { p_friend: id });
   fail(error);
+}
+
+/** Posts to the feed as me. A recommendation with `to_user` goes to that friend only; without, to all friends. */
+export async function postFeed(item: Omit<FeedRow, 'id' | 'user_id' | 'created_at'>): Promise<void> {
+  const c = await client();
+  const { error } = await c.from('feed_items').insert({
+    kind: item.kind,
+    book_title: item.book_title?.slice(0, 200) ?? null,
+    rating: item.rating ?? null,
+    note: item.note?.trim().slice(0, 280) || null,
+    to_user: item.to_user ?? null,
+  });
+  fail(error);
+}
+
+/** My friends' feed items, newest first (the server leaves out what I may not see). */
+export async function friendFeed(): Promise<FeedRow[]> {
+  const c = await client();
+  const { data, error } = await c.from('feed_items').select('*').neq('user_id', currentUserId()!).order('created_at', { ascending: false }).limit(60);
+  fail(error);
+  return (data ?? []) as FeedRow[];
+}
+
+/** Tells friends I finished a book, if I said so (Edit card) and my card isn't private. Quietly does nothing offline. */
+export async function shareFinished(title: string, rating?: number): Promise<void> {
+  if (!accountsAvailable || !signedIn()) return;
+  const prefs = await loadPrefs();
+  if (!prefs.tellFinished || prefs.visibility === 'private') return;
+  await postFeed({ kind: 'finished', book_title: title, rating: rating || null, note: null, to_user: null }).catch(() => undefined);
 }

@@ -4,6 +4,11 @@ import { useLive } from '../hooks';
 import { wrapInput } from '../queries';
 import { parsePeriod, periodId, periodName, wrapFor } from '../wrapped/data';
 import { loadAssets, pagePng, savePicture, sharePicture } from '../wrapped/exportImage';
+import { accountsAvailable, signedIn } from '../account';
+import { postFeed } from '../friends/friends';
+import { hours } from '../stats';
+import { readerType } from '../wrapped/data';
+import { Users } from 'lucide-react';
 import { PAGE_H, PAGE_W, pagesFor, type Assets } from '../wrapped/Pages';
 
 /**
@@ -140,6 +145,29 @@ export function WrappedPage({ id }: { id?: string }) {
                 <Download size={18} /> {busy === 'save' ? 'Making it…' : 'Save picture'}
               </button>
             </div>
+            {accountsAvailable && signedIn() && wrap && (
+              <button
+                type="button"
+                className="link small wrapped-post"
+                onClick={async () => {
+                  try {
+                    const type = readerType(wrap.peak);
+                    await postFeed({
+                      kind: 'wrapped',
+                      book_title: name,
+                      note: [hours(wrap.totalMinutes), type, wrap.genres[0]?.label].filter(Boolean).join(' · '),
+                      rating: null,
+                      to_user: null,
+                    });
+                    setNote('Posted to your friends’ feed.');
+                  } catch (e) {
+                    setNote(e instanceof Error ? e.message : 'It could not be posted.');
+                  }
+                }}
+              >
+                <Users size={15} /> Post to friends
+              </button>
+            )}
             {note && (
               <p className="wrapped-note" role="status">
                 {note}

@@ -33,12 +33,15 @@ export interface CardPrefs {
   name: string;
   visibility: Visibility;
   show: Record<CardItem, boolean>;
+  /** Tell friends in the feed when I finish a book (with my stars). */
+  tellFinished: boolean;
 }
 
 export const DEFAULT_PREFS: CardPrefs = {
   name: '',
   visibility: 'friends',
   show: { now: true, genres: true, line: true, stats: true, theories: false, wrapped: true },
+  tellFinished: true,
 };
 
 /** A card as the server keeps it (supabase/friends.sql), and as the app draws it. */
