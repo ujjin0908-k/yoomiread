@@ -3448,3 +3448,82 @@ body[data-reader='night'] {
   width: auto;
   justify-content: center;
 }
+
+/* ---------- Theory board (src/pages/Theories.tsx) ---------- */
+
+.theory-new {
+  margin-bottom: 18px;
+}
+.theory-new .row.between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.theory-new .pill-btn {
+  width: auto;
+}
+.theory-group {
+  margin-top: 18px;
+}
+.theory-group .section-head .btn {
+  width: auto;
+}
+.theory-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.theory {
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--shadow);
+  border-left: 6px solid var(--line);
+}
+.theory.right {
+  border-left-color: #2f9e6a;
+}
+.theory.wrong {
+  border-left-color: var(--accent);
+}
+.theory-text {
+  margin: 0;
+  font-family: var(--italic);
+  font-style: italic;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+.theory-meta {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.theory-cat {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+.theory-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+}
+.theory-actions .link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+}
+.theory-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 6px;
+  font-size: 0.95rem;
+  color: var(--accent);
+  text-decoration: none;
+}

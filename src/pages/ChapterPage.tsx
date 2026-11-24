@@ -4,7 +4,7 @@ import { inOrder, useChapterOrder } from '../chapterOrder';
 import { mix, topColour } from '../backdrop';
 import { BackdropPicker } from './BackdropPicker';
 import { pictureBlob, usePictureUrl } from '../picture';
-import { AlertTriangle, BookOpen, Bookmark, Headphones, ChevronLeft, ChevronRight, Highlighter, Languages, List, MessageCircle, Orbit, PenLine, Trash2, Type } from 'lucide-react';
+import { AlertTriangle, BookOpen, Bookmark, Headphones, ChevronLeft, ChevronRight, Highlighter, Languages, Lightbulb, List, MessageCircle, Orbit, PenLine, Trash2, Type } from 'lucide-react';
 import '../world/world.css';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { OrderToggle, ProgressBar, Sheet, TopBar, Working } from '../components';
@@ -364,6 +364,9 @@ export function ChapterPage({ id }: { id: string }) {
             </ul>
           )}
           {book && <BuddyChapter book={book} chapter={chapter} chapters={siblings} />}
+          <a className="theory-link" href={`#/theories/${chapter.bookId}/${chapter.id}`}>
+            <Lightbulb size={16} /> Make a guess about what happens next
+          </a>
           <nav className="chapter-nav">
             {prev ? (
               <a className="round-btn" href={`#/chapter/${prev.id}`} aria-label={`Previous: ${prev.title}`}>
